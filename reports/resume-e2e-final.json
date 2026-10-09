@@ -1,0 +1,9 @@
+{
+  "final_state": "DONE",
+  "same_logical_run": true,
+  "completed_stages_retained": true,
+  "uninstall_reinstall_preserved": true,
+  "scope": "runtime candidate, not final polished new run",
+  "threads": 5,
+  "status": "PASS"
+}

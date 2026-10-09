@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "version": "1.0.0-rc1 runtime checkpoint",
+  "run_id": "run_d2f711468518",
+  "state": "DONE",
+  "stage": 5,
+  "calls": 7,
+  "independent_threads": 5,
+  "verdicts": {
+    "developer": "IMPLEMENTED",
+    "qa": "PASS",
+    "reviewer": "APPROVED",
+    "coordinator": "PLAN",
+    "analyst": "ANALYSIS"
+  },
+  "changed_files": [
+    "number_utils.py"
+  ],
+  "native_qa_tests": 2,
+  "reviewer_native_tests": 1,
+  "usage_records": 7,
+  "resume": "PASS - completed Coordinator and Analyst not repeated; same logical run",
+  "reinstall": "PASS - settings/history/checkpoint/auth preserved",
+  "process_cleanup": "PASS - 8 tracked owned processes gone after normal close",
+  "limitations": [
+    "Final polished build requires a subsequent installed acceptance test",
+    "Desktop shortcut launch previously passed; fresh reinstall launch used native EXE because automation geometry was unavailable"
+  ]
+}
