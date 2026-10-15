@@ -121,6 +121,14 @@ jobs:
             echo "Release already exists; refusing to replace existing downloadable binaries."
             exit 1
           fi
+          existing_refs=$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')
+          if grep -Fxq "refs/tags/$RELEASE_TAG" <<< "$existing_refs"; then
+            tagged_commit=$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')
+            if [ "$tagged_commit" != "$SOURCE_COMMIT" ]; then
+              echo "Existing tag points to a different source commit; refusing to mislabel binaries."
+              exit 1
+            fi
+          fi
           cat > release-notes.md <<'NOTES'
           Готовая Windows x64 сборка Codex Team.
 

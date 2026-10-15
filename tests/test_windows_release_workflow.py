@@ -50,3 +50,10 @@ def test_release_tag_is_bound_to_the_checked_out_source_version():
     assert 'Release tag must match source version' in metadata
     assert 'else { $expectedTag }' in metadata
     assert 'else { \'v1.0.0-rc2\' }' not in metadata
+
+
+def test_existing_release_tag_cannot_label_another_commits_binary():
+    assert 'matching-refs/tags/$RELEASE_TAG' in WORKFLOW
+    assert '"$tagged_commit" != "$SOURCE_COMMIT"' in WORKFLOW
+    assert 'refusing to mislabel binaries' in WORKFLOW
+    assert 'git push --force' not in WORKFLOW
