@@ -33,12 +33,22 @@ class TimeMachine:
                    GIT_AUTHOR_EMAIL='codex-team@localhost', GIT_COMMITTER_NAME='Codex Team',
                    GIT_COMMITTER_EMAIL='codex-team@localhost')
         if index: env['GIT_INDEX_FILE'] = str(index)
-        result = subprocess.run(['git','-c','core.fsmonitor=false','-c',f'core.hooksPath={self.hooks}',
-                                 '-c','commit.gpgSign=false',*args],cwd=path,env=env,
-                                capture_output=True,encoding='utf-8',errors='replace',timeout=60)
-        if result.returncode:
-            raise WorkspaceError('Git operation failed: ' + str(sanitize(result.stderr[:2000])))
-        return result.stdout.strip() if '\x00' not in result.stdout else result.stdout
+        # Spool Git output to disk before reading a bounded amount into memory.
+        # Huge diffs fail explicitly instead of freezing the desktop process.
+        with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
+            result = subprocess.run(['git','-c','core.fsmonitor=false','-c',f'core.hooksPath={self.hooks}',
+                                     '-c','commit.gpgSign=false',*args],cwd=path,env=env,
+                                    stdout=output,stderr=errors,timeout=60)
+            errors.seek(0)
+            error = errors.read(2000).decode('utf-8','replace')
+            if result.returncode:
+                raise WorkspaceError('Git operation failed: ' + str(sanitize(error)))
+            output.seek(0)
+            raw = output.read(8_000_001)
+            if len(raw) > 8_000_000:
+                raise WorkspaceError('Git output exceeds the safe 8 MB limit; narrow the comparison')
+            text = raw.decode('utf-8','replace')
+            return text.strip() if '\x00' not in text else text
 
     @staticmethod
     def _sensitive(name):
