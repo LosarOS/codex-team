@@ -54,3 +54,5 @@ Command for real-backend mode: `LIVE_URL=http://127.0.0.1:8769 NODE_PATH=/tmp/co
 ## Bounded indexing measurement
 
 A temporary repository with 1001 tracked text files was measured using `time.monotonic()` around `IntelligenceService.analyze`: cold **666.19 ms**, unchanged cached call **543.16 ms**, same persisted architecture record. These are one local Linux measurements, not universal performance promises. The cached path still enumerates/stat-checks tracked files to invalidate working-tree edits; it avoids rebuilding/storing the architecture snapshot, not all filesystem work.
+
+Final focused Chromium regression: `FOCUSED_MODE=1 NODE_PATH=/tmp/codex-browser-tools/node_modules node tests/v2_browser.cjs` passed direct `/#suite` bootstrap and delayed mutation checks. The project selector and five feature tabs are disabled while a mutation is pending, and restored after both successful and failed responses. The real-FastAPI fixture workflow was rerun against a restarted backend with the final integration/lease changes; all recorded scenarios passed again. Temporary server was stopped after verification.
