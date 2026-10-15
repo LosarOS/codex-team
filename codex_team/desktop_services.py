@@ -11,6 +11,7 @@ import webbrowser
 import zipfile
 from pathlib import Path
 from urllib.parse import urlsplit
+from .actions import role_title
 from .storage import sanitize
 
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
@@ -48,7 +49,7 @@ def navigation_decision(url, origin, user_activated=False, allow_blank=False):
 
 def verified_identifier(identifier):
     if not isinstance(identifier, str) or not IDENTIFIER.fullmatch(identifier):
-        raise ValueError("Invalid project or run identifier")
+        raise ValueError("Некорректный идентификатор проекта или запуска.")
     return identifier
 
 
@@ -57,7 +58,7 @@ def verified_project_path(project):
     from .workspace import WorkspaceManager
     path = project.get("path") or project.get("workspace")
     if not path:
-        raise ValueError("Project record has no workspace")
+        raise ValueError("В записи проекта отсутствует рабочая папка.")
     return WorkspaceManager(Path(path)).validate(Path(path))
 
 
@@ -65,9 +66,9 @@ def verified_worktree_path(run):
     workspace = verified_project_path({"workspace": run.get("workspace")})
     target = Path(run.get("worktree") or run.get("workspace")).resolve()
     if target != workspace and not target.is_relative_to(workspace / ".ai-team/worktrees"):
-        raise ValueError("Worktree is outside the registered project boundary")
+        raise ValueError("Рабочая копия находится за пределами подключённого проекта.")
     if not target.is_dir():
-        raise ValueError("Worktree is no longer available")
+        raise ValueError("Рабочая копия больше недоступна.")
     from .workspace import WorkspaceManager
     return WorkspaceManager(workspace).validate(target)
 
@@ -79,7 +80,7 @@ class SessionMarker:
         self.previous = {}
         if self.path.exists():
             if self.path.is_symlink() or self.path.is_junction() or not os.path.samefile(self.path.parent, self.root):
-                raise ValueError("Linked desktop session marker refused")
+                raise ValueError("Файл состояния сеанса не должен быть ссылкой.")
             try:
                 if self.path.stat().st_size <= 16384:
                     self.previous = json.loads(self.path.read_text(encoding="utf-8"))
@@ -97,7 +98,7 @@ class SessionMarker:
         self.root.mkdir(parents=True, exist_ok=True)
         self.payload.update(changes)
         if self.path.is_symlink() or self.path.is_junction() or not os.path.samefile(self.path.parent, self.root):
-            raise ValueError("Desktop session marker escapes its data root")
+            raise ValueError("Файл состояния сеанса находится за пределами папки данных.")
         temporary = self.root / ("desktop-session-" + uuid.uuid4().hex + ".tmp")
         try:
             with temporary.open("x", encoding="utf-8") as stream:
@@ -168,7 +169,7 @@ class DiagnosticBundle:
         # Destination comes only from a native Save dialog, never a bridge path.
         logs = self.root / "logs"
         if not logs.resolve().is_relative_to(self.root):
-            raise ValueError("Log directory escapes its data root")
+            raise ValueError("Папка журналов находится за пределами папки данных.")
         report = self.collect()
         with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
             archive.writestr("diagnostics.json", json.dumps(report, ensure_ascii=False, indent=2))
@@ -177,7 +178,7 @@ class DiagnosticBundle:
                     path = logs / (name + suffix)
                     if path.is_file():
                         if path.is_symlink() or not path.resolve().is_relative_to(logs.resolve()):
-                            raise ValueError("Linked diagnostic log refused")
+                            raise ValueError("Журнал диагностики не должен быть ссылкой.")
                         with path.open("rb") as stream:
                             stream.seek(max(0, path.stat().st_size - 65536))
                             text = stream.read(65536).decode("utf-8", errors="replace")
@@ -192,7 +193,7 @@ class NotificationLedger:
         self.cursor, self.ids, self.initialized = 0, [], False
         if self.path.exists():
             if self.path.is_symlink() or not self.path.resolve().is_relative_to(self.root):
-                raise ValueError("Linked notification ledger refused")
+                raise ValueError("Хранилище уведомлений не должно быть ссылкой.")
             try:
                 if self.path.stat().st_size <= 65536:
                     data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -225,7 +226,7 @@ class NotificationLedger:
 
     def save(self):
         if self.path.is_symlink() or not self.path.resolve().is_relative_to(self.root):
-            raise ValueError("Notification ledger escapes its data root")
+            raise ValueError("Хранилище уведомлений находится за пределами папки данных.")
         temporary = self.root / ("desktop-notifications-" + uuid.uuid4().hex + ".tmp")
         try:
             with temporary.open("x", encoding="utf-8") as stream:
@@ -272,7 +273,7 @@ class WindowsDesktopServices:
                     completed.set()
             form.BeginInvoke(Action(run))
             if not completed.wait(timeout):
-                raise RuntimeError("Native UI did not respond")
+                raise RuntimeError("Окно приложения не ответило.")
             if errors:
                 raise errors[0]
             return result[0] if result else None
@@ -284,7 +285,7 @@ class WindowsDesktopServices:
         try:
             self.form = self.bridge.window.native
             if self.form is None or self.form.IsDisposed:
-                raise RuntimeError("Native window is unavailable")
+                raise RuntimeError("Окно приложения недоступно.")
             self.invoke(self._install_ui, wait=True)
         except Exception as exc:
             self.error = str(exc)
@@ -331,12 +332,12 @@ class WindowsDesktopServices:
             self.delegates.append(handler)
             item.Click += handler
             return item
-        add("Open Codex Team", self.open_window)
-        self.active_item = add("No active run", self.open_run)
-        add("Pause", lambda: self.control("pause"))
-        add("Open current run", self.open_run)
-        add("Open logs", lambda: os.startfile(str(self.bridge.root / "logs")))
-        add("Quit", self.bridge.request_quit)
+        add("Открыть Codex Team", self.open_window)
+        self.active_item = add("Нет активного запуска", self.open_run)
+        add("Пауза", lambda: self.control("pause"))
+        add("Открыть текущий запуск", self.open_run)
+        add("Открыть журналы", lambda: os.startfile(str(self.bridge.root / "logs")))
+        add("Выйти", self.bridge.request_quit)
         self.icon.ContextMenuStrip = menu
         click = lambda sender, args: self.open_run()
         balloon_click = lambda sender, args: self.open_run(self.balloon_run_id)
@@ -383,7 +384,7 @@ class WindowsDesktopServices:
                 self.active_snapshot = bool(active)
                 self.run_id = active.get("id")
                 self.last_run_id = self.run_id or self.last_run_id
-                title = "Active run: " + str(active.get("current_role") or active.get("state") or "working") if active else "No active run"
+                title = "Активный запуск: " + str(role_title(active.get("current_role")) if active.get("current_role") else {"RUNNING":"В работе", "PAUSED":"Пауза", "STOPPED":"Остановлен", "AUTH_REQUIRED":"Требуется вход", "USER_DECISION_REQUIRED":"Требуется решение", "USAGE_LIMIT":"Достигнут лимит"}.get(active.get("state"), "В работе")) if active else "Нет активного запуска"
                 if title != self.active_title:
                     self.active_title = title
                     self.invoke(lambda title=title: setattr(self.active_item, "Text", title[:100]))
@@ -394,7 +395,7 @@ class WindowsDesktopServices:
                         continue
                     run_id = notification.get("run_id") or self.run_id
                     self.last_run_id = run_id or self.last_run_id
-                    message = sanitize(str(notification.get("message") or "Open Codex Team for details."))[:250]
+                    message = sanitize(str(notification.get("message") or "Откройте Codex Team для просмотра подробностей."))[:250]
                     heading = sanitize(str(notification.get("title") or "Codex Team"))[:60]
                     self.invoke(lambda heading=heading, message=message, run_id=run_id: self._balloon(heading, message, run_id))
             except Exception:
@@ -418,17 +419,17 @@ class WindowsDesktopServices:
         result = ["cancel"]
         def show():
             dialog = Form()
-            dialog.Text = "Codex Team — active run"
+            dialog.Text = "Codex Team — активный запуск"
             dialog.Size = Size(550, 190)
             dialog.FormBorderStyle = FormBorderStyle.FixedDialog
             dialog.StartPosition = FormStartPosition.CenterParent
             dialog.MinimizeBox = dialog.MaximizeBox = False
             label = Label()
-            label.Text = "A run is active. Choose how to close the window."
+            label.Text = "Задача выполняется. Выберите способ закрытия окна."
             label.Location, label.Size = Point(20, 20), Size(500, 35)
             dialog.Controls.Add(label)
             handlers = []
-            for index, (label_text, value) in enumerate((("Keep running in tray", "tray"), ("Stop run and exit", "stop"), ("Cancel", "cancel"))):
+            for index, (label_text, value) in enumerate((("Продолжить в трее", "tray"), ("Остановить и выйти", "stop"), ("Отмена", "cancel"))):
                 button = Button()
                 button.Text = label_text
                 button.Location, button.Size = Point(20 + index * 170, 75), Size(160, 35)

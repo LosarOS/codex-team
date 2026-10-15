@@ -26,7 +26,7 @@ class Registry:
     def get(self, name):
         agent = next((a for a in self.agents() if a["name"] == name and a["enabled"]), None)
         if not agent:
-            raise ValueError(f"Agent is absent or disabled: {name}")
+            raise ValueError(f"Агент отсутствует или отключён: {name}")
         return agent
 
     def packs(self):
@@ -38,15 +38,15 @@ class Registry:
         for name in [*pack["agents"], *pack["specialists"]]:
             agent = self.get(name)
             if name in pack["specialists"] and agent["permission"] != "read-only":
-                raise ValueError("Specialist reviewers must be read-only")
+                raise ValueError("Специалисты проверки должны иметь доступ только для чтения.")
         if pack["agents"] and any(self.get(name)["permission"] == "workspace-write" and name != "developer" for name in pack["agents"]):
-            raise ValueError("Only Developer can write in a pack pipeline")
+            raise ValueError("В команде набора только разработчик может изменять файлы.")
         self.store.save_pack(pack)
 
     def pipeline(self, mode, pack_name, specialists):
         pack = next((p for p in self.packs() if p["name"] == pack_name), None)
         if pack is None:
-            raise ValueError("Unknown agent pack")
+            raise ValueError("Набор агентов не найден.")
         base = {"quick": ["coordinator", "developer", "qa"],
                 "standard": ["coordinator", "analyst", "developer", "qa", "reviewer"],
                 "deep": ["coordinator", "analyst", "developer", "qa", "reviewer", "final-audit"],
@@ -58,20 +58,20 @@ class Registry:
             mandatory = set(base)
             missing = mandatory - set(chosen)
             if missing:
-                raise ValueError("The selected mode requires these core roles in its pack: " + ", ".join(sorted(missing)))
+                raise ValueError("Для выбранного режима в наборе необходимы роли: " + ", ".join(sorted(missing)))
             for role in chosen:
                 if role not in base:
                     if self.get(role)["permission"] != "read-only":
-                        raise ValueError("Additional pack agents must be read-only")
+                        raise ValueError("Дополнительные агенты набора должны иметь доступ только для чтения.")
                     base.insert(base.index("developer") if "developer" in base else 2, role)
         extra = list(dict.fromkeys([*pack.get("specialists", []), *specialists]))
         if mode in {"deep", "audit"}:
             for role in extra:
                 if self.get(role)["permission"] != "read-only":
-                    raise ValueError("Specialists must be read-only; parallel writer reconciliation is unavailable")
+                    raise ValueError("Специалисты должны иметь доступ только для чтения. Согласование параллельных изменений не поддерживается.")
             base[2:2] = extra
         for name in base:
             spec = self.get(name)
             if mode not in spec.get("enabled_modes", ["quick", "standard", "deep", "audit", "plan", "implement"]):
-                raise ValueError(f"Agent {name} is disabled for mode {mode}")
+                raise ValueError(f"Агент {name} отключён для режима {mode}")
         return base

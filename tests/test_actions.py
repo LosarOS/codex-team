@@ -27,14 +27,14 @@ def pending(center, method, params):
 
 def test_permission_requires_explicit_scope_confirmation_and_real_native_response(center):
     card, response, thread = pending(center, COMMAND, {'command': 'python -m pip install pytest', 'cwd': 'C:/project'})
-    with pytest.raises(ValueError, match='Confirm'):
+    with pytest.raises(ValueError, match='подтвердите'):
         center.resolve(card['id'], 'allow_once')
     assert thread.is_alive()
     center.resolve(card['id'], 'allow_once', confirmed=True)
     thread.join(2)
     assert response == [{'decision': 'accept'}]
     assert center.store.action(card['id'])['decision'] == 'allow_once'
-    with pytest.raises(ValueError, match='no longer'):
+    with pytest.raises(ValueError, match='больше не'):
         center.resolve(card['id'], 'allow_run', confirmed=True)
 
 
@@ -49,7 +49,7 @@ def test_native_permission_grants_only_requested_subset_and_session(center):
 def test_sdk_available_decisions_are_authoritative(center):
     card, response, thread = pending(center, COMMAND, {'availableDecisions': ['decline', 'cancel']})
     assert 'allow_once' not in card['allowed_decisions']
-    with pytest.raises(ValueError, match='not supported'):
+    with pytest.raises(ValueError, match='не поддерживает'):
         center.resolve(card['id'], 'allow_once', confirmed=True)
     center.resolve(card['id'], 'deny')
     thread.join(2)
@@ -59,7 +59,7 @@ def test_sdk_available_decisions_are_authoritative(center):
 def test_typed_input_answers_not_persisted(center):
     center.store.save_settings({'permission_policy':{'command_execution':'deny'}})
     card, response, thread = pending(center, INPUT, {'questions': [{'id': 'strategy', 'question': 'Which?', 'isSecret': False}]})
-    with pytest.raises(ValueError, match='Unknown'):
+    with pytest.raises(ValueError, match='Неизвестный'):
         center.resolve(card['id'], 'answer', {'unrelated': ['private answer']})
     center.resolve(card['id'], 'answer', {'strategy': ['private answer']})
     thread.join(2)
@@ -80,7 +80,7 @@ def test_recovery_cannot_replay_stale_approval(center):
     center.store.recover()
     assert center.store.action('old')['status'] == 'expired'
     assert 'private' not in str(center.store.action('old'))
-    with pytest.raises(ValueError, match='no longer'):
+    with pytest.raises(ValueError, match='больше не'):
         center.resolve('old', 'allow_once', confirmed=True)
 
 
@@ -90,7 +90,7 @@ def test_redacted_command_cannot_hide_destructive_suffix_and_receive_grant(cente
     assert response == {'decision':'decline'}
     assert not card['sdk_supported']
     assert 'allow_once' not in card['allowed_decisions']
-    assert 'redacted' in card['limitation']
+    assert 'скрыты секретные значения' in card['limitation']
 
 
 def test_errors_classify_action_auth_and_recoverable_without_traceback():

@@ -89,7 +89,7 @@ def test_api_backend_is_denied_without_persisting(local_app, backend):
     client, _, _, store, _ = local_app
     response = client.post("/api/settings", json={"execution_backend": backend})
     assert response.status_code == 400
-    assert "disabled" in response.json()["detail"]
+    assert "запрещена" in response.json()["detail"]
     assert store.settings() == {}
 
 

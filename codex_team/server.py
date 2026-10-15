@@ -17,7 +17,7 @@ from .settings import Settings
 from .projects import Projects
 from .secrets import WindowsSecretStore
 from .api_provider import ProviderSettings
-from .actions import describe_error
+from .actions import describe_error, role_title
 from . import __version__
 
 class Control(BaseModel):
@@ -95,7 +95,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def desktop_shutdown(request: Request):
         import secrets
         if not desktop_context or not secrets.compare_digest(request.headers.get("X-Codex-Team-Desktop", ""), desktop_context["token"]):
-            raise HTTPException(status_code=403, detail="Desktop ownership required")
+            raise HTTPException(status_code=403, detail="Это действие доступно только настольному приложению.")
         desktop_context["shutdown"]()
         return {"ok": True}
     @app.middleware("http")
@@ -103,15 +103,15 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         host = request.headers.get("host", "")
         parsed = urlparse("http://" + host)
         if parsed.hostname not in {"127.0.0.1", "localhost", "testserver"}:
-            return JSONResponse({"detail": "Only localhost Host allowed"}, status_code=403)
+            return JSONResponse({"detail": "Разрешено подключение только к локальному приложению."}, status_code=403)
         origin = request.headers.get("origin")
         if origin and origin != "http://" + host:
-            return JSONResponse({"detail": "Cross-origin requests refused"}, status_code=403)
+            return JSONResponse({"detail": "Запросы из другого источника запрещены."}, status_code=403)
         if request.method in {"POST", "PUT", "DELETE", "PATCH"}:
             if request.headers.get("content-type", "").split(";")[0] != "application/json":
-                return JSONResponse({"detail": "application/json required"}, status_code=415)
+                return JSONResponse({"detail": "Требуется формат application/json."}, status_code=415)
             if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"}:
-                return JSONResponse({"detail": "Cross-site requests refused"}, status_code=403)
+                return JSONResponse({"detail": "Межсайтовые запросы запрещены."}, status_code=403)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Cache-Control"] = "no-store"
@@ -125,10 +125,10 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     async def invalid_input(request,exc):
         fields = [".".join(str(x) for x in error["loc"] if x != "body") for error in exc.errors()]
         # Pydantic errors include raw input, including a rejected secret. Never echo it.
-        return JSONResponse({"detail":"Check these input fields: " + ", ".join(fields[:20])},status_code=422)
+        return JSONResponse({"detail":"Проверьте поля ввода: " + ", ".join(fields[:20])},status_code=422)
     @app.exception_handler(KeyError)
     async def not_found(request, exc):
-        return JSONResponse({"detail": "The requested item was not found"}, status_code=404)
+        return JSONResponse({"detail": "Запрошенный элемент не найден."}, status_code=404)
 
     @app.exception_handler(ProviderError)
     async def provider_failed(request, exc):
@@ -137,7 +137,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
 
     @app.exception_handler(Exception)
     async def unexpected_failure(request, exc):
-        message = "The request could not finish. Open diagnostics and retry."
+        message = "Не удалось завершить запрос. Откройте диагностику и повторите попытку."
         return JSONResponse({"detail": message, "error": describe_error("FATAL_ERROR", message)}, status_code=500)
 
     @app.get("/api/status")
@@ -145,7 +145,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         try:
             account = auth.account_status()
         except Exception as exc:
-            account = {"status": "UNAVAILABLE", "account": None, "error": "Codex did not respond. Check Settings and retry.","details":sanitize(str(exc))}
+            account = {"status": "UNAVAILABLE", "account": None, "error": "Codex не ответил. Проверьте настройки и повторите попытку.","details":sanitize(str(exc))}
         return {"auth": account, "capabilities": auth.capabilities, "settings": {"execution_backend": "codex_chatgpt", **db.settings()}}
 
     @app.post("/api/login")
@@ -176,12 +176,12 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.post("/api/agents")
     def agent(body: AgentSpec):
         if body.name in {"coordinator", "analyst", "qa", "reviewer", "architect", "final-audit"} and body.permission != "read-only":
-            raise ValueError("Core review roles must be read-only")
+            raise ValueError("Основные роли проверки должны иметь доступ только для чтения.")
         existing = next((a for a in db.agents() if a["name"] == body.name), None)
         if existing:
-            raise ValueError("Agent name already exists. Edit its prompt file or use a new name.")
+            raise ValueError("Агент с таким идентификатором уже существует. Измените его инструкции или выберите другой идентификатор.")
         if (body.permission == "workspace-write" or body.can_network) and not body.confirmed_permissions:
-            raise ValueError("Confirm the custom agent's write or network capability before saving")
+            raise ValueError("Перед сохранением подтвердите доступ пользовательского агента к записи или сети.")
         db.save_agent(body.model_dump())
         return body.model_dump()
 
@@ -192,14 +192,14 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.put("/api/agents/{name}")
     def update_agent(name: str, body: AgentSpec):
         if body.name != name:
-            raise ValueError("Agent name cannot be changed")
+            raise ValueError("Идентификатор агента нельзя изменить.")
         if not any(a["name"] == name for a in db.agents()):
-            raise ValueError("Unknown agent")
+            raise ValueError("Агент не найден.")
         if name in {"coordinator", "analyst", "qa", "reviewer", "architect", "final-audit"} and body.permission != "read-only":
-            raise ValueError("Core review roles must be read-only")
+            raise ValueError("Основные роли проверки должны иметь доступ только для чтения.")
         previous = next(a for a in db.agents() if a["name"] == name)
         if ((body.permission == "workspace-write" and previous.get("permission") != "workspace-write") or (body.can_network and not previous.get("can_network",False))) and not body.confirmed_permissions:
-            raise ValueError("Confirm the agent's new write or network capability before saving")
+            raise ValueError("Перед сохранением подтвердите новые разрешения агента на запись или сеть.")
         from .registry import CORE
         if name in CORE:
             (root / "agents" / f"{name}.md").write_text(body.instructions, encoding="utf-8")
@@ -210,26 +210,26 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def delete_agent(name: str):
         from .registry import CORE
         if name in CORE:
-            raise ValueError("Built-in agents are protected. Duplicate or disable a role instead.")
+            raise ValueError("Встроенные агенты защищены. Создайте копию роли или отключите её.")
         if not any(a["name"]==name for a in db.agents()):
             raise KeyError(name)
         references=[p["name"] for p in engine.registry.packs() if name in p.get("agents",[]) or name in p.get("specialists",[])]
         if references:
-            raise ValueError("Remove this agent from its packs first: " + ", ".join(references))
+            raise ValueError("Сначала удалите агента из наборов: " + ", ".join(references))
         db.delete_agent(name)
         return {"ok":True}
 
     @app.post("/api/packs")
     def create_pack(body: AgentPack):
         if any(p["name"]==body.name for p in engine.registry.packs()):
-            raise ValueError("A pack with this identifier already exists")
+            raise ValueError("Набор с таким идентификатором уже существует.")
         engine.registry.save_pack(body.model_dump())
         return body.model_dump()
 
     @app.put("/api/packs/{name}")
     def update_pack(name: str, body: AgentPack):
         if name != body.name:
-            raise ValueError("Pack identifier cannot be changed")
+            raise ValueError("Идентификатор набора нельзя изменить.")
         if not any(p["name"]==name for p in engine.registry.packs()):
             raise KeyError(name)
         engine.registry.save_pack(body.model_dump())
@@ -241,7 +241,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         if not pack:
             raise KeyError(name)
         if pack.get("builtin"):
-            raise ValueError("Built-in packs are protected. Duplicate them to create a removable pack.")
+            raise ValueError("Встроенные наборы защищены. Создайте копию, которую можно будет удалить.")
         db.delete_pack(name)
         return {"ok":True}
 
@@ -253,7 +253,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def settings(body: Settings):
         changes = body.model_dump(exclude_unset=True)
         if "execution_backend" in changes and changes["execution_backend"] != db.settings().get("execution_backend","codex_chatgpt"):
-            raise ValueError("Provider changes are disabled on this endpoint. Use the explicit AI Provider selection and billing confirmation.")
+            raise ValueError("Смена провайдера через этот запрос запрещена. Используйте выбор ИИ-провайдера с подтверждением условий оплаты.")
         # Nested preferences remain partial as well.
         for key in ("notifications","permission_policy","role_model_defaults"):
             if key in changes:
@@ -267,7 +267,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
 
     def idle_provider_change():
         if engine.active:
-            raise ValueError("Pause or stop the active run before changing provider credentials or selection")
+            raise ValueError("Приостановите или остановите активный запуск перед сменой провайдера или его учётных данных.")
 
     @app.post("/api/providers/select")
     def select_provider(body: ProviderChoice):
@@ -341,7 +341,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def start(body: RunRequest):
         with engine.lock:
             if engine.active:
-                raise ValueError("Another run is active")
+                raise ValueError("Другой запуск уже выполняется.")
             run = engine.create(body)
             return engine.launch(run["id"])
 
@@ -366,7 +366,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def archive_run(run_id: str):
         with engine.lock:
             if run_id in engine.active:
-                raise ValueError("Pause or stop before archiving this run")
+                raise ValueError("Перед архивацией приостановите или остановите запуск.")
             run=db.run(run_id)
             run["archived"]=True
             db.save_run(run)
@@ -375,7 +375,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.delete("/api/runs/{run_id}/worktree")
     def delete_worktree(run_id: str,body: Confirm):
         if not body.confirmed:
-            raise ValueError("Confirm deletion of this clean, inactive worktree")
+            raise ValueError("Подтвердите удаление чистой неактивной рабочей копии.")
         return engine.delete_worktree(run_id)
 
     @app.get("/api/desktop/state")
@@ -395,15 +395,15 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
             payload=json.loads(payload)
             state=payload.get("state")
             if kind=="run_state" and state=="DONE" and preferences["task_complete"]:
-                title,message="Task completed","Result, tests and Diff are available in History."
+                title,message="Задача завершена","Результат, тесты и изменения доступны в истории."
             elif kind=="action_required" and preferences["needs_attention"]:
-                title,message="Action required",payload.get("title","Your decision is needed")
+                title,message="Требуется действие",payload.get("title","Требуется ваше решение")
             elif kind=="run_state" and state in {"FAILED","AUTH_REQUIRED","USAGE_LIMIT","USER_DECISION_REQUIRED","STOPPED"} and preferences["needs_attention"]:
-                title,message="Run needs attention",describe_error(state,payload.get("error") or state)["title"]
+                title,message="Запуск требует внимания",describe_error(state,payload.get("error") or state)["title"]
             elif kind=="agent_completed" and payload.get("verdict") in {"FAIL","CHANGES_REQUIRED"} and preferences["needs_attention"]:
-                title,message="Review found an issue",f"{role}: review the findings in this run."
+                title,message="Проверка выявила проблему",f"{role_title(role)}: просмотрите замечания этого запуска."
             elif kind=="agent_completed" and preferences["stage_complete"]:
-                title,message="Stage completed",f"{role}: {payload.get('verdict','completed')}"
+                title,message="Этап завершён",f"{role_title(role)}: " + {"PASS":"Проверка пройдена", "FAIL":"Проверка не пройдена", "PLAN":"План подготовлен", "CHANGES_REQUIRED":"Требуются исправления", "DONE":"Готово", "IMPLEMENTED":"Изменения внесены"}.get(payload.get("verdict"), "Этап завершён")
             else:
                 continue
             notification_type = "completed" if kind == "run_state" and state == "DONE" else "stage_complete" if kind == "agent_completed" and payload.get("verdict") not in {"FAIL", "CHANGES_REQUIRED"} else "needs_attention"

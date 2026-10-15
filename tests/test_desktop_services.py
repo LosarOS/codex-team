@@ -135,7 +135,7 @@ def test_bad_portable_marker_refuses_silent_installed_data_fallback(tmp_path, mo
     monkeypatch.setattr(runtime.sys, "frozen", True, raising=False)
     monkeypatch.setattr(runtime.sys, "executable", str(tmp_path / "CodexTeam.exe"))
     monkeypatch.delenv("CODEX_TEAM_DATA_ROOT", raising=False)
-    with pytest.raises(RuntimeError, match="Portable configuration"):
+    with pytest.raises(RuntimeError, match="Настройки переносимой сборки"):
         runtime.data_root()
 
 
@@ -182,7 +182,7 @@ def test_worktree_record_cannot_open_arbitrary_external_directory(tmp_path, monk
     workspace.mkdir()
     outside.mkdir()
     monkeypatch.setattr(services, "verified_project_path", lambda record: workspace.resolve())
-    with pytest.raises(ValueError, match="registered project boundary"):
+    with pytest.raises(ValueError, match="подключённого проекта"):
         services.verified_worktree_path({"workspace": str(workspace), "worktree": str(outside)})
 
 
