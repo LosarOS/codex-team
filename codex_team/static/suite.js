@@ -24,9 +24,11 @@
     return encoded.replace(/(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|Bearer\s+[A-Za-z0-9._-]+)/g,'[скрыто]').slice(0,16000);
   }
   function message(value,error=false){
-    status.replaceChildren(el('span','',value?.message||String(value??'')));
+    const raw=value?.message||String(value??'');const untranslated=error&&!/[А-Яа-яЁё]/.test(raw);
+    status.replaceChildren(el('span','',untranslated?'Не удалось выполнить действие. Обновите данные и повторите попытку.':raw));
     status.classList.toggle('suite-error',error);status.setAttribute('role',error?'alert':'status');
-    if(error&&value?.technical){const details=el('details','suite-technical');details.append(el('summary','','Технические сведения об ошибке'),el('pre','suite-output',safeTechnical(value.technical)));status.append(details);}
+    const technical=value?.technical||(untranslated?raw:null);
+    if(error&&technical){const details=el('details','suite-technical');details.append(el('summary','','Технические сведения об ошибке'),el('pre','suite-output',safeTechnical(technical)));status.append(details);}
   }
   function button(label,fn,primary=false,allowWhileBusy=false){const b=el('button',primary?'primary':'secondary',label);b.type='button';b.dataset.allowWhileBusy=String(allowWhileBusy);b.disabled=pendingAction&&!allowWhileBusy;b.addEventListener('click',async()=>{if(b.disabled||pendingAction&&!allowWhileBusy)return;if(allowWhileBusy&&pendingAction){b.disabled=true;try{await fn();}catch(e){message(e,true);}finally{b.disabled=false;}return;}pendingAction=true;lockControls(true);root.setAttribute('aria-busy','true');try{await fn();}catch(e){message(e,true);}finally{pendingAction=false;lockControls(false);root.setAttribute('aria-busy','false');}});return b;}
   function field(label,control){const l=el('label','suite-field');l.append(el('span','',label),control);return l;}
