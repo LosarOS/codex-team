@@ -454,6 +454,11 @@
     $("detail-isolation").title = workspace ? text(workspace) : "";
     renderRunProblem(run); renderActivePipeline();
     const currentState = normalizedState(run.state);
+    const level=run.access_level||"standard";$("detail-access-level").textContent=accessLabels[level]||"Нет данных";
+    const canEditAccess=resumeStates.has(currentState);
+    $("run-access-form").hidden=!canEditAccess;
+    if(state.accessDraftRun!==run.id)$("detail-access-select").value=level;
+    $("apply-run-access").disabled=!canEditAccess||!state.online||state.controlPending||state.accessApplying;$("detail-access-select").disabled=$("apply-run-access").disabled;
     $("run-decision").hidden=currentState!=="USER_DECISION_REQUIRED"||state.actions.some(a=>a.run_id===run.id);
     $("pause-button").hidden = !["RUNNING", "QUEUED", "PAUSING"].includes(currentState);
     $("pause-button").disabled = currentState === "PAUSING";
@@ -813,7 +818,9 @@
       if(Date.now()-state.lastRegistry>30000){const rs=await Promise.allSettled([api("/api/agents"),api("/api/packs")]);if(rs[0].status==="fulfilled")state.agents=Array.isArray(rs[0].value)?rs[0].value:rs[0].value.agents||[];if(rs[1].status==="fulfilled")state.packs=Array.isArray(rs[1].value)?rs[1].value:rs[1].value.packs||[];state.lastRegistry=Date.now();renderRegistry();}
     }catch(error){setOnline(false,error.message);}finally{state.polling=false;}
   }
-  async function control(action, instruction) {
+  const accessLabels={"read-only":"Только чтение",standard:"Рабочая папка","full-access":"Полный доступ"};
+  async function confirmRunAccess(level){return level!=="full-access"||await confirmOperation("Разрешить полный доступ агентам?","Агент-разработчик этого запуска сможет читать и изменять файлы за пределами проекта, выполнять команды и обращаться к сети без дополнительных запросов разрешения. Это может затронуть личные файлы и настройки компьютера. Выбирайте этот режим только для доверенной задачи.","Действует только для выбранного запуска.","Разрешить полный доступ");}
+  async function control(action, instruction, extra={}) {
     const id = state.selectedRun?.id;
     if (!id || state.controlPending) return;
     state.controlPending=true;state.runRevision++;
@@ -821,14 +828,15 @@
     const submittedInstruction=$("steer-instruction").value;
     const buttons = qa(".run-controls button, #steer-button, #queue-button"); buttons.forEach((button) => { button.disabled = true; });
     try {
-      await api(`/api/runs/${encodeURIComponent(id)}/control`, "POST", {action, ...(instruction ? {instruction} : {})});
+      await api(`/api/runs/${encodeURIComponent(id)}/control`, "POST", {action, ...(instruction ? {instruction} : {}),...extra});
       state.runRevision++;
-      toast({pause: "Пауза запрошена после завершения текущего этапа.", stop: "Запрошена остановка запуска.", resume: "Запуск продолжен.", steer: "Указание передано команде.", queue: "Указание сохранено для следующего этапа."}[action]);
+      toast({pause: "Пауза запрошена после завершения текущего этапа.", stop: "Запрошена остановка запуска.", resume: "Запуск продолжен.", steer: "Указание передано команде.", queue: "Указание сохранено для следующего этапа.",set_access:"Уровень доступа изменён. Для продолжения нажмите «Продолжить»."}[action]);
       if (instruction && selection===state.selectionVersion && $("steer-instruction").value===submittedInstruction) $("steer-instruction").value = "";
       const version = selection;
       const run = await api(`/api/runs/${encodeURIComponent(id)}`);
       if (version === state.selectionVersion && state.selectedRun?.id === id) { state.selectedRun = run; renderRun(); }
-    } catch (error) { toast(error.message, true); }
+      return true;
+    } catch (error) { toast(error.message, true);return false; }
     finally { state.controlPending=false; buttons.forEach((button) => { button.disabled = false; }); if (state.selectedRun) renderRun(); }
   }
   async function login(method) {
@@ -1208,12 +1216,19 @@
   qa(".login-button").forEach((button) => button.addEventListener("click", () => login(button.dataset.method)));
   $("add-agent-button").addEventListener("click", () => openAgentEditor());
   ["close-agent-editor", "cancel-agent-button"].forEach((id) => $(id).addEventListener("click", () => { $("agent-editor").hidden = true; }));
+  $("detail-access-select").addEventListener("change",()=>{state.accessDraftRun=state.selectedRun?.id;});
+  $("run-access-form").addEventListener("submit",async event=>{
+    event.preventDefault();if(state.accessApplying||state.controlPending||$("apply-run-access").disabled)return;
+    const id=state.selectedRun?.id,level=$("detail-access-select").value;state.accessApplying=true;$("apply-run-access").disabled=true;$("detail-access-select").disabled=true;showFormError("run-access-error","");
+    try{if(!await confirmRunAccess(level)||state.selectedRun?.id!==id)return;const applied=await control("set_access",null,{access_level:level,...(level==="full-access"?{confirmed_full_access:true}:{})});if(applied)state.accessDraftRun=null;}
+    catch(error){showFormError("run-access-error",error);}finally{state.accessApplying=false;if(state.selectedRun)renderRun();}
+  });
   $("run-form").addEventListener("submit", async (event) => {
     event.preventDefault(); if (state.creatingRun || !$("run-form").reportValidity()) return;
     const workspace = $("workspace").value.trim(); const task = $("task").value.trim();
     if (!workspace || !task) { showFormError("run-form-error", "Укажите путь к проекту и непустую задачу."); return; }
     const request = {
-      workspace, task, mode: $("run-mode").value, pack: $("run-pack").value,
+      workspace, task, access_level:$("run-access-level").value||"standard", mode: $("run-mode").value, pack: $("run-pack").value,
       max_iterations: Number($("max-iterations").value), max_agent_calls: Number($("max-calls").value),
       max_parallel_agents: Number($("max-parallel").value), max_run_duration: Math.round(Number($("max-duration").value) * 60),
       auto_commit: $("auto-commit").checked, isolated: $("isolated").checked,
@@ -1222,6 +1237,8 @@
     const packError=validateComposerPack();if(packError){showFormError("run-form-error",packError);return;}
     state.creatingRun=true;const button = $("start-button"); button.disabled = true; button.textContent = "Подготовка запуска…"; showFormError("run-form-error", "");
     try {
+      if(!await confirmRunAccess(request.access_level))return;
+      if(request.access_level==="full-access")request.confirmed_full_access=true;
       const run = await api("/api/runs", "POST", request);
       try { localStorage.setItem("codex-team-workspace", workspace); } catch (_) { /* storage may be disabled */ }
       state.runs = [run, ...state.runs.filter((item) => item.id !== run.id)]; renderRuns(true);
@@ -1270,7 +1287,7 @@
   window.addEventListener("hashchange", () => setPage(location.hash.slice(1)));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
-  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady};
+  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess};
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   onDesktopReady(); refresh();

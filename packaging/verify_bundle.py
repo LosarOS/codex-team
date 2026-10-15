@@ -4,8 +4,64 @@ import importlib.metadata
 import json
 import subprocess
 import sys
+import tempfile
+import threading
+from dataclasses import replace
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def verify_permission_profiles(internal):
+    """Load real bundled CLI config only; never request account, thread or turn APIs."""
+    from openai_codex.client import CodexClient
+    from codex_team.provider import config_for, ObjectResponse
+
+    verified = []
+    with tempfile.TemporaryDirectory(prefix="codex-permission-preflight-") as temporary:
+        root = Path(temporary)
+        workspace = root / "repo"
+        workspace.mkdir()
+        git = internal / "runtime/git/cmd/git.exe"
+        subprocess.run([str(git), "-c", "init.templateDir=", "init", "-q", str(workspace)],
+                       check=True, capture_output=True, timeout=30)
+        for level in ("standard", "read-only", "full-access"):
+            home = root / level
+            home.mkdir()
+            agent = {"name": "developer", "role": "Разработчик", "permission": "workspace-write", "access_level": level}
+            config = config_for(str(workspace), agent)
+            expected = next(json.loads(value.split("=", 1)[1]) for value in config.config_overrides
+                            if value.startswith("default_permissions="))
+            config = replace(config, codex_bin=str(internal / "codex_cli_bin/bin/codex.exe"),
+                             env={**config.env, "CODEX_HOME": str(home)})
+            client = CodexClient(config)
+            done = threading.Event()
+            outcome = {}
+
+            def load_config():
+                try:
+                    client.start()
+                    client.initialize()
+                    outcome["config"] = client.request("config/read", {"includeLayers": False},
+                                                       response_model=ObjectResponse).root
+                except Exception as error:
+                    outcome["error"] = error
+                finally:
+                    done.set()
+
+            worker = threading.Thread(target=load_config, daemon=True)
+            try:
+                worker.start()
+                if not done.wait(30):
+                    raise TimeoutError("Bundled CLI permission preflight timed out: " + level)
+                if "error" in outcome:
+                    raise outcome["error"]
+                if outcome["config"].get("config", {}).get("default_permissions") != expected:
+                    raise RuntimeError("Bundled CLI selected an unexpected permission profile: " + level)
+                verified.append(level)
+            finally:
+                client.close()
+                worker.join(timeout=1)
+    return verified
+
 
 def main():
     bundle = ROOT / "dist/CodexTeam"
@@ -47,8 +103,11 @@ def main():
                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     if python.returncode != 0:
         raise SystemExit(f"Relocated bundled Python failed: {python.stderr}")
+    profiles = verify_permission_profiles(internal)
     manifest = {"bundle": str(bundle), "app_version": importlib.metadata.version("codex-team"), "sdk_cli_version": result.stdout.strip(), "git_version": git.stdout.strip(), "sdk": importlib.metadata.version("openai-codex"),
                 "pywebview": importlib.metadata.version("pywebview"), "pyinstaller": importlib.metadata.version("pyinstaller"), "bundled_python": json.loads(python.stdout),
+                "permission_profiles_verified": profiles, "permission_profile_inference_calls": 0,
+                "permission_profile_sdk": "source SDK adapter with actual bundled CLI",
                 "required_files_checked": len(required), "sensitive_paths_found": 0,
                 "files": sum(1 for f in bundle.rglob("*") if f.is_file()),
                 "bytes": sum(f.stat().st_size for f in bundle.rglob("*") if f.is_file())}

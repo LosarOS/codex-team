@@ -8,6 +8,7 @@ import subprocess
 import time
 import copy
 import weakref
+import uuid
 from pathlib import Path
 from typing import Protocol
 from pydantic import RootModel
@@ -37,14 +38,39 @@ def dump(model):
         return model.model_dump(mode="json", by_alias=True)
     return model
 
+def full_access(agent: dict | None) -> bool:
+    """Only a writing Developer may receive explicitly selected unrestricted access."""
+    return bool(agent and agent.get("access_level") == "full-access"
+                and agent.get("name", agent.get("role")) == "developer"
+                and agent.get("permission") == "workspace-write")
+
+
 def config_for(workspace: str, agent: dict | None = None) -> CodexConfig:
     """Add a narrow native permission profile without changing saved user config.
 
     Preserve managed environment restrictions. Explicitly select official OpenAI
     provider + ChatGPT-only login. Blank inherited API keys in the child.
     """
-    profile = "codex-team"
-    access = "write" if agent and agent["permission"] == "workspace-write" else "read"
+    level = (agent or {}).get("access_level", "standard")
+    if level not in {"standard", "read-only", "full-access"}:
+        raise ValueError("Неизвестный уровень доступа Codex")
+    base_overrides = (
+        'model_provider="openai"', 'forced_login_method="chatgpt"',
+        'features.multi_agent=false', 'features.apps=false', 'features.prefer_mxc=true',
+        'allow_login_shell=false',
+    )
+    environment = {"OPENAI_API_KEY": "", "CODEX_API_KEY": "", "OPENAI_BASE_URL": ""}
+    if full_access(agent):
+        # Official 0.162.1 built-in profile: filesystem disabled, network enabled.
+        # Do not merge user filesystem entries or edit the user's global config.
+        return CodexConfig(cwd=workspace, client_name="codex_team", client_title="Codex Team",
+                           config_overrides=(*base_overrides,
+                               'default_permissions=":danger-full-access"', 'approval_policy="never"'),
+                           env=environment)
+    # CLI TOML table overrides merge with inherited config. A fresh name avoids
+    # inheriting stale/missing-drive entries from an existing codex-team profile.
+    profile = "codex-team-" + uuid.uuid4().hex
+    access = "write" if agent and agent["permission"] == "workspace-write" and level == "standard" else "read"
     fs = {":minimal": "read", str(Path(workspace).resolve()): access}
     # Tools need their installed runtime libraries. Grant exact executable
     # installation directories read-only, never user document/credential roots.
@@ -73,19 +99,21 @@ def config_for(workspace: str, agent: dict | None = None) -> CodexConfig:
             # Native Git needs directory metadata there to resolve worktree pointers.
             fs.setdefault(str(common.resolve().parent), "read")
             for name in (".env", ".aws", ".codex", ".ssh", ".azure", ".kube", ".agents"):
-                fs[str(common.resolve().parent / name)] = "deny"
+                secret = common.resolve().parent / name
+                if secret.exists():
+                    fs[str(secret)] = "deny"
     # Runtime paths are discovered without executing repository code. Grant
     # exact interpreter/standard-library paths, never a broad base_prefix/home.
     for runtime_path in runtime_read_roots(workspace, project_root=project_root):
         fs.setdefault(runtime_path, "read")
     # A more-specific deny prevents reading obvious credentials inside the repo.
     for name in (".env", ".aws", ".codex", ".ssh", ".azure", ".kube", ".agents"):
-        fs[str(Path(workspace) / name)] = "deny"
+        secret = Path(workspace) / name
+        if secret.exists():
+            fs[str(secret)] = "deny"
     # The exact current working tree alone is granted, not the whole disk or app.
     overrides = (
-        'model_provider="openai"', 'forced_login_method="chatgpt"',
-        'features.multi_agent=false', 'features.apps=false', 'features.prefer_mxc=true',
-        'allow_login_shell=false',
+        *base_overrides,
         f'default_permissions="{profile}"',
         f'permissions.{profile}.network.enabled=false',
     )
@@ -101,7 +129,7 @@ def config_for(workspace: str, agent: dict | None = None) -> CodexConfig:
         overrides = (*overrides, f"permissions.{profile}.workspace_roots={{ {json.dumps(str(common.resolve().parent), ensure_ascii=False)} = true }}")
     return CodexConfig(cwd=workspace, client_name="codex_team", client_title="Codex Team",
                        config_overrides=overrides,
-                       env={"OPENAI_API_KEY": "", "CODEX_API_KEY": "", "OPENAI_BASE_URL": ""})
+                       env=environment)
 
 class CodexProvider:
     capabilities = {"backend": "codex_chatgpt", "sdk": "openai-codex 0.162.1",
@@ -162,7 +190,7 @@ class CodexProvider:
         def approvals(method, params):
             if on_event:
                 on_event("approval_required", {"method": method, "request": sanitize(params or {})})
-            if self.approval_handler:
+            if self.approval_handler and (not full_access(agent) or method == "item/tool/requestUserInput"):
                 response = self.approval_handler(method, params or {})
                 if on_event:
                     granted = response.get("decision") in {"accept", "acceptForSession"} or bool(response.get("permissions")) or bool(response.get("answers"))
@@ -292,16 +320,26 @@ class CodexProvider:
             self._release(client)
 
     @staticmethod
-    def _thread_params(agent, workspace):
-        return {"cwd": workspace, "modelProvider": "openai", "model": agent.get("model"),
-                "developerInstructions": agent["instructions"], "approvalPolicy": "never"}
+    def _thread_params(agent, workspace, config=None):
+        params = {"cwd": workspace, "modelProvider": "openai", "model": agent.get("model"),
+                  "developerInstructions": agent["instructions"], "approvalPolicy": "never"}
+        if full_access(agent):
+            params["sandbox"] = "danger-full-access"
+        elif config is not None:
+            # A persisted thread may refer to the previous connection's UUID.
+            # Official resume code restores it unless the request explicitly
+            # overrides default_permissions (global CLI overrides do not count).
+            profile = next(json.loads(value.split("=", 1)[1]) for value in config.config_overrides
+                           if value.startswith("default_permissions="))
+            params["config"] = {"default_permissions": profile}
+        return params
 
     def fork(self, thread_id, agent, workspace):
         client = self._connect(workspace, agent)
         try:
             self._require_account(client)
-            params = self._thread_params(agent,workspace)
-            if self.approval_handler:
+            params = self._thread_params(agent,workspace,client.config)
+            if self.approval_handler and not full_access(agent):
                 params["approvalPolicy"] = "on-request"
             if self.backend == "openai_api":
                 from .api_provider import API_PROVIDER
@@ -324,8 +362,8 @@ class CodexProvider:
             self.client = client
         try:
             self._require_account(client)
-            params = self._thread_params(agent, workspace)
-            if self.approval_handler:
+            params = self._thread_params(agent, workspace,client.config)
+            if self.approval_handler and not full_access(agent):
                 params["approvalPolicy"] = "on-request"
             if self.backend == "openai_api":
                 from .api_provider import API_PROVIDER
@@ -334,7 +372,7 @@ class CodexProvider:
             # individual permission models cannot establish workspace isolation.
             config = self._bounded(client,lambda:client.request("config/read", {"includeLayers": False}, response_model=ObjectResponse)).root
             mcp = config.get("config", {}).get("mcp_servers", {})
-            params["config"] = {f"mcp_servers.{name}.enabled": False for name in mcp}
+            params.setdefault("config", {}).update({f"mcp_servers.{name}.enabled": False for name in mcp})
             if thread_id:
                 thread = self._bounded(client,lambda:client.thread_resume(thread_id, params)).thread
             else:

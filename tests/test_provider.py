@@ -11,11 +11,17 @@ from codex_team.provider import CodexProvider, ProviderError, config_for
 from codex_team.evidence import successful_test_execution
 
 
+def profile_name(config):
+    return next(tomllib.loads(value)["default_permissions"] for value in config.config_overrides if value.startswith("default_permissions="))
+
+
 @pytest.mark.parametrize("permission,access", [("read-only", "read"), ("workspace-write", "write")])
 def test_config_enforces_chatgpt_scoped_permissions_and_no_credentials(tmp_path, monkeypatch, permission, access):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-live-not-used")
     monkeypatch.setenv("CODEX_API_KEY", "private")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://private.invalid")
+    for secret in (".env", ".aws", ".codex", ".ssh"):
+        (tmp_path / secret).mkdir()
     config = config_for(str(tmp_path), {"permission": permission})
     parsed = {}
     for override in config.config_overrides:
@@ -27,13 +33,13 @@ def test_config_enforces_chatgpt_scoped_permissions_and_no_credentials(tmp_path,
     assert parsed["model_provider"] == "openai"
     assert parsed["forced_login_method"] == "chatgpt"
     assert config.env == {"OPENAI_API_KEY": "", "CODEX_API_KEY": "", "OPENAI_BASE_URL": ""}
-    filesystem = next(tomllib.loads(x)["permissions"]["codex-team"]["filesystem"]
+    filesystem = next(tomllib.loads(x)["permissions"][profile_name(config)]["filesystem"]
                       for x in config.config_overrides if ".filesystem=" in x)
     assert filesystem[str(tmp_path.resolve())] == access
     assert filesystem[":minimal"] == "read"
     for secret in (".env", ".aws", ".codex", ".ssh"):
         assert filesystem[str(tmp_path / secret)] == "deny"
-    assert 'permissions.codex-team.network.enabled=false' in config.config_overrides
+    assert f'permissions.{profile_name(config)}.network.enabled=false' in config.config_overrides
     assert 'features.apps=false' in config.config_overrides
     assert 'features.multi_agent=false' in config.config_overrides
 
@@ -139,7 +145,7 @@ def test_execute_streams_usage_resumes_and_excludes_hidden_reasoning(tmp_path, s
     assert all("hidden" not in str(event) for event in events)
     params = client.resumed_threads[0][1] if thread_id else client.started_threads[0]
     assert params["approvalPolicy"] == "never"
-    assert params["config"] == {"mcp_servers.remote.enabled": False}
+    assert params["config"] == {"mcp_servers.remote.enabled": False, "default_permissions": profile_name(client.config)}
     assert client.closed
 
 
@@ -253,10 +259,10 @@ def test_failed_test_output_is_rejected_even_when_wrapper_exits_zero(command, ou
                                       "src/.aws", "src/.codex", "src/.ssh", "src/.azure", "src/.kube", "src/.agents"])
 def test_workspace_globs_deny_nested_secret_names(tmp_path, relative):
     config = config_for(str(tmp_path), {"permission": "workspace-write"})
-    filesystem_overrides = [x for x in config.config_overrides if "permissions.codex-team.filesystem=" in x]
+    filesystem_overrides = [x for x in config.config_overrides if f"permissions.{profile_name(config)}.filesystem=" in x]
     assert len(filesystem_overrides) == 1
     assert not any("filesystem." in x.split("=", 1)[0] for x in config.config_overrides)
-    filesystem = tomllib.loads(filesystem_overrides[0])["permissions"]["codex-team"]["filesystem"]
+    filesystem = tomllib.loads(filesystem_overrides[0])["permissions"][profile_name(config)]["filesystem"]
     globs = filesystem[":workspace_roots"]
     assert all(access == "deny" for access in globs.values())
     assert any(fnmatch.fnmatchcase(relative, pattern) for pattern in globs), f"No secret denial pattern covers {relative}"
@@ -281,13 +287,92 @@ def test_worktree_policy_registers_original_root_for_secret_globs(tmp_path):
     worktree = tmp_path / "worktree"
     git("worktree", "add", "--detach", str(worktree))
     config = config_for(str(worktree), {"permission": "workspace-write"})
-    override = next(x for x in config.config_overrides if x.startswith("permissions.codex-team.workspace_roots="))
-    roots = tomllib.loads(override)["permissions"]["codex-team"]["workspace_roots"]
+    override = next(x for x in config.config_overrides if x.startswith(f"permissions.{profile_name(config)}.workspace_roots="))
+    roots = tomllib.loads(override)["permissions"][profile_name(config)]["workspace_roots"]
     assert roots[str(repo.resolve())] is True
-    filesystem = next(tomllib.loads(x)["permissions"]["codex-team"]["filesystem"]
+    filesystem = next(tomllib.loads(x)["permissions"][profile_name(config)]["filesystem"]
                       for x in config.config_overrides if ".filesystem=" in x)
     assert filesystem[str(worktree.resolve())] == "write"
     assert filesystem[str(repo.resolve())] == "read"
     for name in (".env", ".aws", ".codex", ".ssh", ".azure", ".kube", ".agents"):
-        assert filesystem[str(repo / name)] == "deny"
-        assert filesystem[str(worktree / name)] == "deny"
+        assert str(repo / name) not in filesystem
+        assert str(worktree / name) not in filesystem
+
+
+def test_missing_credential_paths_are_not_native_absolute_deny_roots(tmp_path):
+    config = config_for(str(tmp_path), {'permission': 'workspace-write'})
+    filesystem = next(tomllib.loads(x)['permissions'][profile_name(config)]['filesystem']
+                      for x in config.config_overrides if '.filesystem=' in x)
+    exact = {key: value for key, value in filesystem.items() if not key.startswith(':') and key != 'glob_scan_max_depth'}
+    assert all(module.Path(key).exists() for key in exact)
+    assert '**/.agents' in filesystem[':workspace_roots']
+
+
+def test_permission_profile_is_fresh_and_cannot_inherit_broken_saved_paths(tmp_path):
+    first = config_for(str(tmp_path), {'permission': 'workspace-write'})
+    second = config_for(str(tmp_path), {'permission': 'workspace-write'})
+    assert profile_name(first).startswith('codex-team-')
+    assert profile_name(first) != profile_name(second)
+    # CLI overrides intentionally never select the inherited static codex-team profile.
+    assert profile_name(first) != 'codex-team'
+
+
+@pytest.mark.parametrize('role,permission,level,expected', [
+    ('developer', 'workspace-write', 'full-access', True),
+    ('developer', 'read-only', 'full-access', False),
+    ('qa', 'workspace-write', 'full-access', False),
+    ('developer', 'workspace-write', 'read-only', False),
+    ('developer', 'workspace-write', 'standard', False),
+])
+def test_access_selection_preserves_role_permission_boundaries(tmp_path, role, permission, level, expected):
+    from openai_codex.generated.v2_all import ThreadStartParams, ThreadResumeParams, ThreadForkParams
+    agent = {'role': role, 'permission': permission, 'access_level': level, 'instructions': 'test'}
+    config = config_for(str(tmp_path), agent)
+    params = CodexProvider._thread_params(agent, str(tmp_path))
+    assert module.full_access(agent) is expected
+    if expected:
+        assert 'default_permissions=":danger-full-access"' in config.config_overrides
+        assert 'approval_policy="never"' in config.config_overrides
+        assert params['sandbox'] == 'danger-full-access'
+        assert not any('filesystem=' in item for item in config.config_overrides)
+        assert config.env['OPENAI_API_KEY'] == ''
+        # Validate against the actual installed official SDK wire schema, no inference.
+        ThreadStartParams.model_validate(params)
+        ThreadResumeParams.model_validate({**params, 'threadId': 'fixture'})
+        ThreadForkParams.model_validate({**params, 'threadId': 'fixture'})
+    else:
+        assert 'sandbox' not in params
+        assert f'permissions.{profile_name(config)}.network.enabled=false' in config.config_overrides
+        if level in {'read-only', 'full-access'}:
+            fs = next(tomllib.loads(x)['permissions'][profile_name(config)]['filesystem']
+                      for x in config.config_overrides if '.filesystem=' in x)
+            assert fs[str(tmp_path.resolve())] == 'read'
+
+
+def test_full_access_does_not_route_native_approvals_but_keeps_user_questions(tmp_path, sdk):
+    provider = CodexProvider(tmp_path)
+    received = []
+    provider.approval_handler = lambda method, params: received.append(method) or {'answers': {}}
+    client = provider._connect(str(tmp_path), {'role': 'developer', 'permission': 'workspace-write', 'access_level': 'full-access'})
+    assert client.approval_handler('item/commandExecution/requestApproval', {}) == {'decision': 'decline'}
+    client.approval_handler('item/tool/requestUserInput', {})
+    assert received == ['item/tool/requestUserInput']
+    provider.close()
+
+
+@pytest.mark.parametrize('name,role,expected', [('developer', 'Разработчик', True), ('qa', 'developer', False)])
+def test_full_access_uses_authoritative_agent_name_not_editable_role(name, role, expected):
+    assert module.full_access({'name': name, 'role': role, 'permission': 'workspace-write', 'access_level': 'full-access'}) is expected
+
+
+def test_each_reconnected_thread_explicitly_selects_current_permission_profile(tmp_path):
+    from openai_codex.generated.v2_all import ThreadStartParams, ThreadResumeParams, ThreadForkParams
+    agent = {'name': 'developer', 'role': 'Разработчик', 'permission': 'workspace-write', 'instructions': 'test'}
+    old = config_for(str(tmp_path), agent)
+    new = config_for(str(tmp_path), agent)
+    assert profile_name(old) != profile_name(new)
+    params = CodexProvider._thread_params(agent, str(tmp_path), new)
+    assert params['config']['default_permissions'] == profile_name(new)
+    ThreadStartParams.model_validate(params)
+    ThreadResumeParams.model_validate({**params, 'threadId': 'saved-with-old-profile'})
+    ThreadForkParams.model_validate({**params, 'threadId': 'saved-with-old-profile'})
