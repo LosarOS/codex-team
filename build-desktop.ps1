@@ -1,4 +1,4 @@
-param([string]$PythonPath, [string]$IsccPath, [switch]$SkipDependencies, [switch]$SkipTests)
+﻿param([string]$PythonPath, [string]$IsccPath, [switch]$SkipDependencies, [switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 $env:PYTHONUTF8 = '1'
