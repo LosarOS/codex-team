@@ -413,7 +413,7 @@ class QAArena:
     def start(self, project_id, confirmation_token, run_id=None):
         with self.lock:
             if self.active is not None:
-                raise ValueError("QA уже выполняется")
+                raise ValueError("Проверки качества уже выполняются")
             preview = self.previews.get(confirmation_token)
             if not preview or preview["expires"] < time.time() or preview["project_id"] != project_id or preview["run_id"] != run_id:
                 raise ValueError("Предварительный просмотр устарел: подтвердите команды заново")

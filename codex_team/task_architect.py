@@ -67,11 +67,11 @@ class TaskArchitectService:
     def ai_refine(self, record_id, provider, confirmed=False, expected_version=None):
         with self._job_guard:
             if self._closed:
-                raise ValueError("Task Architect завершает работу")
+                raise ValueError("Архитектор задач завершает работу")
         if confirmed is not True:
             raise ValueError("Требуется явное подтверждение вызова Codex")
         if getattr(provider,"backend",None) != "codex_chatgpt":
-            raise ValueError("Task Architect использует только официальный вход ChatGPT/Codex")
+            raise ValueError("Архитектор задач использует только официальный вход ChatGPT/Codex")
         row=self.get(record_id)
         if expected_version != row["version"]:
             raise ValueError("Версия ТЗ изменилась; обновите редактор")
@@ -142,7 +142,7 @@ class TaskArchitectService:
             if self._closed:
                 self._ai_lock.release()
                 threading.Thread(target=isolated.close, daemon=True, name="architect-unused-close").start()
-                raise ValueError("Task Architect завершает работу")
+                raise ValueError("Архитектор задач завершает работу")
             self._ai_job = job
         temporary = None
         execution_started = False

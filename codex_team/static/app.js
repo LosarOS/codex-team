@@ -1099,7 +1099,7 @@
   function validateComposerPack() {
     const mode=$("run-mode").value,pack=state.packs.find(p=>p.name===$("run-pack").value);if(!pack)return "Выберите существующий набор агентов.";
     const base=modes[mode].pipeline.filter(name=>name!=="specialists"),agents=pack.agents?.length?pack.agents:base;
-    if(!base.includes("developer")&&agents.includes("developer"))return "Этот режим допускает только чтение. Выберите набор без Developer или другой режим.";
+    if(!base.includes("developer")&&agents.includes("developer"))return "Этот режим допускает только чтение. Выберите набор без роли разработчика или другой режим.";
     return validatePack({default_mode:mode,agents,specialists:["deep","audit"].includes(mode)?[...(pack.specialists||[]),...qa("#specialist-options input:checked").map(i=>i.value)]:[]});
   }
   async function deleteRegistry(kind,item) { if(!await confirmOperation(`Удалить ${kind==="agents"?"агента":"набор"}?`,"Сохранённые результаты прошлых запусков останутся в истории.",item.name,"Удалить"))return;try{await api(`/api/${kind}/${encodeURIComponent(item.name)}`,"DELETE",{});state.agentsSignature="";await reloadRegistry();toast("Удалено.");}catch(error){toast(error.message,true);} }
