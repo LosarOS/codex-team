@@ -5,6 +5,7 @@ assert.equal((await api('/api/status')).ok,true);
 for(const path of ['https://evil.test','//evil.test','/\\evil.test','/api/\nstatus'])await assert.rejects(api(path),e=>e.kind==='validation');
 context.fetch=async()=>({ok:false,status:403,headers:{get:()=> 'application/json'},json:async()=>({detail:'denied'})});await assert.rejects(api('/api/status'),e=>e.status===403);
 context.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>{throw Error('bad')}});await assert.rejects(api('/api/status'),e=>e.kind==='protocol');
+context.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:async()=> '<html>wrong server</html>'});await assert.rejects(api('/api/status'),e=>e.kind==='protocol');
 context.fetch=async()=>{throw new TypeError('network')};await assert.rejects(api('/api/status'),e=>e.kind==='offline');
 context.fetch=async(path,init)=>new Promise((resolve,reject)=>{const abort=()=>{const e=new Error('abort');e.name='AbortError';reject(e)};if(init.signal.aborted)abort();else init.signal.addEventListener('abort',abort,{once:true})});
 await assert.rejects(api('/api/status','GET',undefined,{timeoutMs:5}),e=>e.kind==='timeout');const controller=new AbortController();controller.abort();await assert.rejects(api('/api/status','GET',undefined,{signal:controller.signal}),e=>e.kind==='cancelled');

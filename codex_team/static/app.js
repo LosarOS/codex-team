@@ -136,7 +136,7 @@
   function setPage(page) {
     const [route,feature]=String(page||"workbench").split("/");
     page=route;
-    if(page==="suite")state.suiteFeature=feature||state.suiteFeature||"architect";
+    if(page==="suite")state.suiteFeature=["architect","intelligence","git","qa","budget"].includes(feature)?feature:state.suiteFeature||"architect";
     if(page==="dashboard")page="workbench";
     if (!$("page-" + page)) page = "workbench";
     const changed=state.page!==page;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
