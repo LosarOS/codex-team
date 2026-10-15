@@ -30,38 +30,68 @@ class IntelligenceService:
     def project_root(self, project_id):
         return self.workspace.validate(Path(self.store.project(project_id)["path"]))
 
-    def _files(self, root):
-        # ls-files honors ignore rules even for accidentally tracked ignored files.
-        names = self.workspace._git(root, "ls-files", "-z", "--cached", "--exclude-standard")["stdout"].split("\0")
+    def _catalog(self, root):
+        """Fingerprint Git/index and metadata without opening unchanged source files.
+
+        ctime supplements mtime (including edits preserving size/mtime). Dirty files
+        are additionally hashed: consecutive changes can retain the same Git status.
+        Git ignore enumeration is recomputed so local/global exclude changes apply.
+        """
+        index = self.workspace._git(root, "ls-files", "-z", "--stage", "--cached", "--exclude-standard")["stdout"]
         ignored = set(self.workspace._git(root, "ls-files", "-z", "--cached", "--ignored", "--exclude-standard")["stdout"].split("\0"))
-        result = []
-        for name in names:
-            if not name or name in ignored or not safe_name(name):
+        status = self.workspace._git(root, "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--untracked-files=no")["stdout"]
+        dirty = {part[3:] for part in status.split("\0") if len(part) > 3}
+        candidates, metadata = [], []
+        for record in index.split("\0"):
+            if "\t" not in record:
+                continue
+            name = record.split("\t", 1)[1]
+            if name in ignored or not safe_name(name):
                 continue
             try:
                 path = self.workspace.resolve_inside(root, name)
-                if any((root / Path(*Path(name).parts[:i])).is_symlink() for i in range(1, len(Path(name).parts)+1)):
+                parents = [root / Path(*Path(name).parts[:i]) for i in range(1, len(Path(name).parts)+1)]
+                if any(parent.is_symlink() for parent in parents):
                     continue
-                if path.is_file() and path.stat().st_size <= self.MAX_FILE_BYTES:
-                    with path.open("rb") as stream:
-                        if b"\0" not in stream.read(4096):
-                            result.append(name)
+                stat = path.stat()
+                if not path.is_file() or stat.st_size > self.MAX_FILE_BYTES:
+                    continue
+                digest = None
+                if name in dirty:
+                    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                metadata.append((name, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, stat.st_mode, stat.st_ino, digest))
+                candidates.append(name)
             except (ValueError, OSError):
                 continue
-            if len(result) >= self.MAX_FILES:
+            # Bound even repositories dominated by binary files.
+            if len(candidates) >= self.MAX_FILES:
                 break
-        return sorted(set(result))
+        fingerprint = hashlib.sha256(json.dumps([index, sorted(ignored), status, metadata]).encode()).hexdigest()
+        return sorted(set(candidates)), fingerprint
+
+    def _files(self, root, candidates=None):
+        if candidates is None:
+            candidates, _ = self._catalog(root)
+        result = []
+        for name in candidates:
+            try:
+                path = self.workspace.resolve_inside(root, name)
+                with path.open("rb") as stream:
+                    if b"\0" not in stream.read(4096):
+                        result.append(name)
+            except (ValueError, OSError):
+                continue
+        return result
 
     def analyze(self, project_id, refresh=False):
         started = time.monotonic()
         root = self.project_root(project_id)
-        files = self._files(root)
+        candidates, fingerprint = self._catalog(root)
         head = self.workspace._git(root, "rev-parse", "--verify", "HEAD", check=False)["stdout"].strip() or None
-        # Include working-file metadata so edits at the same HEAD invalidate cache.
-        fingerprint = hashlib.sha256(json.dumps([(f, (root/f).stat().st_mtime_ns, (root/f).stat().st_size) for f in files]).encode()).hexdigest()
         previous = self.get(project_id)
         if not refresh and previous and previous["data"].get("fingerprint") == fingerprint and previous["data"].get("head") == head:
             return previous
+        files = self._files(root, candidates)
         technologies, dependencies = [], []
         adapters = {"pyproject.toml": "Python", "requirements.txt": "Python", "package.json": "JavaScript / Node.js", "Cargo.toml": "Rust", "go.mod": "Go"}
         for name in files:
