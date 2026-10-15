@@ -1,0 +1,123 @@
+name: Publish verified Windows artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows installer workflow run ID
+        required: true
+        type: string
+      tag:
+        description: Version tag matching the verified bundle
+        required: true
+        type: string
+
+permissions: {}
+concurrency:
+  group: publish-windows-artifact
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_ID: ${{ inputs.run_id }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Validate trusted successful source run
+        id: source
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]
+          gh api "repos/$GH_REPO/actions/runs/$RUN_ID" > source-run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('source-run.json'))
+          assert run['repository']['full_name'] == os.environ['GH_REPO']
+          assert run['head_repository']['full_name'] == os.environ['GH_REPO']
+          assert run['path'] == '.github/workflows/windows-release.yml'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['event'] == 'push'
+          assert run['head_branch'] in ('master', 'codex/windows-installer')
+          sha = run['head_sha']
+          assert len(sha) == 40 and all(c in '0123456789abcdef' for c in sha)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('sha=' + sha + '\n')
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: codex-team-windows-x64
+          path: release-assets
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id }}
+      - name: Verify binaries and native installation evidence
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re
+          root = pathlib.Path('release-assets')
+          expected = {'CodexTeam-Setup-x64.exe', 'CodexTeam-Setup-x64.zip', 'CodexTeam-Portable-x64.zip'}
+          checks = json.loads((root / 'release-checksums.json').read_text(encoding='utf-8-sig'))
+          normalized = {name.replace('\\', '/').rsplit('/', 1)[-1]: record for name, record in checks.items()}
+          assert len(checks) == 3 and set(normalized) == expected
+          sums = {}
+          for line in (root / 'SHA256SUMS.txt').read_text(encoding='utf-8-sig').splitlines():
+              digest, name = line.split('  ', 1)
+              assert re.fullmatch('[0-9a-f]{64}', digest) and name in expected and name not in sums
+              sums[name] = digest
+          assert set(sums) == expected
+          for name in expected:
+              path = root / name
+              assert path.is_file() and not path.is_symlink()
+              digest = hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
+              assert digest == normalized[name]['sha256'] == sums[name]
+              assert path.stat().st_size == normalized[name]['bytes'] > 0
+          manifest = json.loads((root / 'build-verification.json').read_text(encoding='utf-8-sig'))
+          version = manifest['app_version']
+          match = re.fullmatch(r'(\d+\.\d+\.\d+)(?:rc(\d+))?', version)
+          assert match
+          tag = 'v' + match[1] + ('-rc' + match[2] if match[2] else '')
+          assert tag == os.environ['RELEASE_TAG']
+          assert manifest['sensitive_paths_found'] == 0 and manifest['required_files_checked'] >= 26
+          smoke = json.loads((root / 'installed-smoke.json').read_text(encoding='utf-8-sig'))
+          assert smoke['platform'] == 'Windows'
+          assert smoke['installed_backend_verified'] is True and smoke['uninstall_verified'] is True
+          assert smoke['model_calls'] == 0 and smoke['sdk_account_calls'] == 0
+          assert smoke['installed_git_version'].startswith('git version ')
+          assert 'Source commit: ' + os.environ['SOURCE_COMMIT'] in (root / 'BUILD-NOTES.txt').read_text(encoding='utf-8-sig')
+          PY
+      - name: Publish immutable verified prerelease
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to replace assets.'
+            exit 1
+          fi
+          refs=$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')
+          if grep -Fxq "refs/tags/$RELEASE_TAG" <<< "$refs"; then
+            tagged=$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')
+            test "$tagged" = "$SOURCE_COMMIT"
+          fi
+          cat > release-notes.md <<'NOTES'
+          Готовая Windows x64 сборка Codex Team.
+
+          **Установка:** скачайте `CodexTeam-Setup-x64.zip`, распакуйте и запустите `CodexTeam-Setup-x64.exe`. Можно скачать установщик `.exe` напрямую. Установка выполняется для текущего пользователя.
+
+          **Без установки:** распакуйте `CodexTeam-Portable-x64.zip` целиком и запустите `CodexTeam.exe` внутри папки.
+
+          Нативная Windows CI успешно завершена; точные результаты тестов доступны по ссылке ниже. Проверены замороженный пакет, тихая установка в Unicode-путь, установленный Git, локальный backend, ресурсы интерфейса и удаление. Отчёты и SHA256 приложены. Интерактивный WebView2 GUI, настоящий Windows DPI и live Codex не проверялись. Приложение не подписано; Windows SmartScreen может показать предупреждение.
+          NOTES
+          printf '\nПроверенная сборка: https://github.com/%s/actions/runs/%s\nИсходный commit: %s\n' "$GH_REPO" "$RUN_ID" "$SOURCE_COMMIT" >> release-notes.md
+          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease
