@@ -14,6 +14,7 @@ def main():
     if len(app_metadata) != 1 or f"Version: {importlib.metadata.version('codex-team')}" not in app_metadata[0].read_text(encoding="utf-8").splitlines():
         raise SystemExit("Application distribution metadata missing or wrong version")
     required = [bundle / "CodexTeam.exe", bundle / "НАЧАЛО.txt", bundle / "THIRD-PARTY-NOTICES.txt",
+                bundle / "Обновить.cmd", bundle / "Update.ps1",
                 internal / "runtime/git/cmd/git.exe", internal / "runtime/git/LICENSE.txt",
                 internal / "codex_team/static/api-client.js", internal / "codex_team/static/design-system.css",
                 internal / "codex_team/static/suite.js", internal / "codex_team/static/mission-control.js", internal / "agents/qa.md", internal / "packs/software-development.json",

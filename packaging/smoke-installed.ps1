@@ -71,10 +71,17 @@ try {
     if (-not $agents.Count -or -not $packs.Count) { throw 'Installed agent/pack resources were not loaded.' }
     $report.agent_count = $agents.Count
     $report.pack_count = $packs.Count
+    $newProject = @{ name = 'Проверка проекта'; path = (Join-Path $temporary 'Новый проект') } | ConvertTo-Json
+    $created = Invoke-RestMethod -Uri ($baseUrl + '/api/projects/create') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($newProject)) -TimeoutSec 60
+    if (-not $created.id -or -not $created.head -or -not $created.ready) { throw 'Installed app could not create a ready Git project without external Git or GitHub.' }
+    $report.project_creation_verified = $true
     $report.installed_backend_verified = $true
     Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
     if (-not $backend.WaitForExit(20000)) { throw 'Installed backend did not shut down cleanly.' }
     if ($backend.ExitCode -ne 0) { throw "Installed backend exited with $($backend.ExitCode)." }
+    & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File (Join-Path $installation 'Update.ps1') -CheckOnly
+    if ($LASTEXITCODE -ne 0) { throw 'Installed updater check failed under Windows PowerShell 5.1.' }
+    $report.updater_check_verified = $true
     $uninstaller = Join-Path $installation 'unins000.exe'
     if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Per-user uninstaller missing.' }
     $remove = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/LOG="' + (Join-Path $diagnostics 'uninstall.log') + '"')) -Wait -PassThru

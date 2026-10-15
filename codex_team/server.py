@@ -50,6 +50,9 @@ class ProjectChoice(BaseModel):
     model_config = ConfigDict(extra="forbid")
     path: str = Field(min_length=1,max_length=4096)
 
+class ProjectCreate(ProjectChoice):
+    name: str = Field(min_length=1,max_length=120)
+
 class ProjectCommands(BaseModel):
     model_config = ConfigDict(extra="forbid")
     commands: dict[str,list[str]]
@@ -317,6 +320,10 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.post("/api/projects")
     def add_project(body: ProjectChoice):
         return projects.add(body.path)
+
+    @app.post("/api/projects/create")
+    def create_project(body: ProjectCreate):
+        return projects.create(body.path, body.name)
 
     @app.get("/api/projects/{project_id}")
     def inspect_project(project_id: str):

@@ -27,7 +27,7 @@ def create_archives(root):
     app = root / "dist/CodexTeam"
     installer = root / "installer/CodexTeam-Setup-x64.exe"
     files = checked_files(app)
-    for required in (app / "CodexTeam.exe", app / "НАЧАЛО.txt", installer):
+    for required in (app / "CodexTeam.exe", app / "НАЧАЛО.txt", app / "Обновить.cmd", app / "Update.ps1", installer):
         if not required.is_file() or required.is_symlink() or not required.resolve().is_relative_to(root):
             raise ValueError("Complete frozen app, installer and first-run help are required")
     if (app / "portable.json").exists():
@@ -45,6 +45,8 @@ def create_archives(root):
     with zipfile.ZipFile(setup_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(installer, installer.name)
         archive.write(app / "НАЧАЛО.txt", "INSTALL-WINDOWS.txt")
+        archive.write(app / "Обновить.cmd", "Обновить.cmd")
+        archive.write(app / "Update.ps1", "Update.ps1")
     checksums = {}
     for file in (installer, setup_zip, target):
         digest = hashlib.sha256()

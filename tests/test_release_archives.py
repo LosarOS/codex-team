@@ -15,6 +15,8 @@ def bundle(root):
     app=root/'dist/CodexTeam';app.mkdir(parents=True)
     (app/'CodexTeam.exe').write_bytes(b'fake-pe-for-archive-contract')
     (app/'НАЧАЛО.txt').write_text('Инструкция',encoding='utf-8')
+    (app/'Обновить.cmd').write_bytes(b'updater-fixture')
+    (app/'Update.ps1').write_bytes(b'updater-fixture')
     (root/'installer').mkdir();(root/'installer/CodexTeam-Setup-x64.exe').write_bytes(b'installer-fixture')
     (root/'packaging').mkdir()
     return app
@@ -25,7 +27,7 @@ def test_setup_and_portable_archives_have_separate_profiles_and_checksums(tmp_pa
     result=archive.create_archives(tmp_path)
     assert len(result)==3
     with ZipFile(tmp_path/'dist/CodexTeam-Setup-x64.zip') as z:
-        assert set(z.namelist())=={'CodexTeam-Setup-x64.exe','INSTALL-WINDOWS.txt'}
+        assert set(z.namelist())=={'CodexTeam-Setup-x64.exe','INSTALL-WINDOWS.txt','Обновить.cmd','Update.ps1'}
     with ZipFile(tmp_path/'dist/CodexTeam-Portable-x64.zip') as z:
         assert json.loads(z.read('CodexTeam/portable.json'))['data_folder']=='data'
     assert not (tmp_path/'dist/CodexTeam/portable.json').exists()

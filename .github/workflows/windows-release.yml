@@ -9,11 +9,15 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc2
+        default: v1.0.0-rc3
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
         default: true
+        type: boolean
+      skip_source_tests:
+        description: Skip the full source suite for this manual build (installer smoke still required)
+        default: false
         type: boolean
 
 permissions:
@@ -27,6 +31,8 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 60
+    env:
+      SKIP_SOURCE_TESTS: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_source_tests }}
     defaults:
       run:
         shell: pwsh
@@ -59,14 +65,18 @@ jobs:
           "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
       - name: Check PowerShell syntax
         run: |
-          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1')) {
+          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Update.ps1')) {
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$null, [ref]$parseErrors) | Out-Null
             if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
           }
       - name: Test and build Windows binaries
         run: |
-          ./build-desktop.ps1 -PythonPath (Get-Command python).Source
+          if ($env:SKIP_SOURCE_TESTS -eq 'true') {
+            ./build-desktop.ps1 -PythonPath (Get-Command python).Source -SkipTests
+          } else {
+            ./build-desktop.ps1 -PythonPath (Get-Command python).Source
+          }
       - name: Silent per-user installation and installed backend smoke
         run: |
           ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
@@ -78,7 +88,8 @@ jobs:
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
-          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", 'Automated checks: source tests, frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
+          $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
+          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: codex-team-windows-x64
@@ -136,6 +147,6 @@ jobs:
 
           **Без установки:** распакуйте `CodexTeam-Portable-x64.zip` целиком и запустите `CodexTeam.exe` внутри папки.
 
-          Сборка проверена автоматическими тестами, проверкой замороженного пакета, тихой установкой, запуском установленного локального backend и удалением тестовой установки. Отчёты и SHA256 приложены. GUI WebView2, настоящий Windows DPI и live Codex не заявляются проверенными. Подпись приложения отсутствует; Windows SmartScreen может показать предупреждение.
+          Проверены замороженный пакет, тихая установка, запуск установленного локального backend и удаление тестовой установки. Статус полного набора исходных тестов указан в BUILD-NOTES.txt. Отчёты и SHA256 приложены. GUI WebView2, настоящий Windows DPI и live Codex не заявляются проверенными. Подпись приложения отсутствует; Windows SmartScreen может показать предупреждение.
           NOTES
           gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease
