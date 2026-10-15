@@ -261,3 +261,151 @@ def test_recovery_is_explicit_after_session_ownership(arena):
         assert other.get_result(row['id'])['status']=='BLOCKED'
     finally:
         other.close()
+
+
+@pytest.mark.parametrize("statuses,planned,cancelled,blocked,expected", [
+    ([], 2, False, False, "NOT RUN"),
+    ([], 2, True, False, "BLOCKED"),
+    ([], 2, False, True, "BLOCKED"),
+    (["PASS"], 1, False, False, "PASS"),
+    (["PASS"], 2, False, False, "PARTIAL"),
+    (["PASS"], 2, True, False, "BLOCKED"),
+    (["FAIL"], 2, True, False, "FAIL"),
+    (["FAIL"], 2, False, True, "FAIL"),
+    (["FAIL", "BLOCKED"], 3, True, True, "FAIL"),
+    (["BLOCKED"], 2, True, False, "BLOCKED"),
+    (["PARTIAL"], 2, False, False, "PARTIAL"),
+    (["NOT RUN"], 2, False, False, "PARTIAL"),
+    (["PASS", "PASS"], 2, False, False, "PASS"),
+])
+def test_gate_precedence_on_partial_and_interrupted_suites(statuses, planned, cancelled, blocked, expected):
+    checks = [{"status": status, "category": "test", "required": True} for status in statuses]
+    assert quality_gate(checks, ["test"], planned_count=planned, cancelled=cancelled, blocked=blocked) == expected
+
+
+def test_gate_cannot_pass_without_required_checks_or_test_evidence():
+    assert quality_gate([{"status": "PASS", "category": "test", "required": False}], ["test"]) == "PARTIAL"
+    assert quality_gate([{"status": "PASS", "category": "build", "required": True}], ["build"]) == "PARTIAL"
+
+
+@pytest.mark.parametrize("exit_code,expected", [(0, "BLOCKED"), (1, "FAIL")])
+def test_cancellation_preserves_failure_and_explains_incomplete_run(arena, exit_code, expected):
+    service, _ = arena
+    service.configure("p", {"image": "sha256:" + "a" * 64, "commands": [
+        {"id": "first", "category": "test", "argv": ["python", "-m", "pytest"]},
+        {"id": "second", "category": "build", "argv": ["python", "build.py"]},
+    ]})
+    class CancelAfterFirst(FixtureSandbox):
+        def execute(self, *args, **kwargs):
+            service.cancel.set()
+            return {"exit_code": exit_code, "duration_seconds": .01, "log": "3 passed"}
+    service.runner = CancelAfterFirst()
+    result = run(service)
+    assert result["status"] == expected
+    assert result["cancelled"] is True
+    assert result["planned_count"] == 2
+    assert len(result["checks"]) == 1
+    assert "отменена" in result["error"]
+
+
+def test_interruption_after_failed_check_keeps_fail(arena):
+    service, path = arena
+    service.configure("p", {"image": "sha256:" + "a" * 64, "commands": [
+        {"id": "first", "category": "test", "argv": ["python", "-m", "pytest"]},
+        {"id": "second", "category": "build", "argv": ["python", "build.py"]},
+    ]})
+    class ChangeAfterFailure(FixtureSandbox):
+        def execute(self, *args, **kwargs):
+            (path / "app.py").write_text("changed")
+            return {"exit_code": 1, "duration_seconds": .01, "log": "1 failed"}
+    service.runner = ChangeAfterFailure()
+    result = run(service)
+    assert result["status"] == "FAIL"
+    assert "изменилось" in result["error"]
+    assert len(result["checks"]) == 1
+
+
+def test_setup_lists_metadata_without_running_project_commands(arena, monkeypatch):
+    service, _ = arena
+    image = {"id": "sha256:" + "a" * 64, "tags": ["local:test"], "digests": [], "size_bytes": 123, "os_type": "linux"}
+    monkeypatch.setattr(DockerRunner, "inspect_daemon", lambda self: {"available": True, "healthy": True, "local": True, "os_type": "linux"})
+    monkeypatch.setattr(DockerRunner, "images", lambda self: [image])
+    monkeypatch.setattr(DockerRunner, "inspect_image", lambda self, value: image)
+    setup = service.setup("p")
+    assert setup["docker"]["healthy"]
+    assert setup["images"] == [image]
+    assert setup["automatic_pull"] is False
+    assert setup["suggestions"][0]["confirmed"] is False
+    with pytest.raises(ValueError, match="Подтвердите"):
+        service.verify_setup("p", image["id"])
+    verified = service.verify_setup("p", image["id"], confirmed=True)
+    assert verified["available"]
+    assert verified["tools_executed"] is False
+    assert service.runner.calls == []
+
+
+def test_setup_missing_docker_is_actionable_and_safe(arena, monkeypatch):
+    service, _ = arena
+    monkeypatch.setattr("codex_team.qa_arena.shutil.which", lambda _: None)
+    result = service.setup("p")
+    assert result["docker"]["available"] is False
+    assert result["images"] == []
+    assert result["remediation"]
+    assert service.verify_setup("p", "sha256:" + "a" * 64, confirmed=True)["available"] is False
+
+
+@pytest.mark.parametrize("endpoint", ["tcp://localhost:2375", "ssh://remote", "https://remote:443"])
+def test_docker_rejects_remote_endpoints_before_any_daemon_call(monkeypatch, endpoint):
+    monkeypatch.setenv("DOCKER_HOST", endpoint)
+    monkeypatch.setattr("codex_team.qa_arena.shutil.which", lambda _: "docker")
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Remote Docker must not be queried")
+    monkeypatch.setattr("codex_team.qa_arena.subprocess.run", forbidden)
+    result = DockerRunner().inspect_daemon()
+    assert result["healthy"] is False
+    assert result["local"] is False
+    assert "Удалённый" in result["reason"]
+
+
+def test_docker_windows_container_mode_is_unavailable(monkeypatch):
+    monkeypatch.setattr("codex_team.qa_arena.shutil.which", lambda _: "docker")
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
+    monkeypatch.setattr(DockerRunner, "_call", lambda *args: '{"os_type":"windows","id":"daemon-test","name":"desktop","version":"1"}')
+    result = DockerRunner().inspect_daemon()
+    assert result["healthy"] is False
+    assert "Linux containers" in result["reason"]
+
+
+def test_docker_image_listing_is_bounded_and_only_returns_safe_fields(monkeypatch):
+    import json
+    calls = []
+    def call(*args):
+        calls.append(args)
+        if args[1] == "ls":
+            return "\n".join("sha256:" + str(i).zfill(64) for i in range(70))
+        return "\n".join(json.dumps({"id": id, "tags": [], "digests": [], "size_bytes": 1, "os_type": "linux"}) for id in args[4:])
+    runner = DockerRunner()
+    monkeypatch.setattr(runner, "_call", call)
+    images = runner.images()
+    assert len(images) == 50
+    assert len(calls[1][4:]) == 50
+    assert all(set(image) == {"id", "tags", "digests", "size_bytes", "os_type"} for image in images)
+
+
+def test_discovery_does_not_read_untracked_or_symlinked_manifests(arena):
+    service, path = arena
+    (path / "package.json").write_text('{"scripts":{"test":"hostile"}}')
+    assert not any(item["id"] == "npm_test" for item in service.discover("p")["suggestions"])
+
+
+def test_restart_preserves_failed_checks_in_interrupted_job(arena):
+    service, _ = arena
+    service._save("qa_result", "p", {"id": "interrupted_failure", "status": "RUNNING", "checks": [{"id": "first", "status": "FAIL", "category": "test"}], "configuration": {"commands": [{"id": "first"}, {"id": "second"}], "required_categories": ["test"]}})
+    service.recover()
+    assert service.get_result("interrupted_failure")["status"] == "FAIL"
+
+
+def test_image_verification_rejects_mutable_and_option_like_references():
+    for image in ["python:latest", "--help@sha256:" + "a" * 64]:
+        with pytest.raises(ValueError, match="SHA256"):
+            DockerRunner().inspect_image(image)

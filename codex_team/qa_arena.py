@@ -86,13 +86,73 @@ def snapshot(path):
 
 
 class DockerRunner:
-    def available(self, image):
-        if not shutil.which("docker"):
-            return False, "Docker недоступен. Запуск команд на хосте запрещён."
+    @staticmethod
+    def endpoint():
+        endpoint = os.environ.get("DOCKER_HOST") or ("npipe:////./pipe/docker_engine" if os.name == "nt" else "unix:///var/run/docker.sock")
+        if not (endpoint.startswith("unix:///") or endpoint.startswith("npipe:////./pipe/")):
+            raise ValueError("Удалённый Docker daemon не разрешён для QA: выберите локальный socket или named pipe")
+        return endpoint
+
+    @classmethod
+    def command(cls, *args):
+        return ["docker", "--host", cls.endpoint(), *args]
+
+    @staticmethod
+    def environment():
+        # Explicit local --host must not be overridden by saved contexts/TLS settings.
+        return {key: value for key, value in os.environ.items() if key not in {"DOCKER_CONTEXT", "DOCKER_TLS", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"}}
+
+    @classmethod
+    def _call(cls, *args):
+        return subprocess.run(cls.command(*args), check=True, capture_output=True, timeout=10, env=cls.environment()).stdout.decode("utf-8", errors="replace")
+
+    def inspect_daemon(self):
+        result = {"available": bool(shutil.which("docker")), "healthy": False, "local": True, "os_type": None, "endpoint": None, "reason": None}
+        if not result["available"]:
+            result["reason"] = "Docker CLI не установлен. Запуск команд на хосте запрещён."
+            return result
         try:
-            subprocess.run(["docker", "image", "inspect", image], check=True, capture_output=True, timeout=10)
+            result["endpoint"] = self.endpoint()
+            info = json.loads(self._call("info", "--format", '{"os_type":{{json .OSType}},"id":{{json .ID}},"name":{{json .Name}},"version":{{json .ServerVersion}}}'))
+            result.update(os_type=info["os_type"], daemon_id=info.get("id"), daemon_name=info.get("name"), version=info.get("version"))
+            result["healthy"] = info["os_type"] == "linux"
+            if not result["healthy"]:
+                result["reason"] = "Нужен режим Linux containers; Windows containers не поддерживаются этим runner."
+        except ValueError as exc:
+            result["reason"] = str(exc) if "Удалённый Docker" in str(exc) else "Не удалось прочитать сведения Docker daemon"
+            result["local"] = False if "Удалённый Docker" in str(exc) else True
         except (subprocess.SubprocessError, OSError):
-            return False, "Подтверждённый локальный образ Docker недоступен. Загрузка образов отключена."
+            result["reason"] = "Локальный Docker daemon недоступен. Запустите Docker Desktop и включите Linux containers."
+        return result
+
+    def images(self, limit=50):
+        ids = list(dict.fromkeys(self._call("image", "ls", "--quiet", "--no-trunc").splitlines()))[:min(50, max(1, limit))]
+        if not ids:
+            return []
+        image_format = '{"id":{{json .Id}},"tags":{{json .RepoTags}},"digests":{{json .RepoDigests}},"size_bytes":{{.Size}},"os_type":{{json .Os}}}'
+        return [json.loads(line) for line in self._call("image", "inspect", "--format", image_format, *ids).splitlines()][:50]
+
+    def inspect_image(self, image):
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]*@sha256:[a-f0-9]{64}|sha256:[a-f0-9]{64}", image):
+            raise ValueError("Требуется неизменяемый локальный SHA256 образ")
+        image_format = '{"id":{{json .Id}},"tags":{{json .RepoTags}},"digests":{{json .RepoDigests}},"size_bytes":{{.Size}},"os_type":{{json .Os}}}'
+        value = json.loads(self._call("image", "inspect", "--format", image_format, image))
+        if image.startswith("sha256:") and image != value.get("id"):
+            raise ValueError("SHA256 локального образа не совпадает")
+        if "@sha256:" in image and image not in (value.get("digests") or []):
+            raise ValueError("Digest локального образа не совпадает")
+        if value.get("os_type") != "linux":
+            raise ValueError("Для изоляции нужен Linux-образ")
+        return value
+
+    def available(self, image):
+        daemon = self.inspect_daemon()
+        if not daemon["healthy"]:
+            return False, daemon["reason"]
+        try:
+            self.inspect_image(image)
+        except (subprocess.SubprocessError, OSError, ValueError):
+            return False, "Подтверждённый локальный Linux-образ Docker недоступен. Загрузка образов отключена."
         return True, None
 
     def execute(self, path, files, image, argv, timeout, cancel, expected_digest=None):
@@ -117,7 +177,7 @@ class DockerRunner:
             if expected_digest and digest.hexdigest() != expected_digest:
                 raise ValueError("Код изменился во время подготовки QA")
             # Source is read-only; copy into ephemeral writable tmpfs inside the container.
-            command = ["docker", "run", "--pull=never", "--name", name, "--rm", "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=128", "--memory=512m", "--cpus=1", "--user=65534:65534", "--tmpfs=/work:rw,nosuid,nodev,size=192m,mode=1777", "--tmpfs=/tmp:rw,nosuid,nodev,size=64m,mode=1777", "--mount", f"type=bind,source={source},target=/source,readonly", "--workdir=/work", "--entrypoint=/bin/sh", image, "-c", 'cp -R /source/. /work/ && exec "$@"', "qa", *argv]
+            command = self.command("run", "--pull=never", "--name", name, "--rm", "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=128", "--memory=512m", "--cpus=1", "--user=65534:65534", "--tmpfs=/work:rw,nosuid,nodev,size=192m,mode=1777", "--tmpfs=/tmp:rw,nosuid,nodev,size=64m,mode=1777", "--mount", f"type=bind,source={source},target=/source,readonly", "--workdir=/work", "--entrypoint=/bin/sh", image, "-c", 'cp -R /source/. /work/ && exec "$@"', "qa", *argv)
             # Docker client proxy defaults must not leak credentials/configuration
             # into untrusted test processes, even with container networking disabled.
             position = command.index("--workdir=/work")
@@ -125,7 +185,7 @@ class DockerRunner:
             command[position:position] = proxy_overrides
             started = time.monotonic()
             with tempfile.TemporaryFile() as log:
-                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.environment())
                 output = bytearray()
                 exceeded = threading.Event()
                 def consume():
@@ -152,26 +212,31 @@ class DockerRunner:
                 finally:
                     if process.poll() is None:
                         try:
-                            subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=15)
+                            subprocess.run(self.command("rm", "-f", name), capture_output=True, timeout=15, env=self.environment())
                         finally:
                             process.kill()
                     process.wait(timeout=10)
                     reader.join(timeout=3)
+                if reason is None and process.returncode in {125, 126, 127}:
+                    reason = "Изолированная среда не смогла запустить команду: проверьте Docker, образ и инструменты (exit " + str(process.returncode) + ")"
                 return {"exit_code": process.returncode, "duration_seconds": round(time.monotonic() - started, 3), "log": output.decode("utf-8", errors="replace"), "error": reason}
 
 
-def quality_gate(results, required_categories):
+def quality_gate(results, required_categories, planned_count=None, cancelled=False, blocked=False):
+    """One precedence rule for every exit, including interruptions: FAIL > BLOCKED."""
+    if any(r["status"] == "FAIL" for r in results):
+        return "FAIL"
+    if blocked or cancelled or any(r["status"] == "BLOCKED" for r in results):
+        return "BLOCKED"
     if not results:
         return "NOT RUN"
     required = [r for r in results if r.get("required", True)]
-    if any(r["status"] == "FAIL" for r in required):
-        return "FAIL"
-    if any(r["status"] == "BLOCKED" for r in required):
-        return "BLOCKED"
     passed_categories = {r["category"] for r in results if r["status"] == "PASS"}
-    if not set(required_categories).issubset(passed_categories):
+    if planned_count is not None and len(results) != planned_count:
         return "PARTIAL"
-    if not required or any(r["status"] != "PASS" for r in results):
+    if not required or "test" not in passed_categories or not set(required_categories).issubset(passed_categories):
+        return "PARTIAL"
+    if any(r["status"] != "PASS" for r in results):
         return "PARTIAL"
     return "PASS"
 
@@ -200,7 +265,8 @@ class QAArena:
             if offset >= page["total"]:
                 break
         for item in interrupted:
-            item.update(status="BLOCKED", error="Приложение завершилось во время проверки")
+            config = item.get("configuration", {})
+            item.update(status=quality_gate(item.get("checks", []), config.get("required_categories", ["test"]), planned_count=len(config.get("commands", [])), blocked=True), error="Приложение завершилось во время проверки")
             self._save("qa_result", item["project_id"], item)
 
     def _save(self, kind, project_id, data):
@@ -232,20 +298,68 @@ class QAArena:
 
     def discover(self, project_id):
         path = self._path(project_id)
+        names = set(safe_files(path))
         suggestions = []
-        for filename, argv, category in [("pytest.ini", ["python", "-m", "pytest"], "test"), ("Cargo.toml", ["cargo", "test", "--offline"], "test")]:
-            if (path / filename).is_file():
-                suggestions.append({"id": category, "category": category, "argv": argv, "required": True})
-        package = path / "package.json"
-        if package.is_file() and package.stat().st_size < 100000:
+        def suggest(key, category, argv, source):
+            suggestions.append({"id": key, "category": category, "argv": argv, "required": True, "source": source, "confirmed": False})
+        if "pytest.ini" in names or "conftest.py" in names:
+            suggest("pytest", "test", ["python", "-m", "pytest"], "pytest.ini" if "pytest.ini" in names else "conftest.py")
+        elif "pyproject.toml" in names:
+            text = safe_read(path, "pyproject.toml").decode("utf-8", errors="replace")
+            if "[tool.pytest" in text:
+                suggest("pytest", "test", ["python", "-m", "pytest"], "pyproject.toml")
+        if "Cargo.toml" in names:
+            suggest("cargo_test", "test", ["cargo", "test", "--offline"], "Cargo.toml")
+        if any(name.endswith((".sln", ".csproj", ".fsproj")) and "/" not in name for name in names):
+            suggest("dotnet_test", "test", ["dotnet", "test", "--no-restore"], "Git: .sln/.csproj/.fsproj")
+        if "package.json" in names:
             try:
-                scripts = json.loads(package.read_text()).get("scripts", {})
+                scripts = json.loads(safe_read(path, "package.json")).get("scripts", {})
                 for key in ("test", "build", "lint"):
                     if key in scripts:
-                        suggestions.append({"id": key, "category": key, "argv": ["npm", "run", key], "required": True})
+                        suggest("npm_" + key, key, ["npm", "run", key], "package.json scripts." + key)
             except (ValueError, OSError):
                 pass
-        return {"suggestions": suggestions, "configuration": self.configuration(project_id), "limitation": "Предложения не выполняются автоматически. Нужен локальный Linux-образ Docker с инструментами и зависимостями; сеть отключена. В QA передаются только отслеживаемые безопасные файлы."}
+        if not any(item["category"] == "test" for item in suggestions) and any(Path(name).name.startswith("test_") and name.endswith(".py") for name in names):
+            suggest("unittest", "test", ["python", "-m", "unittest", "discover", "-v"], "Git: test_*.py; проверьте используемый framework")
+        project_commands = self.store.project(project_id).get("commands", {})
+        if isinstance(project_commands, dict):
+            for category in ("test", "build", "lint", "typecheck"):
+                argv = project_commands.get(category)
+                if isinstance(argv, list) and argv and all(isinstance(part, str) for part in argv):
+                    suggest("project_" + category, category, argv[:32], "Настройки проекта (требуется подтверждение в QA)")
+        return {"suggestions": suggestions, "configuration": self.configuration(project_id), "files_scanned": len(names), "limitation": "Статический анализ отслеживаемых Git-файлов; команды и инструменты не запускались. Предложения не подтверждают наличие инструментов в образе. Нужен локальный Linux-образ Docker с зависимостями; сеть отключена. Секреты, симлинки и неотслеживаемые файлы исключены."}
+
+    def setup(self, project_id):
+        discovery = self.discover(project_id)
+        runner = self.runner if isinstance(self.runner, DockerRunner) else DockerRunner()
+        daemon = runner.inspect_daemon()
+        images, image_error = [], None
+        if daemon["healthy"]:
+            try:
+                images = runner.images()
+            except (subprocess.SubprocessError, OSError, ValueError):
+                image_error = "Не удалось прочитать список локальных образов"
+        return {**discovery, "docker": daemon, "images": images, "image_error": image_error,
+                "remediation": ["Установите или запустите Docker Desktop самостоятельно; включите Linux containers.", "Подготовьте доверенный Linux-образ с /bin/sh, cp, инструментами проекта и уже установленными зависимостями. QA не скачивает образы и пакеты.", "Выберите локальный SHA256 image ID или RepoDigest, подтвердите образ, проверьте предложенные JSON argv команды.", "Сохраните конфигурацию, откройте предварительный просмотр и явно подтвердите тестовый запуск. Test Run использует тот же изолированный QA runner."],
+                "test_run_requires_confirmation": True, "automatic_pull": False, "automatic_install": False}
+
+    def verify_setup(self, project_id, image, confirmed=False):
+        self.store.project(project_id)
+        if confirmed is not True:
+            raise ValueError("Подтвердите выбранный локальный образ перед проверкой")
+        runner = self.runner if isinstance(self.runner, DockerRunner) else DockerRunner()
+        daemon = runner.inspect_daemon()
+        if not daemon["healthy"]:
+            return {"available": False, "docker": daemon, "reason": daemon["reason"], "tools_executed": False}
+        try:
+            inspected = runner.inspect_image(image)
+        except (subprocess.SubprocessError, OSError, ValueError) as exc:
+            reason = str(exc) if isinstance(exc, ValueError) else "Выбранный неизменяемый локальный образ не найден"
+            return {"available": False, "docker": daemon, "reason": reason, "tools_executed": False}
+        return {"available": True, "docker": daemon, "image": inspected, "pinned_image": inspected["id"], "tools_executed": False,
+                "limitation": "Проверены Docker daemon и метаданные локального образа. Наличие и работоспособность инструментов проверяется только подтверждённым Test Run.",
+                "next_step": "Сохраните команды QA, затем подтвердите preview/start для Test Run"}
 
     def configuration(self, project_id):
         self.store.project(project_id)
@@ -255,7 +369,7 @@ class QAArena:
     def configure(self, project_id, data):
         self.store.project(project_id)
         image = str(data.get("image", ""))
-        if not re.fullmatch(r"[a-zA-Z0-9_./:-]+@sha256:[a-f0-9]{64}|sha256:[a-f0-9]{64}", image):
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]*@sha256:[a-f0-9]{64}|sha256:[a-f0-9]{64}", image):
             raise ValueError("Требуется неизменяемый локальный образ: image@sha256:… или sha256:…")
         commands = data.get("commands", [])
         if not isinstance(commands, list) or not 1 <= len(commands) <= 12:
@@ -317,12 +431,16 @@ class QAArena:
             return value
 
     def _execute(self, value, path, snap):
+        interrupted = False
         try:
             available, reason = self.runner.available(value["configuration"]["image"])
             if not available:
-                value.update(status="BLOCKED", error=reason)
+                interrupted = True
+                value.update(error=reason)
             else:
                 for command in value["configuration"]["commands"]:
+                    if self.cancel.is_set():
+                        break
                     if snapshot(path) != snap:
                         raise ValueError("Рабочее дерево изменилось: проверка заблокирована")
                     result = self.runner.execute(path, snap["files"], value["configuration"]["image"], command["argv"], value["configuration"]["timeout_seconds"], self.cancel, expected_digest=snap["digest"])
@@ -335,17 +453,21 @@ class QAArena:
                     self._save("qa_result", value["project_id"], value)
                     if self.cancel.is_set():
                         break
-                value["status"] = quality_gate(value["checks"], value["configuration"]["required_categories"])
-                if len(value["checks"]) != len(value["configuration"]["commands"]):
-                    value["status"] = "PARTIAL"
                 baseline = self._page("qa_baseline", project_id=value["project_id"], limit=1)["items"]
                 value["comparison"] = {"status": "Нет baseline"}
                 if baseline and baseline[0].get("fingerprint") == value["fingerprint"]:
                     prior = {r["id"]: r["status"] for r in baseline[0]["checks"]}
                     value["comparison"] = {"status": "Сопоставимая конфигурация", "baseline_id": baseline[0]["result_id"], "new_regressions": [r["id"] for r in value["checks"] if prior.get(r["id"]) == "PASS" and r["status"] != "PASS"], "limitation": "Сравнение на уровне команд; отдельные test-case и нестабильность среды не выводятся из exit code"}
         except Exception as exc:
-            value.update(status="BLOCKED", error=str(exc))
+            interrupted = True
+            value.update(error=str(exc))
         finally:
+            cancelled = self.cancel.is_set()
+            if cancelled:
+                value["error"] = "QA отменена: оставшиеся команды не выполнялись; результаты выполненных проверок сохранены"
+            value["cancelled"] = cancelled
+            value["planned_count"] = len(value["configuration"]["commands"])
+            value["status"] = quality_gate(value["checks"], value["configuration"]["required_categories"], planned_count=value["planned_count"], cancelled=cancelled, blocked=interrupted)
             value["finished_at"] = time.time()
             self._save("qa_result", value["project_id"], value)
             with self.lock:
