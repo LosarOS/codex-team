@@ -19,7 +19,10 @@ def test_only_trusted_events_and_pinned_actions_can_publish():
 
 def test_native_smoke_and_build_are_required_before_publication():
     assert 'needs: build' in WORKFLOW
-    assert '-SkipTests' not in WORKFLOW and '-SkipDependencies' not in WORKFLOW
+    assert '-SkipDependencies' not in WORKFLOW
+    assert "github.event_name == 'workflow_dispatch' && inputs.skip_source_tests" in WORKFLOW
+    assert "if ($env:SKIP_SOURCE_TESTS -eq 'true')" in WORKFLOW
+    assert 'Full source suite: skipped by explicit manual request.' in WORKFLOW
     assert WORKFLOW.index('./packaging/smoke-installed.ps1') < WORKFLOW.index('Stage verified downloadable files')
     for asset in ['CodexTeam-Setup-x64.exe', 'CodexTeam-Setup-x64.zip', 'CodexTeam-Portable-x64.zip', 'SHA256SUMS.txt', 'installed-smoke.json']:
         assert asset in WORKFLOW

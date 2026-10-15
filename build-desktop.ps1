@@ -95,6 +95,8 @@ $buildWorkPath = Join-Path $PSScriptRoot ('.build-tools/pyinstaller-' + [guid]::
 & $python -m PyInstaller --noconfirm --clean --log-level WARN --distpath dist --workpath $buildWorkPath packaging/CodexTeam.spec
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller desktop build failed' }
 Copy-Item -LiteralPath 'packaging/FIRST_RUN_RU.txt' -Destination 'dist/CodexTeam/НАЧАЛО.txt'
+Copy-Item -LiteralPath 'packaging/Update.cmd' -Destination 'dist/CodexTeam/Обновить.cmd'
+Copy-Item -LiteralPath 'packaging/Update.ps1' -Destination 'dist/CodexTeam/Update.ps1'
 Copy-Item -LiteralPath 'packaging/THIRD-PARTY-NOTICES.txt' -Destination 'dist/CodexTeam/THIRD-PARTY-NOTICES.txt'
 & $python packaging/verify_bundle.py
 if ($LASTEXITCODE -ne 0) { throw 'Frozen desktop bundle verification failed' }

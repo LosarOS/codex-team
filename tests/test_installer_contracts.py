@@ -83,6 +83,8 @@ def test_readme_inside_installer_zip_names_the_setup_executable(tmp_path):
     help_bytes = (ROOT / "packaging" / "FIRST_RUN_RU.txt").read_bytes()
     assert help_bytes.startswith(b"\xef\xbb\xbf")
     (app / "НАЧАЛО.txt").write_bytes(help_bytes)
+    (app / "Обновить.cmd").write_bytes(b'updater-fixture')
+    (app / "Update.ps1").write_bytes(b'updater-fixture')
     module.create_archives(tmp_path)
     with zipfile.ZipFile(tmp_path / "dist" / "CodexTeam-Setup-x64.zip") as archive:
         readme = archive.read("INSTALL-WINDOWS.txt").decode("utf-8-sig")

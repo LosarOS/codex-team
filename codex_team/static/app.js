@@ -134,18 +134,23 @@
     return window.CodexApi.request(path,method,body,{...options,formatError:errorMessage});
   }
 
-  function setPage(page) {
+  function setPage(page, navigation=false) {
     const [route,feature]=String(page||"workbench").split("/");
+    const requestedFeature=["architect","intelligence","git","qa","budget"].includes(route)?route:route==="suite"?(feature||state.suiteFeature||"architect"):null;
+    if(requestedFeature&&requestedFeature!==state.suiteFeature&&$("suite-root")?.getAttribute?.("aria-busy")==="true"){
+      history.replaceState(null,"","#"+(state.page==="suite"?state.suiteFeature:state.page));toast("Дождитесь завершения текущего действия, затем откройте другой инструмент.");return;
+    }
     page=route;
+    if(["architect","intelligence","git","qa","budget"].includes(page)){state.suiteFeature=page;page="suite";}
     if(page==="suite")state.suiteFeature=["architect","intelligence","git","qa","budget"].includes(feature)?feature:state.suiteFeature||"architect";
     if(page==="dashboard")page="workbench";
     if (!$("page-" + page)) page = "workbench";
-    const changed=state.page!==page;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
+    const changed=state.page!==page||(page==="suite"&&state.lastSuiteFeature!==state.suiteFeature);state.lastSuiteFeature=state.suiteFeature;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
     qa(".page").forEach((el) => { el.hidden = el.id !== "page-" + page; });
     qa(".nav-item").forEach((el) => {const active=el.dataset.page===page&&(!el.dataset.suiteFeatureLink||el.dataset.suiteFeatureLink===state.suiteFeature);el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
-    $("page-label").textContent={workbench:"Обзор",projects:"Проекты",runs:"Запуски",history:"История",agents:"Агенты",packs:"Наборы",actions:"Центр действий",usage:"Использование",settings:"Настройки",suite:"Рабочее пространство V2"}[page];
-    const hash="#"+page+(page==="suite"?"/"+state.suiteFeature:"");
-    if(window.location.hash!==hash)history.replaceState(null,"",hash);
+    $("page-label").textContent={workbench:"Обзор",projects:"Проекты",runs:"Запуски",history:"История",agents:"Агенты",packs:"Наборы",actions:"Центр действий",usage:"Использование",settings:"Настройки",suite:({architect:"Архитектор задач",intelligence:"Знания проекта",git:"Машина времени Git",qa:"Проверка качества",budget:"Бюджет запусков"}[state.suiteFeature])}[page];
+    const hash="#"+(page==="suite"?state.suiteFeature:page);
+    if(window.location.hash!==hash){if(navigation&&typeof history.pushState==="function")history.pushState(null,"",hash);else history.replaceState(null,"",hash);}
     if(page==="usage"){renderGlobalUsage();loadAccountUsage();}
     if(page==="agents"||page==="settings")loadModels();
     if(page==="history")loadHistory();
@@ -188,7 +193,7 @@
     const bridge = desktopBridge();
     const canChooseProject = typeof bridge?.choose_project === "function";
     const canOpenLogs = typeof bridge?.open_logs === "function";
-    $("browse-project-button").hidden = !canChooseProject; $("project-browse-button").hidden = !canChooseProject; $("tray-setting-row").hidden=!bridge; $("export-diagnostics-button").hidden = typeof bridge?.export_diagnostics!=="function";
+    $("browse-project-button").hidden = !canChooseProject; $("project-browse-button").hidden = !canChooseProject; $("project-create-browse").hidden = !canChooseProject; $("tray-setting-row").hidden=!bridge; $("export-diagnostics-button").hidden = typeof bridge?.export_diagnostics!=="function";
     $("open-logs-button").hidden = !canOpenLogs;
     $("desktop-settings-panel").hidden = !canOpenLogs && !state.health;
     $("desktop-mode-badge").textContent = state.desktopReady ? "ПРИЛОЖЕНИЕ" : "ЛОКАЛЬНЫЙ СЕРВЕР";
@@ -1141,6 +1146,23 @@
     for(const id of ["history-project","history-mode","history-date","history-archived"])$(id).addEventListener("change",()=>loadHistory(true));
     $("dismiss-onboarding").addEventListener("click",()=>setOnboarding(true));$("show-onboarding-button").addEventListener("click",()=>{setOnboarding(false);setPage("workbench");});
     $("dismiss-recovery").addEventListener("click",async()=>{await nativeOperation("dismiss_recovery");$("recovery-banner").hidden=true;});
+    $("project-create-browse").addEventListener("click",async()=>{
+      const button=$("project-create-browse"),bridge=desktopBridge(),name=$("project-create-name").value.trim();
+      if(button.disabled||typeof bridge?.choose_project!=="function")return;
+      const backslash=String.fromCharCode(92),invalid=Array.from(name).some(c=>c.charCodeAt(0)<32||c===backslash||'<>:"/|?*'.includes(c));
+      if(!name||invalid||/[. ]$/.test(name)||/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name.split('.')[0])){showFormError("project-create-error","Введите название, подходящее для имени новой папки Windows: без служебных символов и зарезервированных имён.");return;}
+      button.disabled=true;showFormError("project-create-error","");
+      try{const selected=await bridge.choose_project();if(selected?.error)throw new Error(text(selected.error));let parent=typeof selected==="string"?selected:selected?.path;if(typeof parent!=="string"||!parent.trim())return;const separator=parent.includes(backslash)||/^[a-z]:/i.test(parent)?backslash:"/";while(parent.endsWith(backslash)||parent.endsWith("/"))parent=parent.slice(0,-1);$("project-create-path").value=parent+separator+name;}
+      catch(error){showFormError("project-create-error",error);}finally{button.disabled=false;}
+    });
+    $("project-create-form").addEventListener("submit",async event=>{
+      event.preventDefault();const form=$("project-create-form"),submit=$("project-create-button");if(submit.disabled||!form.reportValidity())return;
+      const payload={name:$("project-create-name").value.trim(),path:$("project-create-path").value.trim()};
+      submit.disabled=true;showFormError("project-create-error","");
+      try{const project=await api("/api/projects/create","POST",payload);await loadProjects();state.suiteProjectId=project.id;form.reset();useProject(project);toast("Новый проект создан и выбран. Теперь опишите задачу.");}
+      catch(error){showFormError("project-create-error",error);}
+      finally{submit.disabled=false;}
+    });
     $("project-browse-button").addEventListener("click",async()=>{await chooseProject();$("project-path").value=$("workspace").value;});$("project-form").addEventListener("submit",async event=>{event.preventDefault();if(!$("project-form").reportValidity())return;$("project-add-button").disabled=true;showFormError("project-form-error","");try{await addProject($("project-path").value.trim());$("project-path").value="";toast("Проект добавлен.");}catch(error){showFormError("project-form-error",error);}finally{$("project-add-button").disabled=false;}});$("close-project-editor").addEventListener("click",()=>$("project-editor").hidden=true);$("close-project-diff").addEventListener("click",()=>{$("project-diff-panel").hidden=true;state.projectDiffVersion=(state.projectDiffVersion||0)+1;});
     $("project-commands-form").addEventListener("submit",async event=>{event.preventDefault();try{const commands={};for(const [kind,id]of [["test","project-test-command"],["build","project-build-command"],["run","project-run-command"]]){const value=JSON.parse($(id).value.trim()||"[]");if(!Array.isArray(value)||value.some(v=>typeof v!=="string"))throw new Error("Каждая команда должна быть JSON-массивом строк.");commands[kind]=value;}await api(`/api/projects/${encodeURIComponent(state.editingProject)}`,"PUT",{commands});$("project-editor").hidden=true;await loadProjects();toast("Команды сохранены. Выполнение не запускалось.");}catch(error){showFormError("project-commands-error",error);}});
     $("add-pack-button").addEventListener("click",()=>openPackEditor());$("close-pack-editor").addEventListener("click",()=>$("pack-editor").hidden=true);
@@ -1157,8 +1179,8 @@
     $("copy-diagnostics-button").addEventListener("click",copyDiagnostics);$("export-diagnostics-button").addEventListener("click",()=>nativeOperation("export_diagnostics"));
   }
 
-  qa("[data-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.page+(button.dataset.suiteFeatureLink?"/"+button.dataset.suiteFeatureLink:""))));
-  qa("[data-open-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.openPage)));
+  qa("[data-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.suiteFeatureLink||button.dataset.page,true)));
+  qa("[data-open-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.openPage,true)));
   qa("[data-detail-tab]").forEach((button) => {
     button.addEventListener("click", () => setDetailTab(button.dataset.detailTab));
     button.addEventListener("keydown", (event) => {
