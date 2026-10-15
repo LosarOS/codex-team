@@ -25,6 +25,16 @@
     reviewer: ["Проверка кода", "Финальная проверка решения"],
     architect: ["Архитектор", "Проектирование решения"],
     "final-audit": ["Финальный аудит", "Проверка всех результатов"],
+    security:["Безопасность","Проверка угроз и защиты данных"],
+    performance:["Производительность","Проверка скорости работы и использования ресурсов"],
+    "game-logic":["Игровая логика","Проверка правил игры и сохранений"],
+    narrative:["Сценарий игры","Проверка сюжета и согласованности состояний"],
+    "business-analyst":["Бизнес-аналитик","Анализ требований и рабочих процессов"],
+    "system-analyst":["Системный аналитик","Анализ системных требований и взаимодействий"],
+    integration:["Интеграции","Проверка взаимодействия с внешними системами"],
+    frontend:["Интерфейс","Проверка интерфейса и доступности"],
+    backend:["Серверная часть","Проверка обработки данных и серверной логики"],
+    documentation:["Документация","Проверка руководств и технических описаний"],
     specialists: ["Специалисты", "Предметная экспертиза"],
   };
   const modes = {
@@ -347,27 +357,27 @@
     $("specialist-options").replaceChildren(...specialists.map((agent) => {
       const label = node("label", "specialist-option"); const input = node("input");
       input.type = "checkbox"; input.value = agent.name; input.checked = chosenSpecialists.has(agent.name);input.addEventListener("change",renderPreview);
-      label.append(input, document.createTextNode(agent.role || agent.name)); return label;
+      label.append(input, document.createTextNode(roleName(agent.name))); return label;
     }));
     renderPreview();renderPacks(); renderRoleModelDefaults();
     const signature = JSON.stringify(state.agents);
     if (signature === state.agentsSignature) return;
     state.agentsSignature = signature;
     if (!state.agents.length) { empty($("agents-list"), "Команда пока не загружена", "Подключите локальный сервер или добавьте собственного агента."); return; }
-    $("agents-list").replaceChildren(...state.agents.filter(agent=>{const q=$("agents-search").value.trim().toLowerCase();return !q||`${agent.name} ${agent.role} ${agent.description||""}`.toLowerCase().includes(q);}).map((agent, index) => {
+    $("agents-list").replaceChildren(...state.agents.filter(agent=>{const q=$("agents-search").value.trim().toLowerCase();return !q||`${agent.name} ${roleName(agent.name)} ${agent.description||roles[agent.name]?.[1]||""}`.toLowerCase().includes(q);}).map((agent, index) => {
       const card = node("article", "panel agent-card");
       const heading = node("div", "agent-card-heading");
       const title = node("div");
       title.append(node("span", "agent-symbol", String(index + 1).padStart(2, "0")), node("h3", "", roleName(agent.name)), node("div", "role-id mono", agent.name));
       heading.append(title, node("span", `state-badge ${agent.enabled !== false ? "state-good" : ""}`, agent.enabled !== false ? "Включён" : "Выключен"));
-      card.append(heading, node("p", "agent-instructions-preview", agent.description || agent.instructions || "Инструкции не заданы"));
+      card.append(heading, node("p", "agent-instructions-preview", agent.description || roles[agent.name]?.[1] || agent.instructions || "Инструкции не заданы"));
       const footer = node("div", "agent-card-footer");
       const permission = node("span", "agent-permission", agent.permission === "workspace-write" ? "Чтение и запись в рабочей папке" : "Только чтение");
       const edit = node("button", "button text-button", "Изменить →"); edit.type = "button";
       edit.addEventListener("click", () => openAgentEditor(agent));
       footer.append(permission, edit); card.append(footer);
       const actions=node("div","registry-actions");
-      actions.append(actionButton("Дублировать",()=>openAgentEditor({...agent,name:"",role:`${agent.role} · копия`,builtin:false})),actionButton(agent.enabled===false?"Включить":"Выключить",async()=>{try{await api(`/api/agents/${encodeURIComponent(agent.name)}`,"PUT",{...agentPayload(agent),enabled:agent.enabled===false});await reloadRegistry();}catch(e){toast(e.message,true);}}),actionButton("Экспорт",()=>exportJSON(`${agent.name}.agent.json`,agentPayload(agent))));
+      actions.append(actionButton("Дублировать",()=>openAgentEditor({...agent,name:"",role:`${roleName(agent.name)} · копия`,builtin:false})),actionButton(agent.enabled===false?"Включить":"Выключить",async()=>{try{await api(`/api/agents/${encodeURIComponent(agent.name)}`,"PUT",{...agentPayload(agent),enabled:agent.enabled===false});await reloadRegistry();}catch(e){toast(e.message,true);}}),actionButton("Экспорт",()=>exportJSON(`${agent.name}.agent.json`,agentPayload(agent))));
       if(!agent.builtin)actions.append(actionButton("Удалить",()=>deleteRegistry("agents",agent),"danger"));
       else card.append(node("p","field-note","Встроенная роль · удаление защищено"));
       card.append(actions); return card;
@@ -846,9 +856,9 @@
   function openAgentEditor(agent) {
     state.editingAgent = agent?.name || null;
     $("agent-editor").hidden = false;
-    $("agent-editor-title").textContent = agent ? `Агент: ${agent.role || agent.name}` : "Новый агент";
+    $("agent-editor-title").textContent = agent ? `Агент: ${agent.name?roleName(agent.name):agent.role}` : "Новый агент";
     $("agent-name").value = agent?.name || ""; $("agent-name").readOnly = Boolean(agent);
-    $("agent-role").value = agent?.role || ""; $("agent-description").value=agent?.description||""; renderModeChecks($("agent-mode-options"),agent?.enabled_modes||Object.keys(modes)); $("agent-instructions").value = agent?.instructions || "";
+    $("agent-role").value = agent?.role===agent?.name&&agent?.name?roleName(agent.name):agent?.role || ""; $("agent-description").value=agent?.description||""; renderModeChecks($("agent-mode-options"),agent?.enabled_modes||Object.keys(modes)); $("agent-instructions").value = agent?.instructions || "";
     $("agent-permission").value = agent?.permission || "read-only";
     $("agent-permission").disabled = Boolean(agent && ["coordinator", "analyst", "qa", "reviewer", "architect", "final-audit"].includes(agent.name));
     $("agent-model").value = agent?.model || ""; updateEffortOptions($("agent-model").value,"agent-reasoning");$("agent-reasoning").value = agent?.reasoning_effort || "";
