@@ -47,11 +47,11 @@ textarea {line-height:1.65}
 .app-shell {grid-template-columns:248px minmax(0,1fr)}
 .sidebar {padding:24px 14px 14px;overflow:hidden;gap:0;height:100dvh}
 .brand {margin:0 8px 26px;padding:0;gap:12px;font-size:20px;flex-shrink:0}
-.brand small {font-size:10px;letter-spacing:.14em;line-height:1.5}
+.brand small {font-size:12px;letter-spacing:.06em;line-height:1.5}
 .brand-icon {width:38px;height:38px;border-radius:12px;background:var(--accent-soft)}
 .navigation {flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;gap:21px;padding:0 2px 14px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .nav-group {display:grid;gap:3px}
-.nav-group-title {font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding:0 12px 6px}
+.nav-group-title {font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding:0 12px 6px}
 .nav-item {min-height:41px;padding:9px 11px;gap:11px;border-radius:9px;border:1px solid transparent;font-size:13px}
 .nav-item>span:not(.nav-icon):not(.nav-count) {font-size:13px}
 .nav-item.active {background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent-text) 22%,transparent)}
