@@ -158,7 +158,11 @@ class TimeMachine:
             data = preview['data']
             if preview['project_id'] != project_id or data['checkpoint_id'] != checkpoint_id or data['sha'] != checkpoint['data']['sha']:
                 raise WorkspaceError('Preview does not match checkpoint')
-            if data.get('result'): return data['result']
+            if data.get('result'):
+                result=data['result']
+                if self._git(Path(result['path']),'rev-parse','HEAD')!=data['sha']:
+                    raise WorkspaceError('Восстановленная копия изменилась; создайте новый preview')
+                return result
             head,digest,_ = self._state(path)
             if (head,digest) != (data['source_head'],data['state_digest']):
                 raise WorkspaceError('Проект изменился. Повторите предварительный просмотр.')

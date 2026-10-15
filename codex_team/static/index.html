@@ -7,8 +7,10 @@
   <meta name="theme-color" content="#111318">
   <title>Codex Team · Локальный центр управления</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/suite.css">
   <script src="/mission-control.js" defer></script>
   <script src="/app.js" defer></script>
+  <script src="/suite.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">К содержимому</a>
@@ -26,6 +28,7 @@
         <button class="nav-item" data-page="actions" type="button" title="Центр действий" aria-label="Центр действий"><span class="nav-icon" aria-hidden="true">◇</span><span>Центр действий</span><span id="actions-count" class="nav-count" hidden>0</span></button>
         <button class="nav-item" data-page="usage" type="button" title="Использование" aria-label="Использование"><span class="nav-icon" aria-hidden="true">▥</span><span>Использование</span></button>
         <button class="nav-item" data-page="settings" type="button" title="Настройки" aria-label="Настройки"><span class="nav-icon" aria-hidden="true">⚙</span><span>Настройки</span></button>
+        <button class="nav-item" data-page="suite" type="button" title="Рабочее пространство V2" aria-label="Рабочее пространство V2"><span class="nav-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span>Пространство V2</span></button>
       </nav>
       <div class="sidebar-bottom">
         <div class="account-mini"><span id="sidebar-auth-dot" class="status-dot"></span><div><strong id="sidebar-provider-label">ChatGPT / Codex</strong><small id="sidebar-auth-label">Проверка подключения…</small></div></div>
@@ -81,6 +84,7 @@
         </section>
 
 
+        <section id="page-suite" class="page" hidden><div id="suite-root"></div></section>
         <section id="page-projects" class="page" hidden><div class="page-heading"><div><div class="eyebrow">ВАШИ РЕПОЗИТОРИИ</div><h1>Проекты</h1><p>Выберите проект для следующей задачи. Удаление из списка сохраняет все файлы.</p></div><button id="project-browse-button" class="button secondary" type="button" hidden>Выбрать папку…</button></div><section class="panel settings-panel"><form id="project-form"><label for="project-path">Путь к Git-проекту</label><div class="inline-form"><input id="project-path" required autocomplete="off" spellcheck="false" placeholder="D:\Projects\MyProject"><button id="project-add-button" class="button primary" type="submit">Добавить проект</button></div><div id="project-form-error" class="form-error" role="alert" hidden></div></form></section><div id="projects-list" class="projects-grid"><div class="loading-state" role="status">Загрузка проектов…</div></div><section id="project-diff-panel" class="panel editor-panel" hidden><div class="panel-heading"><h2 id="project-diff-title">Изменения проекта</h2><button id="close-project-diff" class="icon-button" type="button" aria-label="Закрыть diff проекта">×</button></div><div id="project-diff-body"></div></section><section id="project-editor" class="panel editor-panel" hidden><div class="panel-heading"><h2 id="project-editor-title">Настройка команд</h2><button id="close-project-editor" class="icon-button" type="button" aria-label="Закрыть настройки проекта">×</button></div><p class="muted">Команды передаются агентам в контекст. Сохранение не запускает их на компьютере. Используйте JSON-массив аргументов, например ["npm", "test"].</p><form id="project-commands-form"><label for="project-test-command">Тесты</label><textarea id="project-test-command" rows="2" placeholder='["python", "-m", "pytest"]'></textarea><label for="project-build-command">Сборка</label><textarea id="project-build-command" rows="2" placeholder='["npm", "run", "build"]'></textarea><label for="project-run-command">Запуск</label><textarea id="project-run-command" rows="2" placeholder='["npm", "start"]'></textarea><button class="button primary" type="submit">Сохранить команды</button><div id="project-commands-error" class="form-error" role="alert" hidden></div></form></section></section>
         <section id="page-runs" class="page" hidden><div class="page-heading"><div><div class="eyebrow">ТЕКУЩАЯ РАБОТА И РАБОЧИЕ КОПИИ</div><h1>Запуски</h1><p>Откройте запуск, чтобы управлять работой и проверить результат.</p></div><button class="button primary" data-open-page="workbench" type="button">+ Новая задача</button></div><div id="runs-list" class="run-cards"></div><div id="runs-detail-slot"></div></section>
         <section id="page-actions" class="page" hidden><div class="page-heading"><div><div class="eyebrow">РЕШЕНИЯ ПОД ВАШИМ КОНТРОЛЕМ</div><h1>Центр действий</h1><p>Разрешения и вопросы команды. Доступные решения поступают из текущего запроса Codex.</p></div><button id="refresh-actions-button" class="button secondary" type="button">Обновить</button></div><div id="actions-list" class="action-list"><div class="loading-state" role="status">Проверка запросов…</div></div></section>

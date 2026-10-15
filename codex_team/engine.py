@@ -85,6 +85,12 @@ class Engine:
                 run[key] = value
         run["budget_policy"] = {"max_agent_calls": run["max_agent_calls"], "max_total_tokens": run.get("max_total_tokens")}
         run["project_commands"] = project.get("commands", {}) if project else {}
+        if project:
+            from .intelligence import IntelligenceService
+            intelligence=IntelligenceService(self.root,self.store)
+            if intelligence.get(project['id']):
+                run['project_intelligence']=json.loads(intelligence.context(project['id'],request.task,max_chars=10000))
+
         for spec in run["agents"].values():
             self._apply_role_defaults(spec, defaults)
         self.store.save_run(run)
@@ -314,6 +320,19 @@ class Engine:
                 run.update(change)
                 run["checkpoint_git"] = after
                 self._save(run)
+                if run.get('project_id'):
+                    from .time_machine import TimeMachine
+                    from .suite_store import SuiteStore
+                    try:
+                        checkpoint=TimeMachine(self.root,SuiteStore(self.store)).create(
+                            run['project_id'], label=f"Этап {role}, вызов {run['calls']}",
+                            run_id=run_id,stage=role,request_id=f"{run_id}-{run['calls']}",workspace=str(cwd))
+                        run.setdefault('git_checkpoints',[]).append(checkpoint['id'])
+                        self.store.event(run_id,'git_checkpoint_created',{'checkpoint_id':checkpoint['id'],'role':role},role)
+                        self._save(run)
+                    except Exception as exc:
+                        self.store.event(run_id,'git_checkpoint_unavailable',{'reason':sanitize(str(exc))},role)
+
                 if control["stop"]:
                     run["state"] = "STOPPED"
                     break

@@ -79,7 +79,9 @@ class ContextManager:
                 native[name].append(item)
         payload = sanitize({"original_task": run["task"], "mode": run["mode"], "role": role,
                             "instructions_from_user": run.get("instructions", []), "project_summary": summary,
-                            "project_memory": memory_state, "acceptance_criteria": acceptance, "relevant_files": files,
+                            "project_memory": memory_state,
+                            "project_intelligence": run.get("project_intelligence"),
+                            "approved_task_specification": run.get("task_specification"), "acceptance_criteria": acceptance, "relevant_files": files,
                             "prior_test_results": tests,
                             "acceptance_source": "Criteria are derived from model artifacts and must agree with the original task and user instructions.",
                             "prior_native_executions": native,

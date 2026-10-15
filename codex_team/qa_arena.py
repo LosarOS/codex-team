@@ -186,6 +186,10 @@ class QAArena:
         self.cancel = threading.Event()
         self.active = None
         self.previews = {}
+    def recover(self):
+        """Call only after the application owns its data-root lease."""
+        if self.active is not None:
+            raise ValueError("Нельзя восстанавливать результаты во время активной проверки")
         # Collect IDs before updates reorder the page by updated_at.
         interrupted = []
         offset = 0
@@ -363,13 +367,15 @@ class QAArena:
 
     def report(self, result_id):
         value = self.get_result(result_id)
-        lines = ["# QA Arena", f"Статус: {value['status']}", f"Git HEAD: {value['head']}", f"Запуск: {value.get('run_id') or 'Не связан'}", "", "Проверки выполнены в Docker без сети; зависимости не устанавливались."]
+        lines = ["# QA Arena", f"Статус: {value['status']}", f"Git HEAD: {value['head']}", f"Запуск: {value.get('run_id') or 'Не связан'}", "", f"Среда: Docker без сети; команд выполнено: {len(value['checks'])}. Зависимости не устанавливались."]
         for check in value["checks"]:
             lines.append(f"- {check['id']}: {check['status']}; exit={check['exit_code']}; {check['duration_seconds']} сек.")
+        if value.get("comparison"):
+            lines.extend(["", "## Сравнение с baseline", json.dumps(value["comparison"],ensure_ascii=False)])
         if value.get("error"):
             lines.append(value["error"])
         return "\n".join(lines)
 
     def close(self):
         self.cancel.set()
-        self.executor.shutdown(wait=False, cancel_futures=True)
+        self.executor.shutdown(wait=True, cancel_futures=True)

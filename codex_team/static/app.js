@@ -131,7 +131,7 @@
   }
   async function api(path, method = "GET", body) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), method === "GET" ? 12000 : 35000);
+    const timeout = setTimeout(() => controller.abort(), /^\/api\/suite\/specifications\/[^/]+\/ai$/.test(path) ? 135000 : method === "GET" ? 12000 : 35000);
     try {
       const options = {method, signal: controller.signal, credentials: "same-origin", cache: "no-store", headers: {Accept: "application/json"}};
       if (body !== undefined) { options.headers["Content-Type"] = "application/json"; options.body = JSON.stringify(body); }
@@ -157,7 +157,7 @@
     const changed=state.page!==page;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
     qa(".page").forEach((el) => { el.hidden = el.id !== "page-" + page; });
     qa(".nav-item").forEach((el) => {const active=el.dataset.page===page;el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
-    $("page-label").textContent={workbench:"Обзор",projects:"Проекты",runs:"Запуски",history:"История",agents:"Агенты",packs:"Наборы",actions:"Центр действий",usage:"Использование",settings:"Настройки"}[page];
+    $("page-label").textContent={workbench:"Обзор",projects:"Проекты",runs:"Запуски",history:"История",agents:"Агенты",packs:"Наборы",actions:"Центр действий",usage:"Использование",settings:"Настройки",suite:"Рабочее пространство V2"}[page];
     if(window.location.hash!=="#"+page)history.replaceState(null,"","#"+page);
     if(page==="usage"){renderGlobalUsage();loadAccountUsage();}
     if(page==="agents"||page==="settings")loadModels();
@@ -167,6 +167,7 @@
     if(page==="packs")renderPacks();
     if(page==="actions")loadActions();
     if(page==="settings")loadProviders();
+    if(page==="suite")window.dispatchEvent?.(new Event("codex-suite-open"));
     if(page==="runs"){renderRunList();if(state.selectedRun)setDetailTab(state.detailTab);}
   }
   function setDetailTab(tab) {
@@ -1240,6 +1241,7 @@
   window.addEventListener("hashchange", () => setPage(location.hash.slice(1)));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
+  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady};
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   onDesktopReady(); refresh();

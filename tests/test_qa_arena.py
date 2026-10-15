@@ -74,6 +74,7 @@ def test_success_persistence_baseline_and_report(arena):
     assert failed["status"] == "FAIL"
     assert failed["comparison"]["new_regressions"] == ["tests"]
     assert "FAIL" in service.report(failed["id"])
+    assert "new_regressions" in service.report(failed["id"])
     service.close()
     restarted = QAArena(service.root, service.store, runner=FixtureSandbox())
     try:
@@ -248,3 +249,15 @@ class Acceptance(unittest.TestCase):
     service.configure("p", {"image": image, "commands": [{"id": "tests", "category": "test", "argv": ["python", "-c", "import unittest; unittest.TextTestRunner().run(unittest.TestSuite())"]}]})
     empty = run(service)
     assert empty["status"] == "PARTIAL", empty
+
+
+def test_recovery_is_explicit_after_session_ownership(arena):
+    service,_=arena
+    row=service._save('qa_result','p',{'id':'qa_interrupted','status':'RUNNING','checks':[]})
+    other=QAArena(service.root,service.store,runner=FixtureSandbox())
+    try:
+        assert other.get_result(row['id'])['status']=='RUNNING'
+        other.recover()
+        assert other.get_result(row['id'])['status']=='BLOCKED'
+    finally:
+        other.close()
