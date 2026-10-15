@@ -101,6 +101,16 @@ class TimeMachine:
                 self._git(path,'read-tree',head,index=index)
                 # Update tracked files only: untracked files are intentionally not captured.
                 self._git(path,'add','-u','--','.',index=index)
+                # Original index additions are tracked too; replay their safe names
+                # through a NUL pathspec without touching the user's index.
+                additions = [name for name in tracked if name and (path/name).is_file()]
+                if len(additions) > 100000 or sum(len(name.encode('utf-8')) + 1 for name in additions) > 8_000_000:
+                    raise WorkspaceError('Tracked file list exceeds checkpoint safety limit')
+                if additions:
+                    pathspec = Path(tmp)/'tracked-pathspec'
+                    pathspec.write_bytes(b''.join(name.encode('utf-8') + b'\x00' for name in additions))
+                    self._git(path,'--literal-pathspecs','add','-f',f'--pathspec-from-file={pathspec}',
+                              '--pathspec-file-nul',index=index)
                 tree = self._git(path,'write-tree',index=index)
                 self._safe_tree(path,tree)
                 sha = self._git(path,'commit-tree',tree,'-p',head,'-m','Codex Team checkpoint')

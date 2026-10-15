@@ -100,3 +100,21 @@ def test_compare_and_paging(machine):
     assert result['files']==['code.py']
     assert '+second' in result['diff']
     assert tm.list('p',limit=1)['total']==2
+
+
+def test_staged_addition_captured_restored_and_source_index_preserved(machine):
+    tm,repo,_=machine
+    (repo/'new tracked.py').write_text('staged content\n')
+    git(repo,'add','new tracked.py')
+    (repo/'new tracked.py').write_text('working content\n')
+    (repo/'never-tracked.py').write_text('untracked content\n')
+    original_index=(repo/'.git'/'index').read_bytes()
+    cp=tm.create('p')
+    assert (repo/'.git'/'index').read_bytes()==original_index
+    assert git(repo,'show',cp['data']['sha']+':new tracked.py')=='working content'
+    assert 'never-tracked.py' not in git(repo,'ls-tree','--name-only',cp['data']['sha'])
+    preview=tm.preview('p',cp['id'])
+    result=tm.restore('p',cp['id'],preview['preview_token'],True)
+    assert Path(result['path'],'new tracked.py').read_text()=='working content\n'
+    assert not Path(result['path'],'never-tracked.py').exists()
+    assert (repo/'.git'/'index').read_bytes()==original_index
