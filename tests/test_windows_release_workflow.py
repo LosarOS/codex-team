@@ -37,6 +37,8 @@ def test_smoke_installs_and_checks_only_its_own_temporary_backend():
     assert '$report.installed_backend_verified = $true' in SMOKE
     assert 'native_gui_verified = $false' in SMOKE and 'model_calls = 0' in SMOKE
     assert '/api/runs' not in SMOKE and '/api/login' not in SMOKE
+    assert '& $installedGit --version' in SMOKE
+    assert '$report.installed_git_version = $gitVersion' in SMOKE
     assert 'unins000.exe' in SMOKE and '$report.uninstall_verified = $true' in SMOKE
 
 

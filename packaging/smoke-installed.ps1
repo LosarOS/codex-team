@@ -32,6 +32,11 @@ try {
     if ($setup.ExitCode -ne 0) { throw "Installer failed with exit code $($setup.ExitCode)." }
     $exe = Join-Path $installation 'CodexTeam.exe'
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Installed executable is missing.' }
+    $installedGit = Join-Path $installation '_internal/runtime/git/cmd/git.exe'
+    if (-not (Test-Path -LiteralPath $installedGit -PathType Leaf)) { throw 'Installed bundled Git is missing.' }
+    $gitVersion = (& $installedGit --version 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $gitVersion -notmatch '^git version ') { throw 'Installed bundled Git did not execute from its Unicode path.' }
+    $report.installed_git_version = $gitVersion
     # Match normal first-run resource seeding without launching a GUI/account session.
     foreach ($folder in @('agents','packs')) {
         Copy-Item -LiteralPath (Join-Path $installation "_internal/$folder") -Destination (Join-Path $profile $folder) -Recurse
