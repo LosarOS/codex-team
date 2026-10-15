@@ -38,3 +38,13 @@ def test_smoke_installs_and_checks_only_its_own_temporary_backend():
     assert 'native_gui_verified = $false' in SMOKE and 'model_calls = 0' in SMOKE
     assert '/api/runs' not in SMOKE and '/api/login' not in SMOKE
     assert 'unins000.exe' in SMOKE and '$report.uninstall_verified = $true' in SMOKE
+
+
+def test_release_tag_is_bound_to_the_checked_out_source_version():
+    metadata = WORKFLOW.split('      - name: Validate release metadata', 1)[1].split('      - name:', 1)[0]
+    assert "tomllib.load(open('pyproject.toml','rb'))['project']['version']" in metadata
+    assert '$expectedTag' in metadata
+    assert '$tag -cne $expectedTag' in metadata
+    assert 'Release tag must match source version' in metadata
+    assert 'else { $expectedTag }' in metadata
+    assert 'else { \'v1.0.0-rc2\' }' not in metadata

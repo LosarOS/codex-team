@@ -47,8 +47,14 @@ jobs:
           INPUT_TAG: ${{ inputs.release_tag }}
           REF_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
-          $tag = if ($env:REF_TAG) { $env:REF_TAG } elseif ($env:INPUT_TAG) { $env:INPUT_TAG } else { 'v1.0.0-rc2' }
-          if ($tag -notmatch '^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$') { throw 'Invalid release tag' }
+          $version = (& python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read source version' }
+          $match = [regex]::Match($version, '^(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?$')
+          if (-not $match.Success) { throw 'Only stable, alpha, beta or release-candidate source versions can be released' }
+          $expectedTag = 'v' + $match.Groups[1].Value
+          if ($match.Groups[2].Success) { $expectedTag += '-' + $match.Groups[2].Value + $match.Groups[3].Value }
+          $tag = if ($env:REF_TAG) { $env:REF_TAG } elseif ($env:INPUT_TAG) { $env:INPUT_TAG } else { $expectedTag }
+          if ($tag -cne $expectedTag) { throw "Release tag must match source version: $expectedTag" }
           "tag=$tag" >> $env:GITHUB_OUTPUT
           "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
       - name: Check PowerShell syntax
