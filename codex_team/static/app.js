@@ -129,36 +129,22 @@
     }
     return detail?.category==="AUTH_REQUIRED"?"Для этого действия требуется официальный вход Codex.":fallback||"Не удалось завершить действие. Проверьте параметры и повторите попытку.";
   }
-  async function api(path, method = "GET", body) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), /^\/api\/suite\/specifications\/[^/]+\/ai$/.test(path) ? 135000 : method === "GET" ? 12000 : 35000);
-    try {
-      const options = {method, signal: controller.signal, credentials: "same-origin", cache: "no-store", headers: {Accept: "application/json"}};
-      if (body !== undefined) { options.headers["Content-Type"] = "application/json"; options.body = JSON.stringify(body); }
-      const response = await fetch(path, options);
-      const contentType = response.headers.get("content-type") || "";
-      const data = contentType.includes("json") ? await response.json() : {detail: await response.text()};
-      if (!response.ok) {
-        const error = new Error(errorMessage(data, `Ошибка сервера (${response.status})`));
-        error.status = response.status; error.technical = data?.detail||data?.error||null;
-        throw error;
-      }
-      return data;
-    } catch (error) {
-      if (error.name === "AbortError") throw new Error("Сервер не ответил вовремя. Проверьте локальное приложение и повторите попытку.");
-      if (error instanceof TypeError) throw new Error("Нет связи с локальным сервером. Убедитесь, что приложение запущено.");
-      throw error;
-    } finally { clearTimeout(timeout); }
+  function api(path, method = "GET", body, options={}) {
+    return window.CodexApi.request(path,method,body,{...options,formatError:errorMessage});
   }
 
   function setPage(page) {
+    const [route,feature]=String(page||"workbench").split("/");
+    page=route;
+    if(page==="suite")state.suiteFeature=feature||state.suiteFeature||"architect";
     if(page==="dashboard")page="workbench";
     if (!$("page-" + page)) page = "workbench";
     const changed=state.page!==page;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
     qa(".page").forEach((el) => { el.hidden = el.id !== "page-" + page; });
-    qa(".nav-item").forEach((el) => {const active=el.dataset.page===page;el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
+    qa(".nav-item").forEach((el) => {const active=el.dataset.page===page&&(!el.dataset.suiteFeatureLink||el.dataset.suiteFeatureLink===state.suiteFeature);el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
     $("page-label").textContent={workbench:"Обзор",projects:"Проекты",runs:"Запуски",history:"История",agents:"Агенты",packs:"Наборы",actions:"Центр действий",usage:"Использование",settings:"Настройки",suite:"Рабочее пространство V2"}[page];
-    if(window.location.hash!=="#"+page)history.replaceState(null,"","#"+page);
+    const hash="#"+page+(page==="suite"?"/"+state.suiteFeature:"");
+    if(window.location.hash!==hash)history.replaceState(null,"",hash);
     if(page==="usage"){renderGlobalUsage();loadAccountUsage();}
     if(page==="agents"||page==="settings")loadModels();
     if(page==="history")loadHistory();
@@ -167,7 +153,7 @@
     if(page==="packs")renderPacks();
     if(page==="actions")loadActions();
     if(page==="settings")loadProviders();
-    if(page==="suite")window.dispatchEvent?.(new Event("codex-suite-open"));
+    if(page==="suite"){const event=new Event("codex-suite-open");event.detail={feature:state.suiteFeature};window.dispatchEvent?.(event);}
     if(page==="runs"){renderRunList();if(state.selectedRun)setDetailTab(state.detailTab);}
   }
   function setDetailTab(tab) {
@@ -407,7 +393,7 @@
       const button = node("button", `run-card${run.id === state.selectedRun?.id ? " selected" : ""}`);
       button.type = "button";
       button.setAttribute("aria-label", `Открыть запуск: ${run.task}`);
-      button.append(node("span", "run-card-icon", activeStates.has(normalizedState(run.state)) ? "↗" : "◈"));
+      button.append(node("span", "run-card-icon", activeStates.has(normalizedState(run.state)) ? "→" : "•"));
       const main = node("div"); main.append(node("span", "run-card-title", run.task));
       const meta = node("div", "run-card-meta");
       meta.append(node("span", "mono", run.workspace), node("span", "", modes[run.mode]?.title || run.mode || "Стандартный"));
@@ -937,7 +923,17 @@
       if(Array.isArray(response)){const query=$("history-search").value.trim().toLowerCase(),filter=$("history-filter").value;const rows=response.filter(r=>(!query||`${r.task} ${r.workspace} ${r.id}`.toLowerCase().includes(query))&&(!filter||normalizedState(r.state)===filter));state.historyTotal=rows.length;state.historyRows=rows.slice(offset,offset+20);}else{state.historyRows=response.items||response.runs||[];state.historyTotal=response.total??state.historyRows.length;}renderHistory();
     }catch(error){if(version===state.historyVersion)empty($("history-list"),"История временно недоступна",error.message);}finally{if(version===state.historyVersion)$("history-list").removeAttribute("aria-busy");}
   }
-  function renderRunList() { const c=$("runs-list");if(!state.runs.length){empty(c,"Пока нет запусков","Создайте первую задачу на странице «Обзор».");return;}c.replaceChildren(...state.runs.slice(0,12).map(run=>{const b=node("button","run-card");b.type="button";b.append(node("span","run-card-icon","▷"));const d=node("div");d.append(node("strong","run-card-title",run.task),node("div","run-card-meta mono",run.worktree?.path||run.workspace));b.append(d,badge(run.state));b.addEventListener("click",()=>selectRun(run.id));return b;})); }
+  function renderRunList() {
+    const c=$("runs-list"),query=($("runs-search")?.value||"").trim().toLocaleLowerCase(),filter=$("runs-state-filter")?.value||"all";
+    const attention=new Set(["FAILED","PAUSED","INTERRUPTED","USER_DECISION_REQUIRED","AUTH_REQUIRED","USAGE_LIMIT"]);
+    const runs=state.runs.filter(run=>{
+      const status=normalizedState(run.state);
+      return (!query||[run.task,run.workspace,run.id].some(value=>String(value||"").toLocaleLowerCase().includes(query)))&&
+        (filter==="all"||filter==="active"&&activeStates.has(status)||filter==="attention"&&attention.has(status)||filter==="finished"&&terminalStates.has(status));
+    });
+    if(!runs.length){empty(c,state.runs.length?"Нет подходящих запусков":"Пока нет запусков",state.runs.length?"Измените поиск или фильтр. В списке показаны загруженные запуски; полная история доступна в разделе «История».":"Создайте первую задачу на странице «Обзор».");return;}
+    c.replaceChildren(...runs.map(run=>{const b=node("button","run-card");b.type="button";const d=node("div");d.append(node("strong","run-card-title",run.task),node("div","run-card-meta mono",run.worktree?.path||run.workspace));b.append(d,badge(run.state));b.addEventListener("click",()=>selectRun(run.id));return b;}));
+  }
   function renderActivePipeline() {
     const run=state.selectedRun;if(!run)return;
     const attempts=MissionControl.attempts(run,state.stageEvents,state.eventsLoaded&&!state.eventsHasMore);
@@ -1156,7 +1152,7 @@
     $("copy-diagnostics-button").addEventListener("click",copyDiagnostics);$("export-diagnostics-button").addEventListener("click",()=>nativeOperation("export_diagnostics"));
   }
 
-  qa("[data-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.page)));
+  qa("[data-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.page+(button.dataset.suiteFeatureLink?"/"+button.dataset.suiteFeatureLink:""))));
   qa("[data-open-page]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.openPage)));
   qa("[data-detail-tab]").forEach((button) => {
     button.addEventListener("click", () => setDetailTab(button.dataset.detailTab));
@@ -1238,6 +1234,12 @@
     catch (error) { showFormError("settings-form-error", error); }
     finally { $("save-settings-button").disabled = false; }
   });
+  window.addEventListener("codex-suite-feature-change",event=>{
+    state.suiteFeature=event.detail?.feature||"architect";
+    qa(".nav-item[data-page='suite']").forEach(el=>{const active=el.dataset.suiteFeatureLink===state.suiteFeature;el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
+  });
+  $("runs-search")?.addEventListener("input",renderRunList);
+  $("runs-state-filter")?.addEventListener("change",renderRunList);
   window.addEventListener("hashchange", () => setPage(location.hash.slice(1)));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }

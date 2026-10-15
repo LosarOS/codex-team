@@ -73,6 +73,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         suite["qa"].recover()
         db.recover()
         yield
+        await asyncio.to_thread(suite["architect"].close)
         await asyncio.to_thread(suite["qa"].close)
         await asyncio.to_thread(engine.close)
         auth.close()
@@ -417,6 +418,14 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.get("/")
     def home():
         return FileResponse(static_root / "index.html")
+
+    @app.get("/api-client.js")
+    def shared_api_script():
+        return FileResponse(static_root / "api-client.js", media_type="text/javascript")
+
+    @app.get("/design-system.css")
+    def design_system_styles():
+        return FileResponse(static_root / "design-system.css", media_type="text/css")
 
     @app.get("/suite.js")
     def suite_script():
