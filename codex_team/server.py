@@ -58,7 +58,7 @@ class Confirm(BaseModel):
     model_config = ConfigDict(extra="forbid")
     confirmed: bool = False
 
-def create_app(root=None, store=None, provider_factory=None, static_root=None, desktop_context=None, secret_store=None):
+def create_app(root=None, store=None, provider_factory=None, static_root=None, desktop_context=None, secret_store=None, qa_runner=None):
     root = Path(root or Path(__file__).resolve().parents[1])
     static_root = Path(static_root or root / "codex_team/static")
     db = store or Store(root / ".ai-team" / "team.sqlite3")
@@ -70,8 +70,11 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @asynccontextmanager
     async def lifespan(app):
         engine.acquire_session()
+        suite["qa"].recover()
         db.recover()
         yield
+        await asyncio.to_thread(suite["architect"].close)
+        await asyncio.to_thread(suite["qa"].close)
         await asyncio.to_thread(engine.close)
         auth.close()
         if store is None:
@@ -79,6 +82,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     app = FastAPI(title="Codex Team", lifespan=lifespan)
     app.state.engine, app.state.store = engine, db
     app.state.providers, app.state.projects = providers, projects
+    from .suite_api import install_suite
+    suite=install_suite(app,root,db,engine,qa_runner)
     @app.get("/health")
     def health():
         import shutil
@@ -413,6 +418,26 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.get("/")
     def home():
         return FileResponse(static_root / "index.html")
+
+    @app.get("/api-client.js")
+    def shared_api_script():
+        return FileResponse(static_root / "api-client.js", media_type="text/javascript")
+
+    @app.get("/design-system.css")
+    def design_system_styles():
+        return FileResponse(static_root / "design-system.css", media_type="text/css")
+
+    @app.get("/suite.js")
+    def suite_script():
+        return FileResponse(static_root / "suite.js", media_type="text/javascript")
+
+    @app.get("/suite.css")
+    def suite_styles():
+        return FileResponse(static_root / "suite.css", media_type="text/css")
+
+    @app.get("/mission-control.js")
+    def mission_control_script():
+        return FileResponse(static_root / "mission-control.js", media_type="text/javascript")
 
     @app.get("/app.js")
     def js():

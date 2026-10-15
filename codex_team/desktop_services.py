@@ -124,6 +124,22 @@ class DiagnosticBundle:
 
     def collect(self):
         report = {"app_version": self.version, "os": {"system": platform.system(), "release": platform.release(), "architecture": platform.machine()}}
+        # Identify the selected profile without opening/copying its database.
+        # Keep the existing home-directory redaction used for diagnostic logs.
+        database = self.root / ".ai-team/team.sqlite3"
+        report["data_profile"] = {
+            "root": diagnostic_redact(str(self.root)),
+            "database": diagnostic_redact(str(database)),
+            "database_exists": database.is_file(),
+            "run_count": None,
+        }
+        try:
+            page = self.runtime.request("/api/runs?summary=true&limit=1&archived=true")
+            count = page.get("total")
+            if type(count) is int and count >= 0:
+                report["data_profile"]["run_count"] = count
+        except Exception:
+            pass  # Offline is unknown, never an invented empty history.
         for endpoint, name in (("/health", "backend_health"), ("/api/settings", "settings"), ("/api/status", "connection")):
             try:
                 data = self.runtime.request(endpoint)

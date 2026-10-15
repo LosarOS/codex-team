@@ -11,6 +11,7 @@ class RunRequest(BaseModel):
     pack: str = "software-development"
     max_iterations: int = Field(default=3, ge=1, le=10)
     max_agent_calls: int = Field(default=15, ge=1, le=100)
+    max_total_tokens: int | None = Field(default=None, ge=1, le=10**12)
     max_parallel_agents: int = Field(default=2, ge=1, le=4)
     max_run_duration: int = Field(default=1800, ge=30, le=86400)
     auto_commit: bool = False

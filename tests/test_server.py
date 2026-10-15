@@ -77,6 +77,11 @@ def test_same_origin_json_and_security_headers(local_app):
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
     assert client.get("/").status_code == 200
     assert client.get("/app.js").status_code == 200
+    for asset in ("/api-client.js", "/design-system.css"):
+        assert client.get(asset).status_code == 200
+    helper = client.get("/mission-control.js")
+    assert helper.status_code == 200
+    assert "javascript" in helper.headers["content-type"]
 
 
 @pytest.mark.parametrize("backend", ["openai_api", "fake_test_only", "custom"])

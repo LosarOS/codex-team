@@ -45,7 +45,7 @@ def test_ui_has_unique_control_ids_and_no_remote_assets():
 
 
 def test_agent_output_cannot_reach_html_execution_sinks():
-    script = (STATIC / "app.js").read_text(encoding="utf-8-sig")
+    script = "\n".join(path.read_text(encoding="utf-8-sig") for path in STATIC.glob("*.js"))
     assert not re.search(r"\.(?:innerHTML|outerHTML)\s*=|insertAdjacentHTML\s*\(|document\.write\s*\(", script)
     assert not re.search(r"\beval\s*\(|new\s+Function\s*\(", script)
 
@@ -66,3 +66,26 @@ def test_browser_behaviour_uses_explicit_provider_and_action_contracts():
     assert report["result"] == "PASS"
     assert "resume exact total budget" in report["evidence"]
     assert "canonical role model defaults" in report["evidence"]
+
+
+def test_mission_control_projects_persisted_attempts_and_activity():
+    node = os.environ.get("CODEX_TEAM_TEST_NODE") or shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for Mission Control projection tests")
+    result = subprocess.run(
+        [node, str(Path(__file__).with_name("mission_control.cjs")), str(STATIC)],
+        capture_output=True, text=True, encoding="utf-8", timeout=30, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(result.stdout.strip())["result"] == "PASS"
+
+
+def test_shared_api_client_bounds_requests_and_reports_errors():
+    node = os.environ.get("CODEX_TEAM_TEST_NODE") or shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for shared transport tests")
+    result = subprocess.run(
+        [node, str(Path(__file__).with_name("api_client.cjs")), str(STATIC)],
+        capture_output=True, text=True, encoding="utf-8", timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -4,6 +4,7 @@ import time
 import uuid
 import hashlib
 from pathlib import Path
+from codex_team.budget_guardian import BudgetGuardian, evaluate, validate_policy
 from codex_team.context import ContextManager
 from codex_team.models import AgentResult, RunRequest, parse_result
 from codex_team.provider import CodexProvider, ProviderError
@@ -76,7 +77,20 @@ class Engine:
             raise ValueError("Unsupported provider; automatic fallback is disabled")
         run["execution_backend"] = backend
         project = next((project for project in self.store.projects() if Path(project["path"]).resolve() == workspace), None)
+        run["project_id"] = project["id"] if project else None
+        policy = BudgetGuardian(self.store).project_policy(project["id"]) if project else {}
+        explicit = getattr(request, "model_fields_set", set())
+        for key, value in policy.items():
+            if key not in explicit:
+                run[key] = value
+        run["budget_policy"] = {"max_agent_calls": run["max_agent_calls"], "max_total_tokens": run.get("max_total_tokens")}
         run["project_commands"] = project.get("commands", {}) if project else {}
+        if project:
+            from .intelligence import IntelligenceService
+            intelligence=IntelligenceService(self.root,self.store)
+            if intelligence.get(project['id']):
+                run['project_intelligence']=json.loads(intelligence.context(project['id'],request.task,max_chars=10000))
+
         for spec in run["agents"].values():
             self._apply_role_defaults(spec, defaults)
         self.store.save_run(run)
@@ -248,8 +262,10 @@ class Engine:
                 if control["pause"]:
                     run["state"] = "PAUSED"
                     break
-                if run["calls"] >= run["max_agent_calls"]:
-                    raise ProviderError("USER_DECISION_REQUIRED", "Agent call budget exhausted")
+                self._budget_events(run)
+                exhausted = evaluate(run)["reached"]
+                if exhausted:
+                    raise ProviderError("USER_DECISION_REQUIRED", "Бюджет запуска исчерпан (budget): " + ", ".join(exhausted) + ". Следующий этап не запущен; контрольная точка сохранена.")
                 if control.get("timeout"):
                     raise ProviderError("USER_DECISION_REQUIRED", "Run duration budget exhausted")
                 role = run["pipeline"][run["stage"]]
@@ -288,6 +304,9 @@ class Engine:
                                              "total": totals, "sdk_last": raw.get("last")})
                     else:
                         run["usage"].append({"agent": role, "iteration": run["iteration"], **raw})
+                if response.get("usage"):
+                    run["usage"][-1].setdefault("completed_at", now())
+                self._budget_events(run)
                 self._save(run)
                 # A returned stage owns its permitted edits. Capture them before
                 # verdict/evidence errors so a same-thread resume can continue.
@@ -301,6 +320,19 @@ class Engine:
                 run.update(change)
                 run["checkpoint_git"] = after
                 self._save(run)
+                if run.get('project_id'):
+                    from .time_machine import TimeMachine
+                    from .suite_store import SuiteStore
+                    try:
+                        checkpoint=TimeMachine(self.root,SuiteStore(self.store)).create(
+                            run['project_id'], label=f"Этап {role}, вызов {run['calls']}",
+                            run_id=run_id,stage=role,request_id=f"{run_id}-{run['calls']}",workspace=str(cwd))
+                        run.setdefault('git_checkpoints',[]).append(checkpoint['id'])
+                        self.store.event(run_id,'git_checkpoint_created',{'checkpoint_id':checkpoint['id'],'role':role},role)
+                        self._save(run)
+                    except Exception as exc:
+                        self.store.event(run_id,'git_checkpoint_unavailable',{'reason':sanitize(str(exc))},role)
+
                 if control["stop"]:
                     run["state"] = "STOPPED"
                     break
@@ -399,6 +431,30 @@ class Engine:
                 if run["state"] not in {"DONE", "STOPPED", "PAUSED"} and run.get("error"):
                     self.actions.product_request(run_id, run.get("current_role"), run["state"], run["error"])
 
+    def _budget_events(self, run):
+        status = evaluate(run)
+        emitted = run.setdefault("budget_thresholds_emitted", [])
+        for metric, thresholds in status["thresholds"].items():
+            limit = status["max_agent_calls" if metric == "calls" else "max_total_tokens"]
+            for threshold in thresholds:
+                identity = f"{metric}/{limit}/{threshold}"
+                if identity not in emitted:
+                    self.store.event(run["id"], "budget_threshold", {"metric": metric, "threshold": threshold, "limit": limit, "observed": status["calls" if metric == "calls" else "measured_tokens"]})
+                    emitted.append(identity)
+        self._save(run)
+
+    def set_budget_policy(self, run_id, policy):
+        policy = validate_policy(policy)
+        with self.lock:
+            if run_id in self.active:
+                raise ValueError("Сначала приостановите запуск перед изменением бюджета")
+            run = self.store.run(run_id)
+            run.update(policy)
+            run["budget_policy"] = {"max_agent_calls": run["max_agent_calls"], "max_total_tokens": run.get("max_total_tokens")}
+            self.store.save_run(run)
+            self.store.event(run_id, "budget_policy_updated", run["budget_policy"])
+            return run
+
     def control(self, run_id, action, instruction=None):
         run = self.store.run(run_id)
         if action == "resume":
@@ -470,7 +526,7 @@ class Engine:
             if budget is not None:
                 if decision != "resume":
                     raise ValueError("Explicit total budgets apply only to Resume")
-                limits = {"max_iterations": (1, 10), "max_agent_calls": (1, 100), "max_run_duration": (30, 86400)}
+                limits = {"max_iterations": (1, 10), "max_agent_calls": (1, 100), "max_run_duration": (30, 86400), "max_total_tokens": (1, 10**12)}
                 if not isinstance(budget, dict) or not budget or set(budget) - set(limits):
                     raise ValueError("Unsupported run budget fields")
                 for key, value in budget.items():
@@ -483,10 +539,13 @@ class Engine:
                     raise ValueError("Call total must leave room for the unfinished stage")
                 if budget.get("max_run_duration", run["max_run_duration"]) <= run.get("elapsed_seconds", 0):
                     raise ValueError("Duration total must exceed elapsed run time")
+                if budget.get("max_total_tokens") is not None and budget["max_total_tokens"] <= (evaluate(run)["measured_tokens"] or 0):
+                    raise ValueError("Token total must exceed measured usage")
             previous = dict(run)
             if instruction:
                 run["instructions"] = [*run.get("instructions", []), instruction]
             run.update(budget or {})
+            run["budget_policy"] = {"max_agent_calls": run["max_agent_calls"], "max_total_tokens": run.get("max_total_tokens")}
             self.store.save_run(run)
             try:
                 self.launch(run_id)

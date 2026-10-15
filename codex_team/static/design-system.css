@@ -1,0 +1,259 @@
+/* Codex Team foundations: semantic surfaces and one shared component scale.
+   Existing layout rules stay in style.css; page-specific suite rules stay in suite.css. */
+:root {
+  --type-caption:12px;
+  --type-body:14px;
+  --type-subtitle:16px;
+  --type-title:22px;
+  --type-display:32px;
+  --control-height:42px;
+  --radius-control:9px;
+  --radius-panel:16px;
+  --page-gap:24px;
+  --panel-padding:24px;
+  --surface-shadow:0 2px 5px #00000008;
+  font-size:var(--type-body);
+  line-height:1.6;
+}
+:root[data-theme="purple-neon"] {
+  --bg:#101019;
+  --panel:#181722;
+  --raised:#242231;
+  --sidebar:#13121d;
+  --input:#12121b;
+  --code:#101018;
+  --hover:#2e293e;
+  --line:#49415f;
+  --line-soft:#302b40;
+  --text:#f0edf8;
+  --muted:#b6b0c8;
+  --faint:#aaa2bc;
+}
+body {font-size:var(--type-body);letter-spacing:.005em}
+h1 {font-size:var(--type-display);font-weight:650;line-height:1.2;letter-spacing:-.04em}
+h2 {font-size:var(--type-title);line-height:1.35;letter-spacing:-.025em}
+h3 {font-size:var(--type-subtitle);line-height:1.45;letter-spacing:-.01em}
+button,input,select,textarea {font-size:var(--type-body)}
+button {font-weight:550}
+input,select,textarea {border-radius:var(--radius-control);min-height:var(--control-height);padding:10px 12px;line-height:1.5}
+input[type="checkbox"],input[type="radio"] {min-height:0}
+input,select,textarea,button,a {touch-action:manipulation}
+label,.field-label,legend {font-size:13px;line-height:1.5;font-weight:600}
+textarea {line-height:1.65}
+:focus-visible {outline:2px solid var(--accent-text);outline-offset:3px}
+:where(input,textarea,select):focus-visible {outline:2px solid var(--accent-text);outline-offset:2px}
+.muted,.field-note,.label-hint,.quiet-tag,.subtle,.eyebrow {font-size:var(--type-caption)}
+.subtle,.eyebrow {letter-spacing:.1em}
+.app-shell {grid-template-columns:248px minmax(0,1fr)}
+.sidebar {padding:24px 14px 14px;overflow:hidden;gap:0;height:100dvh}
+.brand {margin:0 8px 26px;padding:0;gap:12px;font-size:20px;flex-shrink:0}
+.brand small {font-size:12px;letter-spacing:.06em;line-height:1.5}
+.brand-icon {width:38px;height:38px;border-radius:12px;background:var(--accent-soft)}
+.navigation {flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;gap:21px;padding:0 2px 14px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.nav-group {display:grid;gap:3px}
+.nav-group-title {font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding:0 12px 6px}
+.nav-item {min-height:41px;padding:9px 11px;gap:11px;border-radius:9px;border:1px solid transparent;font-size:13px}
+.nav-item>span:not(.nav-icon):not(.nav-count) {font-size:13px}
+.nav-item.active {background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent-text) 22%,transparent)}
+.nav-icon {width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center}
+.nav-icon svg {display:block;width:20px;height:20px}
+.nav-count {font-size:12px;line-height:20px;min-width:22px;text-align:center;border-radius:6px}
+.sidebar-bottom {flex-shrink:0;padding-top:8px;background:var(--sidebar)}
+.account-mini {padding:16px 10px 10px}
+.account-mini strong,.account-mini small,.local-note {font-size:12px}
+.local-note {line-height:1.45;padding:8px 10px}
+.topbar {height:68px;padding:0 32px;background:var(--bg)}
+.breadcrumb {font-size:12px}
+.connection-badge {font-size:12px;border-radius:20px;padding:5px 11px}
+.icon-button {display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;border-radius:8px}
+main {max-width:1680px;padding:32px 32px 24px}
+.page-heading {align-items:flex-start;margin-bottom:28px;gap:20px}
+.page-heading .eyebrow {margin-bottom:10px}
+.page-heading p {font-size:14px;max-width:780px;margin-top:12px;line-height:1.65}
+.quiet-tag {line-height:1.5;border-radius:7px;letter-spacing:.05em}
+.panel,.summary-card,.run-card,.action-card,.suite-panel {border-color:var(--line-soft);border-radius:var(--radius-panel);box-shadow:var(--surface-shadow)}
+.panel-heading {margin-bottom:22px;align-items:flex-start}
+.panel-heading h2 {font-size:18px}
+.compose-grid {grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:var(--page-gap)}
+.compose-panel,.pipeline-preview,.settings-panel,.editor-panel,.agent-card,.project-card,.pack-card {padding:var(--panel-padding)}
+.dashboard-stats {gap:16px;margin-bottom:24px}
+.summary-card {padding:20px}
+.summary-card>span {font-size:12px;margin-bottom:12px}
+.summary-card strong {font-size:17px;font-weight:600;line-height:1.45}
+.summary-card .button {font-size:12px;margin-top:10px;min-height:30px}
+.button {min-height:var(--control-height);border-radius:var(--radius-control);font-size:13px;padding:10px 15px;gap:9px;white-space:normal;text-align:center;line-height:1.5}
+.button.primary {box-shadow:0 1px 2px #0002}
+.button.secondary {background:var(--raised);border-color:var(--line-soft)}
+.button.secondary:hover:not(:disabled) {border-color:var(--line)}
+.button.text-button {font-size:12px;min-height:32px;box-shadow:none}
+.button:disabled {cursor:not-allowed;opacity:.55}
+.button-row {gap:9px}
+.preset-picker {gap:10px;margin-top:22px}
+.preset-button {padding:13px 12px;border-radius:10px;background:var(--input)}
+.preset-button strong {font-size:14px}
+.preset-button small {font-size:12px;line-height:1.5;margin-top:5px}
+.compose-footer {border-top:1px solid var(--line-soft);padding-top:20px;margin-top:24px;flex-wrap:wrap}
+.compose-footer>span {font-size:12px}
+.input-with-icon input,.workspace-picker input {font-size:13px}
+.advanced-options summary {font-size:13px}
+.advanced-options summary span,.check-label small {font-size:12px}
+.check-label,.check-label.inline {font-size:13px;line-height:1.5}
+.pipeline-list {margin:24px 0}
+.pipeline-list h3 {font-size:14px}
+.pipeline-list p,.pipeline-footnote {font-size:12px;line-height:1.65}
+.pipeline-number {font-size:12px;border-radius:9px}
+.tiny-badge {font-size:12px;letter-spacing:0;border-radius:6px}
+.section-heading h2 {font-size:20px}
+.section-heading p {font-size:13px;line-height:1.6}
+.run-card {padding:18px 20px;grid-template-columns:36px minmax(0,1fr) auto;gap:16px}
+.run-card-title {font-size:14px;line-height:1.5;font-weight:600}
+.run-card-meta,.run-card-tail>.muted {font-size:12px;line-height:1.5}
+.run-card-icon {width:36px;height:36px;border-radius:10px}
+.state-badge {font-size:12px;border-radius:6px;line-height:1.4;padding:5px 8px}
+.empty-state {padding:38px 24px;background:var(--input);border-color:var(--line-soft);border-radius:12px}
+.empty-state h3 {font-size:16px;margin:12px 0 8px}
+.empty-state p {font-size:14px;max-width:580px;margin-inline:auto}
+.loading-state {font-size:14px;padding:28px;border-radius:12px;background:var(--input)}
+.run-detail-header {padding:26px}
+.run-detail-header h2 {font-size:20px;line-height:1.5}
+.run-detail-meta .mono,.run-detail-header .eyebrow {font-size:12px}
+.run-stats {display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+.run-stats span {font-size:12px;margin-bottom:8px}
+.run-stats strong {font-size:15px}
+.detail-tabs {gap:24px;padding-inline:26px}
+.detail-tabs button {font-size:13px;padding:14px 0;min-height:48px}
+.detail-tabs button span {font-size:12px;padding:1px 5px}
+.role-button {font-size:13px;padding:11px 10px}
+.role-button>span:last-child,.thread-id {font-size:12px}
+.result-text,.result-list {font-size:14px;line-height:1.8}
+.result-section h3 {font-size:12px;letter-spacing:.08em}
+.role-inspector-header h3 {font-size:18px}
+.code-block,pre,.diff-stat {font-size:12px;line-height:1.7}
+.event-time {font-size:12px}
+.event-item {grid-template-columns:70px minmax(0,1fr);padding:15px 0}
+.event-title {font-size:14px}
+.event-summary {font-size:13px}
+.event-details summary {font-size:12px}
+.steer-form {padding:20px 26px}
+.steer-form label,.steer-form p {font-size:12px}
+.steer-input-row input {font-size:14px}
+.mission-heading h3 {font-size:18px}
+.mission-heading>span {font-size:12px}
+.mission-stage strong {font-size:14px}
+.mission-stage .muted,.mission-stage time {font-size:12px}
+.mission-indicator {width:38px;height:38px}
+.mission-current {padding:20px}
+.mission-current-copy .eyebrow {font-size:12px}
+.mission-current-copy h3 {font-size:16px}
+#mission-current-activity {font-size:13px}
+.mission-current-actions .button {font-size:13px;min-height:42px}
+.mission-metadata {font-size:13px;gap:12px 18px;padding:18px}
+.banner {font-size:14px;padding:18px 20px;border-radius:12px;line-height:1.65}
+.banner p,.form-error,.action-card .action-reason {font-size:14px;line-height:1.7}
+.action-card .limitation,.action-meta,.answer-option {font-size:13px;line-height:1.65}
+.answer-option small {font-size:12px}
+.action-header h2 {font-size:18px}
+.action-question legend {font-size:14px}
+.history-toolbar {padding:20px;gap:12px}
+.history-toolbar input,.history-toolbar select {font-size:13px}
+table {font-size:13px;line-height:1.6}
+thead {font-size:12px;letter-spacing:.03em}
+th {padding:14px 18px;font-weight:600}
+td {padding:17px 18px}
+td button {font-size:13px;line-height:1.6}
+tbody tr:hover {background:var(--accent-soft)}
+.pagination {font-size:13px;padding:18px}
+.agent-card h3,.project-card h3,.pack-card h3 {font-size:18px}
+.agent-card p,.agent-description,.agent-instructions-preview {font-size:14px;line-height:1.7}
+.agent-permission,.project-path,.project-runtime {font-size:13px;line-height:1.6}
+.registry-actions .button,.project-actions .button {font-size:12px;min-height:38px;padding:8px 11px}
+.settings-panel h2 {font-size:19px}
+.settings-panel p,.settings-panel .muted {font-size:13px;line-height:1.7}
+.provider-option strong {font-size:14px}
+.provider-option small {font-size:13px}
+.provider-option {padding:20px;border-radius:11px}
+.usage-card {padding:22px;border-radius:14px}
+.usage-card>span,.usage-card small {font-size:12px}
+.usage-card strong {font-size:28px;letter-spacing:-.03em}
+.capabilities-list {font-size:13px}
+.confirm-dialog {padding:28px;border-radius:18px;border-color:var(--line);max-width:min(620px,calc(100vw - 32px))}
+.confirm-dialog h2 {font-size:22px}
+.confirm-dialog p {font-size:14px;line-height:1.7}
+.toast {font-size:14px;padding:16px 18px;border-radius:12px}
+.app-footer {font-size:12px;line-height:1.6;gap:14px;flex-wrap:wrap}
+.onboarding {padding:24px;background:var(--accent-soft)}
+.onboarding h2 {font-size:20px}
+.onboarding-steps {font-size:13px;line-height:1.7}
+@media(max-width:1200px) {
+  .dashboard-stats {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compose-grid {grid-template-columns:1fr}
+  .pipeline-preview {display:none}
+  .projects-grid {grid-template-columns:1fr}
+  .run-card-tail {flex-wrap:wrap;justify-content:flex-end;gap:8px}
+}
+@media(min-width:651px) and (max-width:1100px) {
+  .app-shell {grid-template-columns:76px minmax(0,1fr)}
+  .sidebar {padding:22px 9px 12px}
+  .brand {margin:0 auto 24px;padding:0;font-size:0}
+  .brand>span:last-child,.brand small,.nav-group-title,.sidebar-bottom {display:none}
+  .navigation {gap:15px}
+  .nav-item {justify-content:center;padding:10px;min-height:44px}
+  .nav-item>span:not(.nav-icon) {display:none!important}
+  .topbar {padding-inline:24px}
+  main {padding:28px 24px}
+}
+@media(max-width:750px) {
+  .history-toolbar {grid-template-columns:1fr 1fr}
+  .run-card {grid-template-columns:32px minmax(0,1fr)}
+  .run-card-tail {grid-column:2;justify-content:flex-start}
+  .form-row,.form-row.three {grid-template-columns:1fr;gap:0}
+  .run-stats {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px) {
+  .app-shell {display:block;padding-bottom:88px}
+  .sidebar {position:fixed;top:auto;bottom:0;height:80px;width:100%;padding:0 8px;background:var(--sidebar);overflow:hidden;z-index:10}
+  .sidebar .brand,.sidebar-bottom,.nav-group-title {display:none}
+  .navigation {display:flex;flex-direction:row;align-items:stretch;overflow-x:auto;overflow-y:hidden;padding:6px 0;gap:5px;height:100%}
+  .nav-group {display:contents}
+  .nav-item {flex:0 0 94px;width:auto;flex-direction:column;justify-content:center;padding:7px 5px;gap:5px;min-height:60px}
+  .nav-item>span:not(.nav-icon):not(.nav-count) {display:block!important;font-size:12px!important;white-space:nowrap}
+  .nav-item .nav-count {display:none!important}
+  .topbar {height:62px;padding-inline:16px;gap:8px}
+  .breadcrumb {font-size:12px;max-width:calc(100vw - 180px)}
+  .topbar-right {gap:6px}
+  .connection-badge {font-size:12px;max-width:130px;overflow:hidden;padding:5px 8px}
+  main {padding:24px 16px}
+  h1,.page-heading h1 {font-size:28px}
+  .page-heading p {font-size:14px}
+  .page-heading {margin-bottom:24px}
+  .compose-panel,.settings-panel,.editor-panel,.agent-card,.project-card,.pack-card {padding:20px}
+  .dashboard-stats {gap:10px}
+  .summary-card {padding:16px}
+  .summary-card strong {font-size:15px}
+  .summary-card>span,.summary-card .button {font-size:12px}
+  .compose-footer>span {font-size:12px}
+  .preset-button {padding:12px 9px}
+  .preset-button strong {font-size:13px}
+  .preset-button small {font-size:12px}
+  .run-detail-header,.detail-content,.role-inspector {padding:20px}
+  .inspector-layout {padding:0}
+  .detail-tabs {padding-inline:20px}
+  .run-context,.run-stats,.mission-current {margin-inline:20px}
+  .history-toolbar {grid-template-columns:1fr}
+  .usage-card {padding:18px}
+  .app-footer {font-size:12px;line-height:1.7}
+  .toast-region {bottom:94px}
+}
+.runs-filterbar {display:grid;grid-template-columns:minmax(180px,2fr) minmax(180px,1fr);gap:16px;padding:20px;border:1px solid var(--line-soft);border-radius:12px;background:var(--panel);margin-bottom:20px}
+.runs-filterbar label {margin:0;display:grid;gap:8px}
+.architect-entry {display:flex;justify-content:space-between;align-items:center;gap:24px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent-text) 25%,var(--line-soft));border-radius:14px;padding:20px 22px;margin-bottom:24px}
+.architect-entry strong {font-size:16px}
+.architect-entry p {font-size:13px;color:var(--muted);margin-top:6px}
+.architect-entry .button {flex-shrink:0}
+@media(max-width:1200px){.pipeline-preview {display:block}}
+@media(max-width:650px){.runs-filterbar {grid-template-columns:1fr;padding:16px}.architect-entry {align-items:stretch;flex-direction:column;padding:18px;gap:14px}}
+/* Runs list has two cells; the dashboard card also includes a leading icon. */
+#runs-list .run-card {grid-template-columns:minmax(0,1fr) auto}
+.run-card>div {min-width:0}
+.run-card-meta.mono {display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:750px){#runs-list .run-card {grid-template-columns:minmax(0,1fr)}#runs-list .run-card>.state-badge {justify-self:start}}
