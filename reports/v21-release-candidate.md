@@ -38,7 +38,7 @@ Independent security review found no critical blocker in the reviewed implementa
 - Task Architect cancellation retains its single ownership slot until execute/interrupt/close finish, keeps its temporary working directory alive while used, and serializes cancellation with its version-checked final save. A late worker cannot write storage itself.
 - Checkpoint retention is opt-in and never deletes automatically. Preview expires and binds inventory, references, policy, runs and restores. Run-linked, restored or otherwise reachable checkpoints are protected. Confirmation removes only `refs/codex-team/checkpoints/…` using expected SHA and retains record history; it never calls Git GC/reset or changes user files, index, branches or worktrees.
 - QA setup inspects only a local Unix socket or Windows named-pipe Docker endpoint, explicitly supplies `--host`, ignores saved contexts/TLS selectors and rejects TCP/SSH remote endpoints. Image verification requires explicit action and immutable SHA metadata; it does not execute tools, download images or install dependencies. Test execution remains a separate confirmed sandbox operation.
-- The local API keeps existing origin/host/JSON mutation restrictions. Transport is shared between old and new screens; malformed external URL spellings were flagged for hardening during review.
+- The local API keeps existing origin/host/JSON mutation restrictions. Transport is shared between old and new screens; external URL spellings, backslashes/control characters and malformed successful responses are rejected; timeouts distinguish offline/cancelled/protocol failures.
 
 Static secret filtering cannot prove absence of arbitrary credentials embedded in normal source text. Same-user malicious filesystem races and a compromised local Docker daemon remain outside a process isolation guarantee. Windows named-pipe operation has code-level checks and mocked coverage, not native execution evidence.
 
@@ -78,3 +78,29 @@ Additional browser scenarios passed: draft survives feature navigation; delayed 
 [Task Architect editor after cancelled fixture](v21-screenshots/after-architect-cancelled-fixture.png). Full JSON assertion evidence and all screenshots: `/workspace/codex-v21-evidence`; downloadable archive: `/workspace/codex-v21-evidence.zip`.
 
 After final transport hardening, targeted Python UI/server checks passed **27 tests in 5.98 s**. JavaScript syntax and Python compilation checks passed. Windows diagnostic script is supplied for native execution but was not run in Linux; its presence does not satisfy the merge gate.
+
+
+## Feature and release status
+
+| Component | Implementation | Available verification |
+|---|---|---|
+| Task Architect | Versioned editable/approved specifications, explicit AI request, cancellation/status API and bounded shutdown with deferred cleanup | 10 lifecycle/API regressions; browser consent/cancel fixtures; real inference NOT RUN |
+| Git Time Machine | Existing isolated restoration plus opt-in retention policy, preview and expected-SHA reference deletion | 19 API/Git safety tests; browser dry-run |
+| Budget Guardian | Existing measured run/stage usage and backend enforcement retained | Full regression suite; browser dashboard |
+| QA Arena | Local Docker setup wizard and immutable image verification; one status aggregator preserves FAIL/BLOCKED through incomplete/cancelled checks | 43 targeted tests including real local Docker smoke; browser setup |
+| Project Intelligence | Metadata/Git-aware cache avoids rereading unchanged content, invalidates on HEAD/index/edit/rename/delete | 8 targeted tests and local benchmark |
+| Agent Mission Control | Existing run detail remains the single pipeline/inspector/events/diff/tests/artifact view | Synthetic DOM/projection contracts and Chromium matrix |
+
+Confirmed priority findings addressed: **P1** premature Task Architect resource cleanup and uncancelled late results; **P1** FAIL/BLOCKED hidden by PARTIAL; **P2** repeated cached source reads; **P2** missing checkpoint retention controls and QA environment setup; **P2** long-content Runs overflow and fragmented navigation/component styling. No confirmed new P0 finding was identified in the available checks.
+
+Commands/evidence:
+
+- `python -m pytest -q`: 488 passed / 9 known baseline failures / 4 skipped, 81.13 s.
+- `python -m pytest -q tests/test_ui_contracts.py tests/test_server.py`: 27 passed, 5.98 s, after final transport changes.
+- `CODEX_QA_DOCKER_IMAGE=sha256:53be7ba2c4bbd2afbeb4444161b0073a1616b31fec59b46c5bb798b21854af2a python -m pytest -q tests/test_qa_arena.py tests/test_qa_setup_api.py`: 43 passed, 17.53 s. This environment's explicitly prepared local stdlib-only image was used; no image download or model calls.
+- `node --check` for every `codex_team/static/*.js`; `python -m compileall -q codex_team`: passed.
+- [Complete browser assertion JSON](v21-browser-results.json). Browser fixture execution does not establish real Codex or Windows execution.
+
+The suite uses additive existing SQLite records/revisions; this hardening adds no destructive schema migration. Retention keeps historical records as tombstones. Packaging includes the new local CSS/JS through the existing static-file wildcard; Windows builds were not produced or accepted here. A defective SDK may finish after the HTTP timeout: the service reserves its single ownership slot and temporary directory until the worker/interrupt/close actually finish, rather than deleting live resources or allowing unbounded concurrent retries.
+
+**Merge is intentionally not performed.** PR #1 is already an ancestor of PR #2; master was not changed. Native Windows 10/11, WebView2, named-pipe Docker, DPI, tray/notifications, installed/portable packaging and existing-data-profile acceptance require the checklist above and real evidence before merging.

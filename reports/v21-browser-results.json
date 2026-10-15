@@ -1,0 +1,3526 @@
+{
+  "phase": "after",
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "purple-neon",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "dark-fantasy",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "light",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "cssZoom": 1.25,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "cssZoom": 1.5,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "workbench",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "projects",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs-list",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "runs",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "agents",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "packs",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "history",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "actions",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "usage",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "settings",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "intelligence",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "architect",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "budget",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "git",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "phase": "after",
+      "theme": "system",
+      "name": "qa",
+      "cssZoom": 1.75,
+      "width": 1366,
+      "scroll": 1366
+    },
+    {
+      "keyboardFocus": {
+        "tag": "BUTTON",
+        "outline": "solid"
+      }
+    }
+  ],
+  "errors": [],
+  "unknown": [],
+  "overflows": []
+}
