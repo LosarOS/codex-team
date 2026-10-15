@@ -68,6 +68,7 @@
     "item/started": "Действие начато", "item/completed": "Действие завершено", "turn/started": "Шаг агента начат", "turn/completed": "Шаг агента завершён",
     "thread/tokenUsage/updated": "Расход токенов обновлён", thread_ready: "Независимая сессия готова", run_state: "Состояние запуска",
     repair_requested: "Возврат на исправление", user_instruction: "Указание пользователя", pause_requested: "Пауза запрошена", stop_requested: "Остановка запрошена", approval_required: "Требуется разрешение",
+    access_level_changed: "Уровень доступа изменён", access_profile_refreshed: "Профиль доступа обновлён",
   };
   const activeStates = new Set(["RUNNING", "QUEUED", "PAUSING", "STOPPING"]);
   const resumeStates = new Set(["PAUSED", "INTERRUPTED", "USER_DECISION_REQUIRED", "AUTH_REQUIRED", "FAILED", "STOPPED", "USAGE_LIMIT"]);

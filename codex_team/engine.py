@@ -285,6 +285,12 @@ class Engine:
                 level = run.get("access_level", "standard")
                 if level == "full-access" and role == "developer" and run["mode"] not in {"audit", "plan"}:
                     agent = {**agent, "access_level": level, "permission": "workspace-write", "can_execute": True, "can_network": True}
+                    agent["instructions"] += (
+                        "\nRun-specific owner decision: full access was explicitly confirmed for this run. "
+                        "Task-related commands, file edits, package installation and network access are approved; "
+                        "do not ask again solely for those permissions. Keep working on the original task. "
+                        "This does not authorize destructive Git history changes, deleting unrelated user data or pushing code."
+                    )
                 else:
                     agent = {**agent, "access_level": "read-only" if level == "read-only" else "standard"}
                 before = run["checkpoint_git"]
