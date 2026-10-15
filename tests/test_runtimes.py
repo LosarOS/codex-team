@@ -23,6 +23,10 @@ def python_tree(root):
     return root
 
 
+def profile_name(config):
+    return next(tomllib.loads(value)["default_permissions"] for value in config.config_overrides if value.startswith("default_permissions="))
+
+
 @pytest.fixture
 def bundle(tmp_path, monkeypatch):
     resources = tmp_path / "bundle"
@@ -199,15 +203,16 @@ def test_pytest_hint_disables_cache_and_explains_dependency(tmp_path, bundle):
 
 
 def test_provider_profile_grants_bundle_runtime_without_home_or_bundle_root(tmp_path, bundle, monkeypatch):
+    (tmp_path / ".codex").mkdir()
     monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr=""))
     config = config_for(str(tmp_path), {"permission": "read-only"})
-    fs = next(tomllib.loads(value)["permissions"]["codex-team"]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
+    fs = next(tomllib.loads(value)["permissions"][profile_name(config)]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
     assert fs[str(bundle / "runtime/python/python.exe")] == "read"
     assert fs[str(bundle / "runtime/python/Lib")] == "read"
     assert str(bundle) not in fs and str(Path.home()) not in fs
     assert fs[str(tmp_path)] == "read"
     assert fs[str(tmp_path / ".codex")] == "deny"
-    assert 'permissions.codex-team.network.enabled=false' in config.config_overrides
+    assert f'permissions.{profile_name(config)}.network.enabled=false' in config.config_overrides
 
 
 def test_context_injects_frozen_runtime_and_authoritative_worktree_command(tmp_path, bundle):
@@ -267,7 +272,7 @@ def test_shell_git_installation_parent_cannot_expand_into_home_or_root(tmp_path,
     monkeypatch.setattr(runtimes.shutil, "which", lambda name, path=None: str(tool) if name == "git" else None)
     monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr=""))
     config = config_for(str(tmp_path), {"permission": "read-only"})
-    fs = next(tomllib.loads(value)["permissions"]["codex-team"]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
+    fs = next(tomllib.loads(value)["permissions"][profile_name(config)]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
     assert str(parent) not in fs
     assert fs[str(tool)] == "read"
 
@@ -282,7 +287,7 @@ def test_shared_git_metadata_does_not_grant_home_or_use_home_for_runtime_discove
     monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout=str(common), stderr=""))
     monkeypatch.setattr(provider, "runtime_read_roots", lambda workspace, project_root=None: observed.append(project_root) or [])
     config = config_for(str(tmp_path), {"permission": "read-only"})
-    fs = next(tomllib.loads(value)["permissions"]["codex-team"]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
+    fs = next(tomllib.loads(value)["permissions"][profile_name(config)]["filesystem"] for value in config.config_overrides if ".filesystem=" in value)
     assert fs[str(common)] == "read"
     assert str(home) not in fs
     assert not any(".workspace_roots=" in value for value in config.config_overrides)

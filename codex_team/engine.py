@@ -63,6 +63,8 @@ class Engine:
         return snap
 
     def create(self, request: RunRequest):
+        if request.access_level == "full-access" and not request.confirmed_full_access:
+            raise ValueError("Подтвердите полный доступ: команды и сеть без песочницы для разработчика.")
         workspace = self.workspace.validate(request.workspace)
         pipeline = self.registry.pipeline(request.mode, request.pack, request.specialists)
         run_id = "run_" + uuid.uuid4().hex[:12]
@@ -76,6 +78,7 @@ class Engine:
         if backend not in {"codex_chatgpt", "openai_api"}:
             raise ValueError("Unsupported provider; automatic fallback is disabled")
         run["execution_backend"] = backend
+        run["access_profile_version"] = 1
         project = next((project for project in self.store.projects() if Path(project["path"]).resolve() == workspace), None)
         run["project_id"] = project["id"] if project else None
         policy = BudgetGuardian(self.store).project_policy(project["id"]) if project else {}
@@ -195,6 +198,12 @@ class Engine:
                 raise ValueError("This run's worktree was deleted; it cannot be resumed")
             if run["state"] != "QUEUED" and run["state"] not in RESUMABLE:
                 raise ValueError("Run cannot be resumed in its current state")
+            if run.get("access_profile_version") != 1:
+                previous_threads = dict(run.get("threads", {}))
+                run["threads"] = {}
+                run["access_profile_version"] = 1
+                self.store.save_run(run)
+                self.store.event(run_id, "access_profile_refreshed", {"reason": "Обновлена конфигурация песочницы; контрольная точка сохранена.", "previous_threads": previous_threads})
             if self.lease is None:
                 self.lease = AppLease(self.root)
             try:
@@ -271,8 +280,13 @@ class Engine:
                 role = run["pipeline"][run["stage"]]
                 agent = run["agents"][role]
                 # Audit and plan modes never give a role workspace write access.
-                if run["mode"] in {"audit", "plan"}:
+                if run["mode"] in {"audit", "plan"} or run.get("access_level") == "read-only":
                     agent = {**agent, "permission": "read-only"}
+                level = run.get("access_level", "standard")
+                if level == "full-access" and role == "developer" and run["mode"] not in {"audit", "plan"}:
+                    agent = {**agent, "access_level": level, "permission": "workspace-write", "can_execute": True, "can_network": True}
+                else:
+                    agent = {**agent, "access_level": "read-only" if level == "read-only" else "standard"}
                 before = run["checkpoint_git"]
                 control.update(stage_before=before, stage_writer=agent["permission"] == "workspace-write", owned_paths=set(), owned_hashes={})
                 run["current_role"] = role
@@ -454,6 +468,26 @@ class Engine:
             self.store.save_run(run)
             self.store.event(run_id, "budget_policy_updated", run["budget_policy"])
             return run
+
+    def set_access(self, run_id, access_level, confirmed_full_access=False):
+        if access_level not in {"standard", "read-only", "full-access"}:
+            raise ValueError("Выберите допустимый уровень доступа.")
+        if access_level == "full-access" and not confirmed_full_access:
+            raise ValueError("Подтвердите полный доступ к файлам, командам и сети.")
+        with self.lock:
+            run = self.store.run(run_id)
+            if run_id in self.active or run["state"] not in RESUMABLE | {"QUEUED"}:
+                raise ValueError("Сначала приостановите запуск перед изменением доступа.")
+            previous = run.get("access_level", "standard")
+            previous_threads = dict(run.get("threads", {}))
+            run["access_level"] = access_level
+            # Native threads retain their prior sandbox; recreate only conversation
+            # handles, keeping results, worktree, usage, checkpoint and all history.
+            run["threads"] = {}
+            run["access_profile_version"] = 1
+            self._save(run)
+            self.store.event(run_id, "access_level_changed", {"previous": previous, "access_level": access_level, "previous_threads": previous_threads})
+            return self.store.run(run_id)
 
     def control(self, run_id, action, instruction=None):
         run = self.store.run(run_id)

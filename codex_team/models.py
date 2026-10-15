@@ -16,6 +16,8 @@ class RunRequest(BaseModel):
     max_run_duration: int = Field(default=1800, ge=30, le=86400)
     auto_commit: bool = False
     isolated: bool = True
+    access_level: Literal["standard", "read-only", "full-access"] = "standard"
+    confirmed_full_access: bool = Field(default=False, exclude=True)
     specialists: list[str] = Field(default_factory=list, max_length=8)
 
 class AgentSpec(BaseModel):

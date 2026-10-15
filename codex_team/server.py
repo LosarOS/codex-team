@@ -24,6 +24,8 @@ class Control(BaseModel):
     model_config = ConfigDict(extra="forbid")
     action: str
     instruction: str | None = None
+    access_level: Literal["standard", "read-only", "full-access"] | None = None
+    confirmed_full_access: bool = False
 
 class Login(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -425,6 +427,12 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
 
     @app.post("/api/runs/{run_id}/control")
     def control(run_id: str, body: Control):
+        if body.action == "set_access":
+            if body.instruction is not None:
+                raise ValueError("Изменение доступа не отправляет указания агенту.")
+            return engine.set_access(run_id, body.access_level, body.confirmed_full_access)
+        if body.access_level is not None or body.confirmed_full_access:
+            raise ValueError("Уровень доступа изменяется отдельным действием перед продолжением.")
         return engine.control(run_id, body.action, body.instruction)
 
     @app.get("/")
