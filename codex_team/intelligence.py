@@ -107,7 +107,7 @@ class IntelligenceService:
                 except (ValueError, OSError):
                     pass
         modules = [{"path": name, "files": sum(f.startswith(name + "/") for f in files), "category": "derived_finding", "confidence": "medium", "source": "git ls-files"} for name in sorted({f.split('/')[0] for f in files if '/' in f})[:100]]
-        data = {"head": head, "fingerprint": fingerprint, "files": files, "technologies": technologies, "modules": modules, "dependencies": dependencies, "limited": len(files) >= self.MAX_FILES, "duration_ms": round((time.monotonic()-started)*1000), "summary": f"Доступно {len(files)} текстовых файлов Git; модулей верхнего уровня: {len(modules)}.", "limitations": "Статический анализ деклараций; runtime-зависимости и точная семантика модулей не определяются."}
+        data = {"head": head, "fingerprint": fingerprint, "files": files, "technologies": technologies, "modules": modules, "dependencies": dependencies, "limited": len(files) >= self.MAX_FILES, "duration_ms": round((time.monotonic()-started)*1000), "summary": f"Доступно {len(files)} текстовых файлов Git; модулей верхнего уровня: {len(modules)}.", "limitations": "Статический анализ деклараций; зависимости времени выполнения и точная семантика модулей не определяются."}
         return self.suite.put("architecture", project_id, data)
 
     def get(self, project_id):

@@ -80,4 +80,10 @@ idMap['runs-search'].value='Нет подходящей задачи';await idMa
 idMap['runs-search'].value='';await idMap['runs-search'].dispatchEvent({type:'input'});assert(query('button',idMap['runs-list']).length>0,'run search did not restore');
 idMap['runs-state-filter'].value='active';await idMap['runs-state-filter'].dispatchEvent({type:'change'});assert.equal(query('button',idMap['runs-list']).length,0,'active filter included inactive runs');
 idMap['runs-state-filter'].value='all';await idMap['runs-state-filter'].dispatchEvent({type:'change'});
+responses['/api/agents'].push({name:'security',role:'security',instructions:'English fixture instructions',permission:'read-only',enabled:true});
+await idMap['refresh-button'].click();await settle();
+await query('[data-page="agents"]')[0].click();await settle();
+idMap['agents-search'].value='безопасность';await idMap['agents-search'].dispatchEvent({type:'input'});await settle();
+assert(query('h3',idMap['agents-list']).some(el=>el.textContent==='Безопасность'),'Russian specialist display/search failed');
+assert(!query('p',idMap['agents-list']).some(el=>el.textContent==='English fixture instructions'),'technical instructions leaked into builtin description');
 console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run']}));})().catch(e=>{console.error(e);process.exitCode=1;});

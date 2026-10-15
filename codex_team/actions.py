@@ -24,17 +24,21 @@ def decline(method):
     return {"decision": "decline"}
 
 
+def role_title(role):
+    return {"coordinator":"Координатор", "analyst":"Аналитик", "developer":"Разработчик", "qa":"Тестировщик", "reviewer":"Проверка кода", "architect":"Архитектор"}.get(role, role or "Агент")
+
+
 def describe_error(code, message):
     categories = {
-        "AUTH_REQUIRED": ("AUTH_REQUIRED", "Connect your ChatGPT account", "Open Settings and use the official sign-in."),
-        "USER_DECISION_REQUIRED": ("USER_ACTION_REQUIRED", "Your decision is needed", "Review the request and choose how to continue."),
-        "PERMISSION_REQUIRED": ("PERMISSION_REQUIRED", "Permission is needed", "Review the requested scope in Action Center."),
-        "CONFIGURATION_REQUIRED": ("CONFIGURATION_REQUIRED", "Project setup is needed", "Check project runtimes and commands."),
-        "USAGE_LIMIT": ("USER_ACTION_REQUIRED", "Codex usage is unavailable", "Wait for the account limit to reset, then resume. Provider changes are explicit."),
-        "INTERRUPTED": ("RECOVERABLE_ERROR", "The session was interrupted", "Resume from History when you are ready."),
-        "FAILED": ("RECOVERABLE_ERROR", "This run could not continue", "Review details, open logs, and retry or resume."),
+        "AUTH_REQUIRED": ("AUTH_REQUIRED", "Подключите учётную запись ChatGPT", "Откройте настройки и выполните официальный вход."),
+        "USER_DECISION_REQUIRED": ("USER_ACTION_REQUIRED", "Требуется ваше решение", "Просмотрите запрос и выберите способ продолжения."),
+        "PERMISSION_REQUIRED": ("PERMISSION_REQUIRED", "Требуется разрешение", "Проверьте запрошенные разрешения в центре действий."),
+        "CONFIGURATION_REQUIRED": ("CONFIGURATION_REQUIRED", "Требуется настройка проекта", "Проверьте среды выполнения и команды проекта."),
+        "USAGE_LIMIT": ("USER_ACTION_REQUIRED", "Достигнут лимит использования Codex", "Дождитесь обновления лимита учётной записи и продолжите запуск. Смена провайдера требует отдельного действия."),
+        "INTERRUPTED": ("RECOVERABLE_ERROR", "Сеанс прерван", "Продолжите запуск из истории, когда будете готовы."),
+        "FAILED": ("RECOVERABLE_ERROR", "Не удалось продолжить запуск", "Просмотрите подробности и журналы, затем повторите или продолжите запуск."),
     }
-    category, title, remedy = categories.get(code, ("RECOVERABLE_ERROR", "The operation could not finish", "Review details and retry. Open logs if it happens again."))
+    category, title, remedy = categories.get(code, ("RECOVERABLE_ERROR", "Не удалось завершить действие", "Просмотрите подробности и повторите попытку. Если ошибка повторится, откройте журналы."))
     return {"category": category, "title": title, "message": sanitize(str(message)), "remedy": remedy}
 
 
@@ -54,11 +58,11 @@ class ActionCenter:
         description = describe_error(code, message)
         card = {"id":"action_" + uuid.uuid4().hex[:16],"run_id":run_id,"role":role,
                 "kind":"product","category":description["category"],"title":description["title"],
-                "reason":description["message"],"details":description,"scope":"Current run checkpoint",
+                "reason":description["message"],"details":description,"scope":"Контрольная точка текущего запуска",
                 "command":"","risk":"low","requires_confirmation":False,"status":"pending","created_at":now(),
                 "method":"product/decision","questions":[],"choices":sanitize(choices or []),
                 "allowed_decisions":["resume","stop","explain"],"sdk_supported":True,
-                "limitation":"Resume reruns the unfinished stage. It does not grant native permissions or extend run budgets."}
+                "limitation":"Продолжение повторно запускает незавершённый этап. Оно не выдаёт разрешений и не увеличивает бюджет запуска."}
         self.store.save_action(card)
         self.store.event(run_id,"action_required",card,role)
         return card
@@ -66,7 +70,7 @@ class ActionCenter:
     def complete_product(self, request_id, decision):
         card = self.store.action(request_id)
         if card.get("kind") != "product" or card["status"] != "pending" or decision not in card["allowed_decisions"]:
-            raise ValueError("This product decision is no longer available")
+            raise ValueError("Это решение больше недоступно.")
         card.update(status="resolved",decision=decision,resolved_at=now())
         self.store.save_action(card)
         self.store.event(card["run_id"],"action_resolved",{"id":request_id,"decision":decision},card.get("role"))
@@ -106,18 +110,18 @@ class ActionCenter:
                     decisions.insert(1, "allow_run")
         request_id = "action_" + uuid.uuid4().hex[:16]
         card = {"id": request_id, "run_id": run_id, "role": role, "kind": "decision" if method == INPUT else "permission",
-                "title": f"{role} needs {'your answer' if method == INPUT else 'permission'}", "reason": sanitize(params.get("reason") or "The official Codex session requested a decision."),
-                "command": sanitize(command), "cwd": params.get("cwd"), "scope": "Only the scope requested by the official Codex session",
+                "title": f"{role_title(role)}: {'требуется ваш ответ' if method == INPUT else 'требуется разрешение'}", "reason": sanitize(params.get("reason") or "Официальный сеанс Codex запросил решение."),
+                "command": sanitize(command), "cwd": params.get("cwd"), "scope": "Только разрешения, запрошенные официальным сеансом Codex",
                 "risk": risk, "requires_confirmation": risk == "high", "status": "pending", "created_at": now(),
                 "method": method, "category": category, "questions": sanitize(params.get("questions", [])), "choices": [],
                 "details": sanitize(params), "allowed_decisions": decisions, "sdk_supported": supported,
-                "limitation": "Allow for run applies to this agent's current Codex session; other agent sessions retain their own permissions." if supported and method != INPUT else ""}
+                "limitation": "Разрешение на запуск действует только в текущем сеансе этого агента. Разрешения остальных агентов не меняются." if supported and method != INPUT else ""}
         if not supported:
-            card["limitation"] = "The command contains redacted secret assignments. Ask the agent to use an existing environment variable and show the complete operation before approval." if hidden_command else "This SDK request type has no supported grant in Codex Team. It will be declined."
+            card["limitation"] = "В команде скрыты секретные значения. Попросите агента использовать существующую переменную окружения и показать полную операцию перед подтверждением." if hidden_command else "Codex Team не поддерживает выдачу разрешения для этого типа запроса SDK. Запрос будет отклонён."
         if limitation:
             card["limitation"] = limitation
         if profile_error:
-            card["limitation"] = "The requested permission scope is unsupported: " + profile_error + ". It will be declined."
+            card["limitation"] = "Запрошенные разрешения не поддерживаются: " + profile_error + ". Запрос будет отклонён."
         waiter = {"event": threading.Event(), "response": None, "card": card, "params": params}
         with self.lock:
             if self.closed:
@@ -142,12 +146,12 @@ class ActionCenter:
         with self.lock:
             waiter = self.pending.get(request_id)
             if not waiter or waiter["event"].is_set():
-                raise ValueError("This request is no longer waiting in a live Codex session")
+                raise ValueError("Этот запрос больше не ожидает ответа в активном сеансе Codex.")
             card, params = waiter["card"], waiter["params"]
             if decision not in card["allowed_decisions"]:
-                raise ValueError("This decision is not supported by the official request")
+                raise ValueError("Официальный запрос не поддерживает это решение.")
             if decision in {"allow_once", "allow_run"} and card["requires_confirmation"] and not confirmed:
-                raise ValueError("Confirm the requested scope before granting permission")
+                raise ValueError("Перед выдачей разрешения подтвердите его область действия.")
             method = card["method"]
             response = decline(method)
             if decision in {"allow_once", "allow_run"}:
@@ -158,19 +162,19 @@ class ActionCenter:
             elif decision == "answer":
                 answers = answers or {}
                 if not isinstance(answers, dict):
-                    raise ValueError("Answers must be keyed by question identifier")
+                    raise ValueError("Ответы должны соответствовать идентификаторам вопросов.")
                 known = {q["id"]: q for q in params.get("questions", []) if isinstance(q, dict) and "id" in q}
                 if set(answers) - set(known):
-                    raise ValueError("Unknown question identifier")
+                    raise ValueError("Неизвестный идентификатор вопроса.")
                 normalized = {}
                 for key, values in answers.items():
                     if not isinstance(values, list) or not values or any(not isinstance(v, str) or len(v) > 10000 for v in values):
-                        raise ValueError("Each answer must contain bounded text values")
+                        raise ValueError("Каждый ответ должен содержать текст допустимой длины.")
                     if known[key].get("isSecret"):
-                        raise ValueError("Use provider settings or official sign-in for secrets")
+                        raise ValueError("Для секретных данных используйте настройки провайдера или официальный вход.")
                     normalized[key] = {"answers": values}
                 if set(normalized) != set(known):
-                    raise ValueError("Answer each question before continuing")
+                    raise ValueError("Ответьте на каждый вопрос перед продолжением.")
                 response = {"answers": normalized}
             elif decision == "cancel" and method in {COMMAND, FILE}:
                 response = {"decision": "cancel"}

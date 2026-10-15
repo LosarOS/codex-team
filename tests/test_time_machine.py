@@ -199,3 +199,13 @@ def test_retention_restart_tombstone_history_and_age(tmp_path):
     assert storage.db.execute('SELECT count(*) FROM suite_revisions WHERE id=?',(old['id'],)).fetchone()[0]==1
     assert tm.retention_confirm('p',preview['preview_token'],True)==result
     storage.close()
+
+
+def test_checkpoint_validation_errors_are_russian(machine):
+    tm, _, store = machine
+    foreign = store.put('git_checkpoint', 'other', {'sha': 'a'*40})
+    with pytest.raises(WorkspaceError, match='Контрольная точка относится к другому проекту'):
+        tm._record('p', foreign['id'])
+    invalid = store.put('git_checkpoint', 'p', {'sha': 'invalid'})
+    with pytest.raises(WorkspaceError, match='Некорректный SHA контрольной точки'):
+        tm._record('p', invalid['id'])

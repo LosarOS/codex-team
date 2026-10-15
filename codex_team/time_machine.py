@@ -21,7 +21,7 @@ class TimeMachine:
         self.hooks = self.root / '.ai-team' / 'time-machine-hooks'
         self.hooks.mkdir(parents=True, exist_ok=True)
         if not self.hooks.resolve().is_relative_to(self.root) or self.hooks.is_symlink() or any(self.hooks.iterdir()):
-            raise WorkspaceError('Unsafe Git hooks directory')
+            raise WorkspaceError('Небезопасный каталог обработчиков Git')
 
     def _project(self, project_id):
         source = self.store if hasattr(self.store, 'project') else self.store.store
@@ -42,11 +42,11 @@ class TimeMachine:
             errors.seek(0)
             error = errors.read(2000).decode('utf-8','replace')
             if result.returncode:
-                raise WorkspaceError('Git operation failed: ' + str(sanitize(error)))
+                raise WorkspaceError('Не удалось выполнить операцию Git. Подробности: ' + str(sanitize(error)))
             output.seek(0)
             raw = output.read(8_000_001)
             if len(raw) > 8_000_000:
-                raise WorkspaceError('Git output exceeds the safe 8 MB limit; narrow the comparison')
+                raise WorkspaceError('Вывод Git превышает безопасный лимит 8 МБ. Сократите объём сравнения.')
             text = raw.decode('utf-8','replace')
             return text.strip() if '\x00' not in text else text
 
@@ -62,14 +62,14 @@ class TimeMachine:
             if not entry: continue
             meta,name = entry.split('\t',1)
             if self._sensitive(name) or meta.split()[0] in {'120000','160000'}:
-                raise WorkspaceError('Контрольная точка заблокирована: секреты, symlink или submodule в Git tree')
+                raise WorkspaceError('Контрольная точка заблокирована: в дереве Git обнаружены секреты, символические ссылки или подмодули')
 
     def _record(self, project_id, checkpoint_id):
         record = self.store.get('git_checkpoint',checkpoint_id)
         if record['project_id'] != project_id:
-            raise WorkspaceError('Checkpoint belongs to another project')
+            raise WorkspaceError('Контрольная точка относится к другому проекту')
         sha = record['data']['sha']
-        if not re.fullmatch('[0-9a-f]{40,64}',sha): raise WorkspaceError('Invalid checkpoint SHA')
+        if not re.fullmatch('[0-9a-f]{40,64}',sha): raise WorkspaceError('Некорректный SHA контрольной точки')
         return record
 
     def list(self, project_id, limit=50, offset=0, q=''):
@@ -82,7 +82,7 @@ class TimeMachine:
             if workspace:
                 candidate = self.workspace.validate(Path(workspace))
                 if self._git(path,'rev-parse','--path-format=absolute','--git-common-dir') != self._git(candidate,'rev-parse','--path-format=absolute','--git-common-dir'):
-                    raise WorkspaceError('Workspace is not part of this project')
+                    raise WorkspaceError('Рабочее дерево не относится к этому проекту')
                 path = candidate
             if request_id:
                 record_id = 'cp_' + hashlib.sha256(f'{project_id}:{request_id}'.encode()).hexdigest()[:32]
@@ -105,7 +105,7 @@ class TimeMachine:
                 # through a NUL pathspec without touching the user's index.
                 additions = [name for name in tracked if name and (path/name).is_file()]
                 if len(additions) > 100000 or sum(len(name.encode('utf-8')) + 1 for name in additions) > 8_000_000:
-                    raise WorkspaceError('Tracked file list exceeds checkpoint safety limit')
+                    raise WorkspaceError('Список отслеживаемых файлов превышает безопасный лимит контрольной точки')
                 if additions:
                     pathspec = Path(tmp)/'tracked-pathspec'
                     pathspec.write_bytes(b''.join(name.encode('utf-8') + b'\x00' for name in additions))
@@ -157,11 +157,11 @@ class TimeMachine:
             preview = self.store.get('git_restore',preview_token)
             data = preview['data']
             if preview['project_id'] != project_id or data['checkpoint_id'] != checkpoint_id or data['sha'] != checkpoint['data']['sha']:
-                raise WorkspaceError('Preview does not match checkpoint')
+                raise WorkspaceError('Предварительный просмотр не соответствует контрольной точке')
             if data.get('result'):
                 result=data['result']
                 if self._git(Path(result['path']),'rev-parse','HEAD')!=data['sha']:
-                    raise WorkspaceError('Восстановленная копия изменилась; создайте новый preview')
+                    raise WorkspaceError('Восстановленная копия изменилась; повторите предварительный просмотр')
                 return result
             head,digest,_ = self._state(path)
             if (head,digest) != (data['source_head'],data['state_digest']):
@@ -171,11 +171,11 @@ class TimeMachine:
             destination = self.root / '.ai-team' / 'restored' / ('restore_' + uuid.uuid4().hex)
             destination.parent.mkdir(parents=True,exist_ok=True)
             if not destination.resolve().is_relative_to(self.root) or destination.parent.is_symlink():
-                raise WorkspaceError('Unsafe restore destination')
+                raise WorkspaceError('Небезопасный каталог для восстановления')
             branch = 'codex-restore/' + uuid.uuid4().hex
             self._git(path,'worktree','add','-b',branch,str(destination),data['sha'])
             actual = self._git(destination,'rev-parse','HEAD')
-            if actual != data['sha']: raise WorkspaceError('Restored HEAD verification failed')
+            if actual != data['sha']: raise WorkspaceError('Не удалось подтвердить соответствие восстановленного HEAD контрольной точке')
             result = {'path':str(destination),'branch':branch,'head':actual,'checkpoint_id':checkpoint_id}
             self.store.put('git_restore',project_id,{**data,'result':result},record_id=preview_token,
                            expected_version=preview['version'])
@@ -209,7 +209,7 @@ class TimeMachine:
             normalized = {'enabled':policy.get('enabled',False),'keep_latest':policy.get('keep_latest'),
                           'max_age_days':policy.get('max_age_days')}
             if type(normalized['enabled']) is not bool:
-                raise WorkspaceError('enabled должен быть boolean')
+                raise WorkspaceError('Параметр enabled должен иметь логическое значение: true или false')
             for name in ('keep_latest','max_age_days'):
                 value=normalized[name]
                 if value is not None and (type(value) is not int or not 1<=value<=100000):
@@ -299,13 +299,13 @@ class TimeMachine:
         with self.lock:
             if confirmed is not True: raise WorkspaceError('Требуется явное подтверждение очистки')
             preview=self.store.get('git_retention_preview',preview_token)
-            if preview['project_id']!=project_id: raise WorkspaceError('Чужой preview')
+            if preview['project_id']!=project_id: raise WorkspaceError('Предварительный просмотр относится к другому проекту')
             data=preview['data']
             if data.get('result'): return data['result']
-            if time.time()>data['expires_at']: raise WorkspaceError('Предпросмотр устарел')
+            if time.time()>data['expires_at']: raise WorkspaceError('Предварительный просмотр устарел')
             inventory=self._retention_inventory(project_id)
             if inventory['_fingerprint']!=data['fingerprint']:
-                raise WorkspaceError('Состояние изменилось. Повторите предпросмотр очистки.')
+                raise WorkspaceError('Состояние изменилось. Повторите предварительный просмотр очистки.')
             path=self._project(project_id); deleted=[]
             for candidate in data['candidates']:
                 # Lease protects against concurrent external ref changes. Never GC,

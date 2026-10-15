@@ -39,19 +39,19 @@ def data_root():
         portable_marker = Path(sys.executable).resolve().parent / "portable.json"
         if portable_marker.is_file():
             if portable_marker.is_symlink() or not portable_marker.resolve().is_relative_to(portable_marker.parent):
-                raise RuntimeError("Linked portable marker refused")
+                raise RuntimeError("Файл настроек переносимой сборки не должен быть ссылкой.")
             try:
                 if portable_marker.stat().st_size > 4096 or json.loads(portable_marker.read_text(encoding="utf-8")).get("format") != 1:
-                    raise ValueError("Unknown portable marker")
+                    raise ValueError("Неизвестный формат настроек переносимой сборки.")
             except (OSError, ValueError, AttributeError) as exc:
-                raise RuntimeError("Portable configuration is invalid. Extract the original portable archive again.") from exc
+                raise RuntimeError("Настройки переносимой сборки повреждены. Повторно распакуйте исходный архив.") from exc
             portable_data = portable_marker.parent / "data"
             if not portable_data.resolve().is_relative_to(portable_marker.parent):
-                raise RuntimeError("Portable data folder escapes the application directory")
+                raise RuntimeError("Папка данных переносимой сборки находится за пределами каталога приложения.")
             return portable_data.resolve()
     local = os.environ.get("LOCALAPPDATA")
     if not local:
-        raise RuntimeError("LOCALAPPDATA is unavailable. Set CODEX_TEAM_DATA_ROOT to a writable user folder.")
+        raise RuntimeError("LOCALAPPDATA недоступна. Укажите доступную для записи пользовательскую папку в CODEX_TEAM_DATA_ROOT.")
     return (Path(local) / "CodexTeam").resolve()
 
 def initialize_data(root, resources, legacy=None):
@@ -62,7 +62,7 @@ def initialize_data(root, resources, legacy=None):
         directory = root / name
         directory.mkdir(exist_ok=True)
         if not directory.resolve().is_relative_to(root.resolve()):
-            raise RuntimeError("Desktop data directory escapes its root")
+            raise RuntimeError("Папка данных находится за пределами разрешённого каталога.")
     database = root / ".ai-team/team.sqlite3"
     source_db = Path(legacy) / ".ai-team/team.sqlite3" if legacy else None
     if source_db and source_db.exists() and not database.exists() and source_db.resolve() != database.resolve():
@@ -73,7 +73,7 @@ def initialize_data(root, resources, legacy=None):
             with closing(sqlite3.connect(f"file:{source_db.as_posix()}?mode=ro", uri=True)) as source, closing(sqlite3.connect(temporary)) as target:
                 source.backup(target)
                 if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                    raise RuntimeError("Existing database integrity check failed")
+                    raise RuntimeError("Проверка целостности существующей базы данных завершилась ошибкой.")
             temporary.replace(database)
             source_runs = Path(legacy) / ".ai-team/runs"
             if source_runs.is_dir():
@@ -92,7 +92,7 @@ def initialize_data(root, resources, legacy=None):
     if database.exists():
         with closing(sqlite3.connect(database)) as db:
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                raise RuntimeError("Database is corrupted. Original data preserved; see logs.")
+                raise RuntimeError("База данных повреждена. Исходные данные сохранены; подробности в журналах.")
             if db.execute("SELECT 1 FROM sqlite_master WHERE name='settings'").fetchone():
                 invalid = []
                 for key, value in db.execute("SELECT key,data FROM settings"):
@@ -151,7 +151,7 @@ class SingleInstance:
             if ctypes.get_last_error() == 183:
                 kernel.CloseHandle(self.handle)
                 self.handle = None
-                raise RuntimeError("Codex Team is already running. Use its existing window.")
+                raise RuntimeError("Codex Team уже запущен. Откройте существующее окно приложения.")
         else:
             import fcntl
             Path(root).mkdir(parents=True, exist_ok=True)
@@ -160,7 +160,7 @@ class SingleInstance:
                 fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError:
                 self.stream.close()
-                raise RuntimeError("Codex Team is already running")
+                raise RuntimeError("Codex Team уже запущен.")
 
     def close(self):
         if self.handle:
@@ -252,7 +252,7 @@ class BackendRuntime:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if self.process is None or self.process.poll() is not None:
-                raise RuntimeError("Backend failed to start. See backend.log.")
+                raise RuntimeError("Не удалось запустить локальный сервер. Подробности в backend.log.")
             try:
                 health = self.request("/health")
                 if health.get("status") == "ok" and health.get("instance") == self.instance:
@@ -260,7 +260,7 @@ class BackendRuntime:
             except (OSError, ValueError):
                 pass
             time.sleep(0.15)
-        raise TimeoutError("Backend health check timed out. See backend.log.")
+        raise TimeoutError("Превышено время ожидания локального сервера. Подробности в backend.log.")
 
     def active_run(self):
         health = self.request("/health")
@@ -290,4 +290,4 @@ class BackendRuntime:
             self.logger.info("Owned backend stopped")
 
 def close_allowed(active, confirm):
-    return not active or bool(confirm("A Codex run is currently active. Stop run and exit? Choose Cancel to keep working."))
+    return not active or bool(confirm("Сейчас выполняется задача Codex. Остановить её и выйти? Чтобы продолжить работу, нажмите «Отмена»."))

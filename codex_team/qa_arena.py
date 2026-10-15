@@ -90,7 +90,7 @@ class DockerRunner:
     def endpoint():
         endpoint = os.environ.get("DOCKER_HOST") or ("npipe:////./pipe/docker_engine" if os.name == "nt" else "unix:///var/run/docker.sock")
         if not (endpoint.startswith("unix:///") or endpoint.startswith("npipe:////./pipe/")):
-            raise ValueError("Удалённый Docker daemon не разрешён для QA: выберите локальный socket или named pipe")
+            raise ValueError("Удалённый сервер Docker не разрешён для QA: выберите локальный сокет или именованный канал")
         return endpoint
 
     @classmethod
@@ -109,7 +109,7 @@ class DockerRunner:
     def inspect_daemon(self):
         result = {"available": bool(shutil.which("docker")), "healthy": False, "local": True, "os_type": None, "endpoint": None, "reason": None}
         if not result["available"]:
-            result["reason"] = "Docker CLI не установлен. Запуск команд на хосте запрещён."
+            result["reason"] = "Командный клиент Docker не установлен. Запуск команд на основном компьютере запрещён."
             return result
         try:
             result["endpoint"] = self.endpoint()
@@ -117,12 +117,12 @@ class DockerRunner:
             result.update(os_type=info["os_type"], daemon_id=info.get("id"), daemon_name=info.get("name"), version=info.get("version"))
             result["healthy"] = info["os_type"] == "linux"
             if not result["healthy"]:
-                result["reason"] = "Нужен режим Linux containers; Windows containers не поддерживаются этим runner."
+                result["reason"] = "Включите режим контейнеров Linux; эта среда проверки не поддерживает контейнеры Windows."
         except ValueError as exc:
-            result["reason"] = str(exc) if "Удалённый Docker" in str(exc) else "Не удалось прочитать сведения Docker daemon"
-            result["local"] = False if "Удалённый Docker" in str(exc) else True
+            result["reason"] = str(exc) if "Удалённый сервер Docker" in str(exc) else "Не удалось прочитать сведения сервера Docker"
+            result["local"] = False if "Удалённый сервер Docker" in str(exc) else True
         except (subprocess.SubprocessError, OSError):
-            result["reason"] = "Локальный Docker daemon недоступен. Запустите Docker Desktop и включите Linux containers."
+            result["reason"] = "Локальный сервер Docker недоступен. Запустите Docker Desktop и включите контейнеры Linux."
         return result
 
     def images(self, limit=50):
@@ -134,13 +134,13 @@ class DockerRunner:
 
     def inspect_image(self, image):
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]*@sha256:[a-f0-9]{64}|sha256:[a-f0-9]{64}", image):
-            raise ValueError("Требуется неизменяемый локальный SHA256 образ")
+            raise ValueError("Требуется локальный образ, закреплённый идентификатором SHA256")
         image_format = '{"id":{{json .Id}},"tags":{{json .RepoTags}},"digests":{{json .RepoDigests}},"size_bytes":{{.Size}},"os_type":{{json .Os}}}'
         value = json.loads(self._call("image", "inspect", "--format", image_format, image))
         if image.startswith("sha256:") and image != value.get("id"):
             raise ValueError("SHA256 локального образа не совпадает")
         if "@sha256:" in image and image not in (value.get("digests") or []):
-            raise ValueError("Digest локального образа не совпадает")
+            raise ValueError("Контрольная сумма локального образа не совпадает")
         if value.get("os_type") != "linux":
             raise ValueError("Для изоляции нужен Linux-образ")
         return value
@@ -218,7 +218,7 @@ class DockerRunner:
                     process.wait(timeout=10)
                     reader.join(timeout=3)
                 if reason is None and process.returncode in {125, 126, 127}:
-                    reason = "Изолированная среда не смогла запустить команду: проверьте Docker, образ и инструменты (exit " + str(process.returncode) + ")"
+                    reason = "Изолированная среда не смогла запустить команду: проверьте Docker, образ и инструменты (код завершения " + str(process.returncode) + ")"
                 return {"exit_code": process.returncode, "duration_seconds": round(time.monotonic() - started, 3), "log": output.decode("utf-8", errors="replace"), "error": reason}
 
 
@@ -321,7 +321,7 @@ class QAArena:
             except (ValueError, OSError):
                 pass
         if not any(item["category"] == "test" for item in suggestions) and any(Path(name).name.startswith("test_") and name.endswith(".py") for name in names):
-            suggest("unittest", "test", ["python", "-m", "unittest", "discover", "-v"], "Git: test_*.py; проверьте используемый framework")
+            suggest("unittest", "test", ["python", "-m", "unittest", "discover", "-v"], "Git: test_*.py; проверьте используемую систему тестирования")
         project_commands = self.store.project(project_id).get("commands", {})
         if isinstance(project_commands, dict):
             for category in ("test", "build", "lint", "typecheck"):
@@ -341,7 +341,7 @@ class QAArena:
             except (subprocess.SubprocessError, OSError, ValueError):
                 image_error = "Не удалось прочитать список локальных образов"
         return {**discovery, "docker": daemon, "images": images, "image_error": image_error,
-                "remediation": ["Установите или запустите Docker Desktop самостоятельно; включите Linux containers.", "Подготовьте доверенный Linux-образ с /bin/sh, cp, инструментами проекта и уже установленными зависимостями. QA не скачивает образы и пакеты.", "Выберите локальный SHA256 image ID или RepoDigest, подтвердите образ, проверьте предложенные JSON argv команды.", "Сохраните конфигурацию, откройте предварительный просмотр и явно подтвердите тестовый запуск. Test Run использует тот же изолированный QA runner."],
+                "remediation": ["Установите или запустите Docker Desktop самостоятельно; включите контейнеры Linux.", "Подготовьте доверенный Linux-образ с /bin/sh, cp, инструментами проекта и уже установленными зависимостями. QA не скачивает образы и пакеты.", "Выберите локальный идентификатор образа SHA256 или RepoDigest, подтвердите образ и проверьте предложенные команды — массивы аргументов JSON.", "Сохраните конфигурацию, откройте предварительный просмотр и явно подтвердите тестовый запуск. Тестовый запуск использует ту же изолированную среду QA."],
                 "test_run_requires_confirmation": True, "automatic_pull": False, "automatic_install": False}
 
     def verify_setup(self, project_id, image, confirmed=False):
@@ -358,8 +358,8 @@ class QAArena:
             reason = str(exc) if isinstance(exc, ValueError) else "Выбранный неизменяемый локальный образ не найден"
             return {"available": False, "docker": daemon, "reason": reason, "tools_executed": False}
         return {"available": True, "docker": daemon, "image": inspected, "pinned_image": inspected["id"], "tools_executed": False,
-                "limitation": "Проверены Docker daemon и метаданные локального образа. Наличие и работоспособность инструментов проверяется только подтверждённым Test Run.",
-                "next_step": "Сохраните команды QA, затем подтвердите preview/start для Test Run"}
+                "limitation": "Проверены сервер Docker и метаданные локального образа. Наличие и работоспособность инструментов проверяются только при подтверждённом тестовом запуске.",
+                "next_step": "Сохраните команды QA, откройте предварительный просмотр и подтвердите тестовый запуск"}
 
     def configuration(self, project_id):
         self.store.project(project_id)
@@ -413,7 +413,7 @@ class QAArena:
     def start(self, project_id, confirmation_token, run_id=None):
         with self.lock:
             if self.active is not None:
-                raise ValueError("QA уже выполняется")
+                raise ValueError("Проверки качества уже выполняются")
             preview = self.previews.get(confirmation_token)
             if not preview or preview["expires"] < time.time() or preview["project_id"] != project_id or preview["run_id"] != run_id:
                 raise ValueError("Предварительный просмотр устарел: подтвердите команды заново")
@@ -454,13 +454,13 @@ class QAArena:
                     if self.cancel.is_set():
                         break
                 baseline = self._page("qa_baseline", project_id=value["project_id"], limit=1)["items"]
-                value["comparison"] = {"status": "Нет baseline"}
+                value["comparison"] = {"status": "Нет эталона проверок"}
                 if baseline and baseline[0].get("fingerprint") == value["fingerprint"]:
                     prior = {r["id"]: r["status"] for r in baseline[0]["checks"]}
-                    value["comparison"] = {"status": "Сопоставимая конфигурация", "baseline_id": baseline[0]["result_id"], "new_regressions": [r["id"] for r in value["checks"] if prior.get(r["id"]) == "PASS" and r["status"] != "PASS"], "limitation": "Сравнение на уровне команд; отдельные test-case и нестабильность среды не выводятся из exit code"}
+                    value["comparison"] = {"status": "Сопоставимая конфигурация", "baseline_id": baseline[0]["result_id"], "new_regressions": [r["id"] for r in value["checks"] if prior.get(r["id"]) == "PASS" and r["status"] != "PASS"], "limitation": "Сравнение на уровне команд; по коду завершения нельзя определить отдельные тестовые сценарии и нестабильность среды"}
         except Exception as exc:
             interrupted = True
-            value.update(error=str(exc))
+            value.update(error="Не удалось выполнить проверку QA. Подробности: " + str(exc))
         finally:
             cancelled = self.cancel.is_set()
             if cancelled:
@@ -483,7 +483,7 @@ class QAArena:
     def promote_baseline(self, project_id, result_id):
         value = self.get_result(result_id)
         if value["project_id"] != project_id or value["status"] != "PASS":
-            raise ValueError("Baseline может быть только успешно завершённой проверкой этого проекта")
+            raise ValueError("Эталоном может быть только успешно завершённая проверка этого проекта")
         existing = self._page("qa_baseline", project_id=project_id, limit=1)["items"]
         return self._save("qa_baseline", project_id, {"id": existing[0]["id"] if existing else "qa_baseline_" + uuid.uuid4().hex, "result_id": result_id, "head": value["head"], "fingerprint": value["fingerprint"], "checks": value["checks"]})
 
@@ -491,9 +491,9 @@ class QAArena:
         value = self.get_result(result_id)
         lines = ["# QA Arena", f"Статус: {value['status']}", f"Git HEAD: {value['head']}", f"Запуск: {value.get('run_id') or 'Не связан'}", "", f"Среда: Docker без сети; команд выполнено: {len(value['checks'])}. Зависимости не устанавливались."]
         for check in value["checks"]:
-            lines.append(f"- {check['id']}: {check['status']}; exit={check['exit_code']}; {check['duration_seconds']} сек.")
+            lines.append(f"- {check['id']}: {check['status']}; код завершения={check['exit_code']}; {check['duration_seconds']} сек.")
         if value.get("comparison"):
-            lines.extend(["", "## Сравнение с baseline", json.dumps(value["comparison"],ensure_ascii=False)])
+            lines.extend(["", "## Сравнение с эталоном проверок", json.dumps(value["comparison"],ensure_ascii=False)])
         if value.get("error"):
             lines.append(value["error"])
         return "\n".join(lines)

@@ -50,9 +50,9 @@ class AgentPack(BaseModel):
     def identifiers(cls, values):
         import re
         if any(not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", value) for value in values):
-            raise ValueError("Agent identifiers must use lowercase letters, digits, hyphens or underscores")
+            raise ValueError("В идентификаторах агентов допустимы строчные латинские буквы, цифры, дефисы и подчёркивания")
         if len(values) != len(set(values)):
-            raise ValueError("Agent identifiers cannot be repeated")
+            raise ValueError("Идентификаторы агентов не должны повторяться")
         return values
 
 class Finding(BaseModel):

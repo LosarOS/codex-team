@@ -89,3 +89,32 @@ def test_shared_api_client_bounds_requests_and_reports_errors():
         capture_output=True, text=True, encoding="utf-8", timeout=10, check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_primary_markup_uses_russian_labels_instead_of_internal_terms():
+    class Copy(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.labels = []
+
+        def handle_data(self, data):
+            self.labels.append(data)
+
+        def handle_starttag(self, tag, attributes):
+            attrs = dict(attributes)
+            self.labels.extend(attrs.get(key, "") for key in ("title", "aria-label", "placeholder", "alt"))
+
+    copy = Copy()
+    copy.feed((STATIC / "index.html").read_text(encoding="utf-8-sig"))
+    assert not re.search(
+        r"\b(?:provider|workspace|API key|Reasoning effort|Quality Gate|Baseline|Mission Control)\b|LOCAL CONTROL CENTER|OFFICIAL CODEX SDK",
+        "\n".join(copy.labels), re.IGNORECASE,
+    )
+
+
+def test_builtin_pack_titles_and_descriptions_are_russian():
+    for path in (REPOSITORY / "packs").glob("*.json"):
+        pack = json.loads(path.read_text(encoding="utf-8"))
+        assert re.search("[А-Яа-яЁё]", pack["title"]) or pack["title"] == "ELMA365"
+        assert re.search("[А-Яа-яЁё]", pack["description"])
+        assert pack["name"] == path.stem

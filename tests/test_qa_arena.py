@@ -373,7 +373,7 @@ def test_docker_windows_container_mode_is_unavailable(monkeypatch):
     monkeypatch.setattr(DockerRunner, "_call", lambda *args: '{"os_type":"windows","id":"daemon-test","name":"desktop","version":"1"}')
     result = DockerRunner().inspect_daemon()
     assert result["healthy"] is False
-    assert "Linux containers" in result["reason"]
+    assert "режим контейнеров Linux" in result["reason"]
 
 
 def test_docker_image_listing_is_bounded_and_only_returns_safe_fields(monkeypatch):

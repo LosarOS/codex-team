@@ -176,7 +176,7 @@ def test_occupied_preferred_port_uses_other_loopback_port():
 def test_single_instance_lock_is_exclusive_and_reusable_after_close(tmp_path):
     first = runtime.SingleInstance(tmp_path)
     try:
-        with pytest.raises(RuntimeError, match="already running"):
+        with pytest.raises(RuntimeError, match="уже запущен"):
             runtime.SingleInstance(tmp_path)
     finally:
         first.close()
@@ -193,7 +193,7 @@ def test_single_instance_is_released_on_process_crash(tmp_path):
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         assert child.stdout.readline().strip() == "ready"
-        with pytest.raises(RuntimeError, match="already running"):
+        with pytest.raises(RuntimeError, match="уже запущен"):
             runtime.SingleInstance(tmp_path)
         _, stderr = child.communicate("x", timeout=10)
         assert child.returncode == 23, stderr
@@ -292,7 +292,7 @@ def test_backend_crash_is_detected_before_health_request(tmp_path, resources, mo
     backend = runtime.BackendRuntime(tmp_path, resources, preferred_port=0)
     backend.process = FakeProcess(code=1)
     monkeypatch.setattr(backend, "request", lambda *args: pytest.fail("Dead backend must not receive requests"))
-    with pytest.raises(RuntimeError, match="failed to start"):
+    with pytest.raises(RuntimeError, match="Не удалось запустить"):
         backend.wait_ready(timeout=1)
 
 
@@ -303,7 +303,7 @@ def test_readiness_timeout_is_bounded(tmp_path, resources, monkeypatch):
     monkeypatch.setattr(runtime.time, "monotonic", lambda: next(clock))
     monkeypatch.setattr(runtime.time, "sleep", lambda duration: None)
     monkeypatch.setattr(backend, "request", lambda *args: (_ for _ in ()).throw(OSError("not ready")))
-    with pytest.raises(TimeoutError, match="timed out"):
+    with pytest.raises(TimeoutError, match="Превышено время ожидания"):
         backend.wait_ready(timeout=1)
 
 
@@ -528,7 +528,7 @@ def test_crash_monitor_reports_recoverable_history_message(tmp_path, resources, 
     monkeypatch.setattr(bridge, "_error" if hasattr(bridge, "_error") else "error", lambda error: errors.append(str(error)))
     bridge_method(bridge, "monitor")()
     assert len(errors) == 1
-    assert "history is saved" in errors[0]
+    assert "История сохранена" in errors[0]
 
 
 @pytest.fixture

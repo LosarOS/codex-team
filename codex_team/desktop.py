@@ -10,11 +10,11 @@ from pathlib import Path
 from .desktop_runtime import VERSION, BackendRuntime, SingleInstance, close_allowed, configure_logs, data_root, initialize_data, resource_root
 from .desktop_services import DiagnosticBundle, SessionMarker, WindowsDesktopServices, verified_identifier, verified_project_path, verified_worktree_path
 
-STARTUP_HTML = """<!doctype html><html><meta charset=utf-8><title>Codex Team</title><style>
+STARTUP_HTML = """<!doctype html><html lang="ru"><meta charset=utf-8><title>Codex Team</title><style>
 body{background:#0c1220;color:#e4ecff;font:16px Segoe UI;padding:70px}h1{font-size:28px}p{line-height:1.8;color:#abb9d4}
 button{background:#276fed;color:white;border:0;border-radius:8px;padding:12px 24px;margin-right:10px;cursor:pointer}</style>
-<h1>Codex Team</h1><p id=message>Starting Codex Team…<br>Backend · Database · Git · ChatGPT</p>
-<div id=actions hidden><button onclick="pywebview.api.retry()">Retry</button><button onclick="pywebview.api.open_logs()">Open logs</button><button onclick="pywebview.api.exit()">Exit</button></div></html>"""
+<h1>Codex Team</h1><p id=message>Запуск Codex Team…<br>Сервер · База данных · Git · ChatGPT</p>
+<div id=actions hidden><button onclick="pywebview.api.retry()">Повторить</button><button onclick="pywebview.api.open_logs()">Открыть журналы</button><button onclick="pywebview.api.exit()">Выйти</button></div></html>"""
 
 def backend_main(args):
     import shutil
@@ -89,36 +89,36 @@ class DesktopBridge:
 
     def open_project(self, project_id):
         if not self.trusted() or not self.ready:
-            return {"error": "Project opening is unavailable"}
+            return {"error": "Открытие проекта недоступно."}
         try:
             project = self.runtime.request("/api/projects/" + verified_identifier(project_id))
             os.startfile(str(verified_project_path(project)))
             return {"ok": True}
         except (OSError, ValueError):
-            return {"error": "This registered project is no longer available"}
+            return {"error": "Подключённый проект больше недоступен."}
 
     def open_worktree(self, run_id):
         if not self.trusted() or not self.ready:
-            return {"error": "Worktree opening is unavailable"}
+            return {"error": "Открытие рабочей копии недоступно."}
         try:
             run = self.runtime.request("/api/runs/" + verified_identifier(run_id))
             os.startfile(str(verified_worktree_path(run)))
             return {"ok": True}
         except (OSError, ValueError):
-            return {"error": "This run's verified worktree is no longer available"}
+            return {"error": "Проверенная рабочая копия этого запуска больше недоступна."}
 
     def export_diagnostics(self):
         if not self.trusted():
-            return {"error": "Diagnostics are unavailable outside the local application"}
+            return {"error": "Диагностика доступна только в локальном приложении."}
         import webview
-        chosen = self.services.invoke(lambda: self.window.create_file_dialog(webview.FileDialog.SAVE, directory=str(self.root), save_filename="CodexTeam-diagnostics.zip", file_types=("ZIP archives (*.zip)",)), wait=True, timeout=None)
+        chosen = self.services.invoke(lambda: self.window.create_file_dialog(webview.FileDialog.SAVE, directory=str(self.root), save_filename="CodexTeam-diagnostics.zip", file_types=("ZIP-архивы (*.zip)",)), wait=True, timeout=None)
         if not chosen:
             return {"cancelled": True}
         try:
             path = DiagnosticBundle(self.root, VERSION, self.runtime).export(chosen[0])
             return {"ok": True, "path": str(path), "redacted": True}
         except (OSError, ValueError):
-            return {"error": "Diagnostics could not be saved. Choose another destination."}
+            return {"error": "Не удалось сохранить диагностику. Выберите другую папку."}
 
     def recovery_status(self):
         if not self.trusted():
@@ -128,7 +128,7 @@ class DesktopBridge:
                 self.recovery_runs = [run["id"] for run in self.runtime.request("/api/runs") if run.get("state") == "INTERRUPTED"][:100]
             except (OSError, ValueError):
                 self.recovery_runs = []
-        return {"abnormal": self.marker.abnormal, "message": "Previous session ended unexpectedly. Your history and partial work are preserved." if self.marker.abnormal else "", "run_ids": self.recovery_runs or []}
+        return {"abnormal": self.marker.abnormal, "message": "Предыдущий сеанс завершился неожиданно. История и промежуточные изменения сохранены." if self.marker.abnormal else "", "run_ids": self.recovery_runs or []}
 
     def dismiss_recovery(self):
         return self.marker.dismiss() if self.trusted() else {"error": "Unavailable"}
@@ -143,7 +143,7 @@ class DesktopBridge:
 
     def open_logs(self):
         if not self.trusted():
-            return {"error": "Desktop bridge is unavailable outside local application"}
+            return {"error": "Связь с настольным приложением доступна только локально."}
         os.startfile(str(self.root / "logs"))
         return {"ok": True}
 
@@ -177,7 +177,7 @@ class DesktopBridge:
         def show():
             time.sleep(0.4)
             try:
-                self.window.evaluate_js("document.getElementById('message').textContent=" + json.dumps("The local backend could not continue. Your history and projects are preserved. Open logs for details, then Retry.") + ";document.getElementById('actions').hidden=false")
+                self.window.evaluate_js("document.getElementById('message').textContent=" + json.dumps("Локальный сервер остановился. История и проекты сохранены. Просмотрите журналы и нажмите «Повторить».") + ";document.getElementById('actions').hidden=false")
             except Exception:
                 logging.getLogger("desktop").exception("Could not display backend failure")
         threading.Thread(target=show, daemon=True).start()
@@ -187,7 +187,7 @@ class DesktopBridge:
             return
         try:
             if not self.services.ready.wait(20) or self.services.error:
-                raise RuntimeError("Native desktop initialization failed")
+                raise RuntimeError("Не удалось подготовить настольное приложение.")
             if self.closing or self.shutting_down:
                 return
             if self.runtime:
@@ -220,7 +220,7 @@ class DesktopBridge:
         while not self.closing and runtime is self.runtime and runtime.process.poll() is None:
             time.sleep(0.5)
         if not self.closing and runtime is self.runtime:
-            self.error("Backend exited unexpectedly. Your history is saved. Retry to recover interrupted runs.")
+            self.error("Локальный сервер неожиданно завершился. История сохранена. Нажмите «Повторить», чтобы восстановить прерванные запуски.")
 
     def on_closing(self):
         if self.closing:
@@ -312,7 +312,7 @@ def main():
         logger.exception("Desktop startup failed")
         if os.name == "nt":
             import ctypes
-            ctypes.windll.user32.MessageBoxW(None, "Codex Team could not start. Open the logs for details.\nLogs: " + str(root / "logs"), "Codex Team", 0x10)
+            ctypes.windll.user32.MessageBoxW(None, "Не удалось запустить Codex Team. Подробности находятся в журналах.\nЖурналы: " + str(root / "logs"), "Codex Team", 0x10)
         else:
             raise
     finally:
