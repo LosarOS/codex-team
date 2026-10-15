@@ -100,10 +100,15 @@ class DockerRunner:
         with tempfile.TemporaryDirectory(prefix="codex-qa-") as temporary:
             source = Path(temporary) / "source"
             source.mkdir()
+            source.chmod(0o755)
             digest = hashlib.sha256()
             for relative in files:
                 target = source / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
+                for directory in [target.parent, *target.parent.parents]:
+                    if directory == source.parent:
+                        break
+                    directory.chmod(0o755)
                 content = safe_read(path, relative)
                 digest.update(relative.encode())
                 digest.update(content)
@@ -113,6 +118,11 @@ class DockerRunner:
                 raise ValueError("Код изменился во время подготовки QA")
             # Source is read-only; copy into ephemeral writable tmpfs inside the container.
             command = ["docker", "run", "--pull=never", "--name", name, "--rm", "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=128", "--memory=512m", "--cpus=1", "--user=65534:65534", "--tmpfs=/work:rw,nosuid,nodev,size=192m,mode=1777", "--tmpfs=/tmp:rw,nosuid,nodev,size=64m,mode=1777", "--mount", f"type=bind,source={source},target=/source,readonly", "--workdir=/work", "--entrypoint=/bin/sh", image, "-c", 'cp -R /source/. /work/ && exec "$@"', "qa", *argv]
+            # Docker client proxy defaults must not leak credentials/configuration
+            # into untrusted test processes, even with container networking disabled.
+            position = command.index("--workdir=/work")
+            proxy_overrides = [part for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy") for part in ("--env", key + "=")]
+            command[position:position] = proxy_overrides
             started = time.monotonic()
             with tempfile.TemporaryFile() as log:
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

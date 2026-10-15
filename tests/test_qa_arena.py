@@ -42,7 +42,7 @@ def arena(tmp_path):
 
 
 def finished(service, id):
-    for _ in range(100):
+    for _ in range(3000):
         result = service.get_result(id)
         if result["status"] != "RUNNING":
             return result
@@ -162,6 +162,11 @@ def test_docker_adapter_has_mandatory_isolation_and_no_host_shell(arena, monkeyp
             return 0
     def popen(argv, **kwargs):
         captured.append((argv, kwargs))
+        from pathlib import Path
+        mount = argv[argv.index("--mount") + 1]
+        source = Path(mount.split("source=", 1)[1].split(",target=", 1)[0])
+        assert source.stat().st_mode & 0o777 == 0o755
+        assert (source / "app.py").stat().st_mode & 0o777 == 0o644
         assert kwargs.get("shell") is not True
         return Process()
     monkeypatch.setattr("codex_team.qa_arena.subprocess.Popen", popen)
@@ -172,6 +177,7 @@ def test_docker_adapter_has_mandatory_isolation_and_no_host_shell(arena, monkeyp
     for flag in ["--pull=never", "--network=none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user=65534:65534", "--pids-limit=128", "--memory=512m"]:
         assert flag in argv
     assert "readonly" in argv[argv.index("--mount") + 1]
+    assert "HTTP_PROXY=" in argv and "https_proxy=" in argv
     assert argv[-3:] == ["python", "-m", "pytest"]
     assert result["exit_code"] == 0
     assert result["log"] == "3 passed\n"
@@ -187,3 +193,58 @@ def test_snapshot_symlink_never_copies_outside(arena):
         pytest.skip("Symlinks unavailable")
     subprocess.run(["git", "-C", str(path), "add", "linked.py"], check=True)
     assert "linked.py" not in safe_files(path)
+
+
+def test_real_docker_stdlib_acceptance(arena, monkeypatch):
+    """Opt-in real sandbox integration; image must already exist locally, never pulled.
+
+    CODEX_QA_DOCKER_IMAGE=sha256:... python -m pytest tests/test_qa_arena.py
+    The chosen local Linux image needs /bin/sh, cp and Python's unittest stdlib.
+    """
+    import os
+    image = os.environ.get("CODEX_QA_DOCKER_IMAGE")
+    if not image:
+        pytest.skip("Set CODEX_QA_DOCKER_IMAGE to a pre-existing pinned stdlib image")
+    service, path = arena
+    service.runner = DockerRunner()
+    assert service.runner.available(image)[0]
+    fixture = path / "test_acceptance.py"
+    content = '''import os, pathlib, socket, unittest
+class Acceptance(unittest.TestCase):
+    def test_isolated(self):
+        self.assertNotEqual(os.getuid(), 0)
+        self.assertNotIn("CODEX_QA_SENTINEL_SECRET", os.environ)
+        self.assertFalse(os.environ.get("HTTP_PROXY"))
+        self.assertFalse(os.environ.get("https_proxy"))
+        self.assertFalse(pathlib.Path(".env").exists())
+        self.assertFalse(pathlib.Path(".git").exists())
+        with self.assertRaises(OSError):
+            socket.create_connection(("192.0.2.1", 9), timeout=.2)
+        with self.assertRaises(OSError):
+            pathlib.Path("/source/host_write.txt").write_text("blocked")
+        pathlib.Path("ephemeral.txt").write_text("inside tmpfs only")
+    def test_result(self):
+        self.assertEqual(1, 1)
+'''
+    fixture.write_text(content)
+    subprocess.run(["git", "-C", str(path), "add", "test_acceptance.py"], check=True)
+    subprocess.run(["git", "-C", str(path), "commit", "-qm", "isolated acceptance fixture"], check=True)
+    monkeypatch.setenv("CODEX_QA_SENTINEL_SECRET", "must-not-reach-test-code")
+    service.configure("p", {"image": image, "commands": [{"id": "tests", "category": "test", "argv": ["python", "-m", "unittest", "-v"]}], "timeout_seconds": 30})
+    original = subprocess.run(["git", "-C", str(path), "status", "--porcelain"], check=True, capture_output=True).stdout
+    success = run(service)
+    assert success["status"] == "PASS", success
+    assert "Ran 2 tests" in success["checks"][0]["log"]
+    service.promote_baseline("p", success["id"])
+    fixture.write_text(content.replace("self.assertEqual(1, 1)", "self.assertEqual(1, 2)"))
+    failure = run(service)
+    assert failure["status"] == "FAIL", failure
+    assert failure["comparison"]["new_regressions"] == ["tests"]
+    fixture.write_text(content)
+    assert subprocess.run(["git", "-C", str(path), "status", "--porcelain"], check=True, capture_output=True).stdout == original
+    assert not (path / "ephemeral.txt").exists()
+    assert not (path / "host_write.txt").exists()
+    assert (path / ".env").read_text() == "PASSWORD=private"
+    service.configure("p", {"image": image, "commands": [{"id": "tests", "category": "test", "argv": ["python", "-c", "import unittest; unittest.TextTestRunner().run(unittest.TestSuite())"]}]})
+    empty = run(service)
+    assert empty["status"] == "PARTIAL", empty
