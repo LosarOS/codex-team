@@ -1,4 +1,4 @@
-<# CI-only Windows smoke. Installs the freshly built app in a unique temporary directory,
+﻿<# CI-only Windows smoke. Installs the freshly built app in a unique temporary directory,
    checks its real frozen backend and packaged assets, then uninstalls it. No login,
    model calls, project code or interactive GUI acceptance is performed. #>
 [CmdletBinding()]
@@ -11,7 +11,7 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Instal
 $repository = Split-Path $PSScriptRoot -Parent
 $diagnostics = Join-Path $repository '.build-tools/installed-smoke'
 New-Item -ItemType Directory -Force -Path $diagnostics | Out-Null
-$temporary = Join-Path ([IO.Path]::GetTempPath()) ('CodexTeam-smoke-' + [guid]::NewGuid().ToString('N'))
+$temporary = Join-Path ([IO.Path]::GetTempPath()) ('CodexTeam-проверка-' + [guid]::NewGuid().ToString('N'))
 $installation = Join-Path $temporary 'installed'
 $profile = Join-Path $temporary 'profile'
 New-Item -ItemType Directory -Force -Path $temporary,$profile | Out-Null
