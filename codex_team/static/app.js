@@ -12,7 +12,9 @@
     projects: [], projectsError: null, actions: [], actionsError: null, actionsLoading: false, actionsSignature: "", providers: null, providerTouched: false,
     appearance: {theme:"system",accent_color:null}, historyRows: [], historyPage: 0, historyTotal: 0, historyVersion: 0, historyTimer: null, runTotal: 0, allUsage: null,
     editingPack: null, editingProject: null, diffLimit: 1000, diffLines: [], diffRun: null, diffTotal: 0, diffHasMore: false, diffLoading: false,
-    eventsHasMore: false, eventsLoaded: false, eventsState: null, lastRunList: 0, lastRunDetail: 0, availableModels: [], diffError: null,
+    lastEventsFetch: 0, eventsHasMore: false, eventsLoaded: false, eventsState: null, lastRunList: 0, lastRunDetail: 0, availableModels: [], diffError: null,
+    controlPending: false, creatingRun: false, runRevision: 0, pendingActions: new Set(),
+    stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
     desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
   };
   const roles = {
@@ -34,12 +36,12 @@
     implement: {title: "Готовый план", description: "Реализация заданного плана с QA и ревью результата.", pipeline: ["coordinator", "developer", "qa", "reviewer"]},
   };
   const stateLabels = {
-    QUEUED: "В очереди", RUNNING: "В работе", PAUSING: "Приостановка",
+    WAITING: "Ожидание этапа", QUEUED: "В очереди", RUNNING: "В работе", PAUSING: "Приостановка",
     PAUSED: "Пауза", STOPPING: "Остановка", STOPPED: "Остановлен",
     INTERRUPTED: "Прерван", DONE: "Завершён", COMPLETED: "Завершён",
     FAILED: "Ошибка", USER_DECISION_REQUIRED: "Нужно решение", AUTH_REQUIRED: "Нужен вход", USAGE_LIMIT: "Лимит Codex",
-    PLAN: "План", ANALYSIS: "Анализ", IMPLEMENTED: "Реализовано", PASS: "PASS",
-    FAIL: "FAIL", APPROVED: "APPROVED", CHANGES_REQUIRED: "Нужны исправления",
+    PLAN: "План", ANALYSIS: "Анализ", IMPLEMENTED: "Реализовано", PASS: "Проверено",
+    FAIL: "Проверка не пройдена", APPROVED: "Одобрено", CHANGES_REQUIRED: "Нужны исправления",
   };
   const eventLabels = {
     run_created: "Запуск создан", created: "Запуск создан", state_changed: "Состояние изменено",
@@ -171,7 +173,7 @@
     state.detailTab=tab;
     qa("[data-detail-tab]").forEach(button=>{const active=button.dataset.detailTab===tab;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));button.tabIndex=active?0:-1;$("detail-"+button.dataset.detailTab).hidden=!active;});
     if(!state.selectedRun)return;
-    if(tab==="overview")renderRoles();
+    if(tab==="overview"){renderRoles();if(!state.eventsLoaded)fetchEvents(state.selectedRun.id,state.selectionVersion).catch(e=>showEventError(e));}
     if(tab==="diff")loadDiff();
     if(tab==="tests")renderTests();
     if(tab==="artifacts")renderArtifacts();
@@ -274,6 +276,7 @@
     service.hidden = online;
     if (!online) service.textContent = error || "Локальный сервер недоступен. Проверьте, что приложение запущено.";
     renderConnection();
+    if(state.selectedRun)renderRun();
   }
   function renderConnection() {
     const connected = runReady();
@@ -283,7 +286,7 @@
     $("sidebar-auth-dot").className = `status-dot ${dotClass}`;
     $("sidebar-auth-label").textContent=!state.online?"Нет связи с сервером":apiActive?connected?"API key настроен":"API key требуется":connected?"Аккаунт подключён":"Авторизация требуется"; $("sidebar-provider-label").textContent=apiActive?"OpenAI API":"ChatGPT / Codex"; $("compose-provider-label").replaceChildren(node("span",`status-dot ${apiActive?"yellow":"green"}`),document.createTextNode(apiActive?"Отдельная оплата OpenAI API":"Через ваш аккаунт Codex")); $("api-required-banner").hidden=!state.online||!apiActive||connected;
     $("auth-banner").hidden = !state.online || connected || apiActive;
-    $("start-button").disabled = !state.online || !connected || state.runs.some((run) => activeStates.has(normalizedState(run.state)));
+    $("start-button").disabled = state.creatingRun || !state.online || !connected || state.runs.some((run) => activeStates.has(normalizedState(run.state)));
     $("start-button").title=state.runs.some(run=>activeStates.has(normalizedState(run.state)))?"Сначала завершите, остановите или приостановите текущий запуск.":!connected?apiActive?"Сохраните API key или выберите Codex в настройках.":"Войдите через официальный Codex.":"";
     qa(".login-button").forEach((button) => { button.disabled = !state.online || state.loginPending; }); renderProviderChoice();
   }
@@ -429,7 +432,7 @@
     table.append(head, body); return table;
   }
   async function selectRun(id,scroll=true) {
-    const version=++state.selectionVersion;state.selecting=true;state.events=[];state.eventCursor=0;state.eventsLoaded=false;state.eventsHasMore=false;state.eventsState=null;state.selectedRole=null;state.runSignature="";state.actionsSignature="";state.diffLimit=1000;state.diffLines=[];state.diffRun=null;state.diffHasMore=false;state.diffLoading=false;state.diffError=null;state.diffStat=null;
+    const version=++state.selectionVersion;state.selecting=true;$("steer-instruction").value="";state.events=[];state.lastEventsFetch=0;state.eventCursor=0;state.eventsLoaded=false;state.eventsHasMore=false;state.eventsState=null;state.selectedRole=null;state.selectedAttempt=null;state.selectedAttemptInfo=null;state.stageEvents=[];state.eventsRequest=null;$("events-error").hidden=true;$("more-events-button").disabled=false;$("more-events-button").hidden=true;state.runSignature="";state.actionsSignature="";state.diffLimit=1000;state.diffLines=[];state.diffRun=null;state.diffHasMore=false;state.diffLoading=false;state.diffError=null;state.diffStat=null;
     try{const run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version!==state.selectionVersion)return;state.selectedRun=run;setPage("runs");renderRun();renderRuns(true);renderActions();if(scroll)$("run-detail").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});}
     catch(error){if(version===state.selectionVersion)toast(error.message,true);}finally{if(version===state.selectionVersion)state.selecting=false;}
   }
@@ -460,11 +463,16 @@
     $("pause-button").hidden = !["RUNNING", "QUEUED", "PAUSING"].includes(currentState);
     $("pause-button").disabled = currentState === "PAUSING";
     $("resume-button").hidden = !resumeStates.has(currentState);
-    $("resume-button").disabled = !runReady();
+    $("resume-button").disabled = !runReady() || !state.online;
     $("stop-button").hidden = !activeStates.has(currentState);
     $("stop-button").disabled = currentState === "STOPPING";
+    const latestControl=state.events.filter(e=>["pause_requested","stop_requested","run_state","resumed","recovered"].includes(e.type)).at(-1);
+    if(activeStates.has(currentState)&&latestControl?.type==="pause_requested")$("pause-button").disabled=true;
+    if(activeStates.has(currentState)&&latestControl?.type==="stop_requested")$("stop-button").disabled=true;
     $("steer-form").hidden = terminalStates.has(currentState);
-    const signature = JSON.stringify([run.results, run.threads, run.pipeline, run.current_role, run.usage]);
+    if(state.controlPending || !state.online)qa(".run-controls button, #steer-button, #queue-button").forEach(b=>b.disabled=true);
+    else {$("steer-button").disabled=false;$("queue-button").disabled=false;}
+    const signature = JSON.stringify([run.results, run.threads, run.pipeline, run.current_role, run.usage, run.state, run.calls]);
     if (signature !== state.runSignature) {
       state.runSignature = signature;
       if(state.detailTab==="overview")renderRoles(); if(state.detailTab==="tests")renderTests(); if(state.detailTab==="artifacts")renderArtifacts(); if(state.detailTab==="usage")renderRunUsage();
@@ -476,16 +484,21 @@
     const roleList = availableRoles(run);
     if (!roleList.includes(state.selectedRole)) state.selectedRole = run.current_role || roleList[0];
     if (!roleList.length) { $("role-list").replaceChildren(); empty($("role-inspector"), "Команда готовится к работе", "После планирования здесь появятся этапы и результаты агентов."); return; }
+    const attempts=MissionControl.attempts(run,state.stageEvents,state.eventsLoaded&&!state.eventsHasMore);
+    const focusedRole=Array.from($("role-list").children).find(b=>b===document.activeElement)?.dataset.role;
     $("role-list").replaceChildren(...roleList.map((role) => {
       const button = node("button", `role-button${state.selectedRole === role ? " active" : ""}`); button.type = "button";
-      const result = run.results?.[role];
-      const isActive = run.current_role === role && activeStates.has(normalizedState(run.state));
-      const needsAction = normalizedState(result?.verdict)==="USER_DECISION_REQUIRED";
+      button.dataset.role=role;
+      const attempt=[...attempts].reverse().find(a=>a.role===role&&(a.number||a.call||a.result))||attempts.find(a=>a.role===role);
+      const result=attempt?.result;
+      const isActive=activeStates.has(normalizedState(attempt?.state));
+      const needsAction=["USER_DECISION_REQUIRED","AUTH_REQUIRED","USAGE_LIMIT","PAUSED","INTERRUPTED"].includes(normalizedState(attempt?.state));
       const success = result && ["PASS", "APPROVED", "IMPLEMENTED", "PLAN", "ANALYSIS"].includes(normalizedState(result.verdict));
       button.append(node("span", `status-dot ${isActive || needsAction ? "yellow" : result ? success ? "green" : "red" : ""}`), node("span", "", roleName(role)), node("span", "", isActive ? "↗" : needsAction ? "!" : result ? success ? "✓" : "×" : "·"));
       button.setAttribute("aria-pressed", String(state.selectedRole === role));
-      button.addEventListener("click", () => { state.selectedRole = role; renderRoles(); }); return button;
+      button.addEventListener("click", () => { state.selectedRole = role; state.selectedAttempt=null;state.selectedAttemptInfo=null; renderRoles(); }); return button;
     }));
+    if(focusedRole)Array.from($("role-list").children).find(b=>b.dataset.role===focusedRole)?.focus();
     renderInspector(state.selectedRole);
   }
   function appendResultSection(container, title, value, asList = false) {
@@ -497,12 +510,31 @@
     container.append(section);
   }
   function renderInspector(role) {
-    const container = $("role-inspector"); container.replaceChildren();
-    const run = state.selectedRun; const result = run.results?.[role];
+    const container = $("role-inspector");
+    const run = state.selectedRun;
+    const attempts = MissionControl.attempts(run,state.stageEvents,state.eventsLoaded&&!state.eventsHasMore);
+    const attempt = attempts.find(a=>a.key===state.selectedAttempt) || [...attempts].reverse().find(a=>a.role===role&&(a.number||a.call||a.result)) || attempts.find(a=>a.role===role);
+    const result = attempt ? attempt.result : run.results?.[role];
+    const inspectionKey=`${run.id}:${attempt?.key||role}`;
+    const keepExpanded=container.dataset.inspection===inspectionKey&&Array.from(container.querySelectorAll("details")).some(d=>d.open);
+    container.dataset.inspection=inspectionKey;container.replaceChildren();
     const heading = node("div", "role-inspector-header"); heading.append(node("h3", "", roleName(role)));
-    if (result?.verdict) heading.append(badge(result.verdict));
+    if (attempt) heading.append(badge(attempt.state));
+    else if (result?.verdict) heading.append(badge(result.verdict));
     else if (run.current_role === role && activeStates.has(normalizedState(run.state))) heading.append(badge("RUNNING"));
     container.append(heading);
+    if(attempt) {
+      const timing = node("dl","mission-metadata");
+      for(const [label,value] of [["Попытка",attempt.historyOnly?"Нет данных (сохранённый результат)":attempt.number|| (attempt.call?`Вызов ${attempt.call}`:"Ещё не начата")],["Итерация",attempt.iteration??"Нет данных"],["Начало",attempt.started?prettyDate(attempt.started):"Нет данных"],["Завершение",attempt.ended?prettyDate(attempt.ended):"Нет данных"]])timing.append(node("dt","",label),node("dd","",value));
+      if(attempt.started&&attempt.ended)timing.append(node("dt","","Продолжительность"),node("dd","",`${Math.max(0,Math.round((new Date(attempt.ended)-new Date(attempt.started))/1000))} с`));
+      container.append(timing);
+      if(attempt.error)appendResultSection(container,"Ошибка / блокировка",attempt.error);
+    }
+    appendResultSection(container,"Задача запуска",run.task);
+    const roleUsage=aggregateUsage(list(run.usage).filter(u=>(u.agent||u.role)===role));
+    appendResultSection(container,"Токены роли за весь запуск",roleUsage.total===null?"Нет данных":formatNumber.format(roleUsage.total));
+    const recent=state.events.filter(e=>e.role===role).slice(-5);
+    if(recent.length)appendResultSection(container,"Последние события роли",recent.map(e=>`${prettyDate(e.created_at,true)} · ${eventLabels[e.type]||e.type}: ${eventSummary(e.payload)}`),true);
     const thread = run.threads?.[role];
     if (thread) container.append(node("div", "thread-id mono", `Thread: ${typeof thread === "string" ? thread : thread.id || thread.thread_id || text(thread)}`));
     if (!result) {
@@ -511,6 +543,7 @@
     }
     if (typeof result === "string") { appendResultSection(container, "Результат", result); return; }
     appendResultSection(container, "Результат", result.summary || result.result || result.output);
+    appendResultSection(container, "Проверки", result.tests, true);
     appendResultSection(container, "План", result.plan, true);
     appendResultSection(container, "Критерии приёмки", result.acceptance_criteria, true);
     appendResultSection(container, "Важные файлы", result.relevant_files || result.changed_files, true);
@@ -530,7 +563,7 @@
       }); container.append(section);
     }
     if (Object.keys(result.project_map || {}).length) appendResultSection(container, "Карта проекта", result.project_map);
-    const details = node("details", "raw-details"); details.append(node("summary", "", "Полный структурированный результат"), node("pre", "code-block", text(result))); container.append(details);
+    const details = node("details", "raw-details");details.open=keepExpanded; details.append(node("summary", "", "Полный структурированный результат"), node("pre", "code-block", text(result))); container.append(details);
   }
   function renderDiff() {
     const run=state.selectedRun;if(!run)return;
@@ -702,38 +735,63 @@
     if (typeof payload === "string") return payload.slice(0, 1200);
     if (!payload) return "";
     const item = payload.item || payload;
+    if(Array.isArray(item.changes)&&item.changes.some(c=>c.path))return `Файлы: ${item.changes.map(c=>c.path).filter(Boolean).join(", ").slice(0,1200)}`;
     return text(item.command || item.summary || item.message || item.instruction || item.state || item.verdict || item.error || item.type || "").slice(0, 1200);
+  }
+  function showEventError(error) {
+    $("events-error").hidden=false;$("events-error").textContent=error.message;
+    $("events-status").textContent="Сохранённая лента доступна. Повторите загрузку.";
+    $("more-events-button").hidden=false;
   }
   function renderEvents() {
     $("events-count").textContent = state.events.length;
-    const container = $("event-list");
-    if (!state.events.length) { empty(container, "Ожидание событий", "События выполнения обновляются каждые 2 секунды."); return; }
-    const previousCount = Number(container.dataset.count || 0);
-    if (previousCount === state.events.length && container.dataset.run === state.selectedRun?.id) return;
-    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 70;
-    const previousScroll = container.scrollTop;
-    const expanded = new Set(qa("#event-list details[open]").map((details) => details.dataset.eventId));
-    container.dataset.count = state.events.length; container.dataset.run = state.selectedRun?.id || "";
-    container.replaceChildren(...state.events.map((event) => {
-      const row = node("article", "event-item"); row.append(node("time", "event-time", prettyDate(event.created_at, true)));
-      const content = node("div"); const title = node("div", "event-title");
-      if (event.role) title.append(node("span", "event-role", roleName(event.role)));
-      title.append(document.createTextNode(eventLabels[event.type] || event.type)); content.append(title);
-      const summary = eventSummary(event.payload); if (summary) content.append(node("p", "event-summary", summary));
-      if (event.payload && (typeof event.payload !== "object" || Object.keys(event.payload).length)) {
-        const details = node("details", "event-details"); details.dataset.eventId = String(event.id); details.open = expanded.has(String(event.id));
-        details.append(node("summary", "", "Данные события"), node("pre", "code-block", text(event.payload))); content.append(details);
+    const container=$("event-list"), filter=state.eventFilter;
+    const visible=state.events.filter(e=>filter==="all"||MissionControl.category(e)===filter);
+    const context=`${state.selectedRun?.id}:${filter}`;
+    const same=container.dataset.context===context;
+    const wasAtBottom=container.scrollHeight-container.scrollTop-container.clientHeight<70;
+    const previousScroll=container.scrollTop;
+    if(!same){container.replaceChildren();container.dataset.context=context;}
+    const existing=new Map(Array.from(container.children).filter(el=>el.dataset.eventId).map(el=>[el.dataset.eventId,el]));
+    const wanted=new Set(visible.map(e=>String(e.id)));
+    for(const [id,el] of existing)if(!wanted.has(id))el.remove();
+    if(visible.length){
+      if(!existing.size)container.replaceChildren();
+      for(const event of visible){
+        if(existing.has(String(event.id)))continue;
+        const row=node("article","event-item");row.dataset.eventId=String(event.id);
+        row.append(node("time","event-time",prettyDate(event.created_at,true)));
+        const content=node("div"),title=node("div","event-title");
+        if(event.role)title.append(node("span","event-role",roleName(event.role)));
+        title.append(document.createTextNode(eventLabels[event.type]||event.type));content.append(title);
+        const summary=eventSummary(event.payload);if(summary)content.append(node("p","event-summary",summary));
+        if(event.payload&&Object.keys(event.payload).length){const details=node("details","event-details");details.append(node("summary","","Данные события"),node("pre","code-block",text(event.payload)));content.append(details);}
+        row.append(content);container.append(row);
       }
-      row.append(content); return row;
-    }));
-    if ($("follow-events").checked && (wasAtBottom || previousCount === 0)) container.scrollTop = container.scrollHeight;
-    else container.scrollTop = previousScroll;
+    } else empty(container,"Нет событий",state.eventsLoaded?"Для выбранного фильтра пока нет событий.":"Загружаем сохранённые события запуска…");
+    if($("follow-events").checked&&(wasAtBottom||!same))container.scrollTop=container.scrollHeight;
+    else container.scrollTop=previousScroll;
+    $("events-status").textContent=`Показано ${visible.length} · загружено ${state.events.length}${state.eventsHasMore?" · есть следующие страницы":""}`;
   }
   async function fetchEvents(id,version) {
-    const response=await api(`/api/runs/${encodeURIComponent(id)}/events?after=${state.eventCursor}&limit=100&meaningful=true`);
-    if(version!==state.selectionVersion||state.selectedRun?.id!==id)return;
-    const data=Array.isArray(response)?response:response.items||response.events||[];state.eventsLoaded=true;state.eventsHasMore=Boolean(response.has_more);state.eventsState=normalizedState(state.selectedRun.state);
-    const ids=new Set(state.events.map(e=>e.id));state.events.push(...data.filter(e=>!ids.has(e.id)));state.eventCursor=response.next_cursor??Math.max(state.eventCursor,...data.map(e=>Number(e.id)||0));if(state.events.length>600)state.events.splice(0,state.events.length-600);delete $("event-list").dataset.count;$("more-events-button").hidden=!state.eventsHasMore;renderEvents();
+    if(state.eventsRequest)return state.eventsRequest;
+    const button=$("more-events-button");button.disabled=true;
+    const request=(async()=>{
+      try {
+        const response=await api(`/api/runs/${encodeURIComponent(id)}/events?after=${state.eventCursor}&limit=100&meaningful=true`);
+        if(version!==state.selectionVersion||state.selectedRun?.id!==id)return;
+        const data=Array.isArray(response)?response:response.items||response.events||[];
+        state.lastEventsFetch=Date.now();state.eventsLoaded=true;state.eventsHasMore=Boolean(response.has_more);state.eventsState=normalizedState(state.selectedRun.state);
+        const ids=new Set(state.events.map(e=>e.id));const added=data.filter(e=>!ids.has(e.id));state.events.push(...added);
+        state.stageEvents.push(...added.filter(e=>["agent_started","agent_completed"].includes(e.type)));
+        state.eventCursor=response.next_cursor??Math.max(state.eventCursor,...data.map(e=>Number(e.id)||0));
+        if(state.events.length>600)state.events.splice(0,state.events.length-600);
+        $("events-error").hidden=true;button.hidden=!state.eventsHasMore;renderEvents();renderActivePipeline();
+        if(state.detailTab==="overview"&&added.length)renderRoles();
+      }catch(error){if(version===state.selectionVersion)showEventError(error);}
+      finally{if(version===state.selectionVersion){state.eventsRequest=null;button.disabled=false;}}
+    })();
+    state.eventsRequest=request;return request;
   }
   async function refresh() {
     if(state.refreshing)return;state.refreshing=true;$("refresh-button").disabled=true;
@@ -745,34 +803,38 @@
       if(responses[2].status==="fulfilled"||responses[3].status==="fulfilled"){renderRegistry();state.lastRegistry=Date.now();}
       if(responses[5].status==="fulfilled"){state.providers=responses[5].value;renderProviders();renderConnection();}
       if(state.online){await loadActions();if(["projects","history"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
-      if(state.selectedRun){const id=state.selectedRun.id,version=state.selectionVersion,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion){state.selectedRun=run;renderRun();if(state.detailTab==="activity"&&!state.eventsHasMore)await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
+      if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
     }catch(error){toast(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
   }
   async function poll() {
-    if(state.polling||state.refreshing||state.selecting||document.hidden)return;state.polling=true;
+    if(state.polling||state.refreshing||state.selecting||state.controlPending||state.pendingActions.size||document.hidden)return;state.polling=true;
     try{if(Date.now()-state.lastStatus>15000||!state.online){state.status=await api("/api/status");state.lastStatus=Date.now();setOnline(true);renderStatus();}
       const active=state.runs.some(r=>activeStates.has(normalizedState(r.state)));
       if(Date.now()-state.lastRunList>(active?1800:10000)){acceptRuns(await api("/api/runs?summary=true&limit=20&offset=0"));state.lastRunList=Date.now();}
       await loadActions();
-      const run=state.selectedRun,id=run?.id,version=state.selectionVersion,summary=state.runs.find(r=>r.id===id);
-      if(id&&state.page==="runs"&&Date.now()-state.lastRunDetail>1800&&((summary&&(summary.state!==run.state||summary.calls!==run.calls||summary.current_role!==run.current_role||summary.iteration!==run.iteration))||(activeStates.has(normalizedState(run.state))&&Date.now()-state.lastRunDetail>30000))){const updated=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion){state.selectedRun=updated;state.lastRunDetail=Date.now();renderRun();}}
-      if(id&&state.page==="runs"&&state.detailTab==="activity"&&!state.eventsHasMore&&(activeStates.has(normalizedState(state.selectedRun.state))||!state.eventsLoaded||state.eventsState!==normalizedState(state.selectedRun.state)))await fetchEvents(id,version);
+      const run=state.selectedRun,id=run?.id,version=state.selectionVersion,revision=state.runRevision,summary=state.runs.find(r=>r.id===id);
+      if(id&&state.page==="runs"&&Date.now()-state.lastRunDetail>1800&&((summary&&(summary.state!==run.state||summary.calls!==run.calls||summary.current_role!==run.current_role||summary.iteration!==run.iteration))||(activeStates.has(normalizedState(run.state))&&Date.now()-state.lastRunDetail>30000))){const updated=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=updated;state.lastRunDetail=Date.now();renderRun();}}
+      if(id&&state.page==="runs"&&["overview","activity"].includes(state.detailTab)&&(activeStates.has(normalizedState(state.selectedRun.state))||Date.now()-state.lastEventsFetch>10000||state.eventsHasMore||!state.eventsLoaded||state.eventsState!==normalizedState(state.selectedRun.state)))await fetchEvents(id,version);
       if(Date.now()-state.lastRegistry>30000){const rs=await Promise.allSettled([api("/api/agents"),api("/api/packs")]);if(rs[0].status==="fulfilled")state.agents=Array.isArray(rs[0].value)?rs[0].value:rs[0].value.agents||[];if(rs[1].status==="fulfilled")state.packs=Array.isArray(rs[1].value)?rs[1].value:rs[1].value.packs||[];state.lastRegistry=Date.now();renderRegistry();}
     }catch(error){setOnline(false,error.message);}finally{state.polling=false;}
   }
   async function control(action, instruction) {
     const id = state.selectedRun?.id;
-    if (!id) return;
+    if (!id || state.controlPending) return;
+    state.controlPending=true;state.runRevision++;
+    const selection=state.selectionVersion;
+    const submittedInstruction=$("steer-instruction").value;
     const buttons = qa(".run-controls button, #steer-button, #queue-button"); buttons.forEach((button) => { button.disabled = true; });
     try {
       await api(`/api/runs/${encodeURIComponent(id)}/control`, "POST", {action, ...(instruction ? {instruction} : {})});
+      state.runRevision++;
       toast({pause: "Пауза запрошена после завершения текущего этапа.", stop: "Запрошена остановка запуска.", resume: "Запуск продолжен.", steer: "Указание передано команде.", queue: "Указание сохранено для следующего этапа."}[action]);
-      if (instruction) $("steer-instruction").value = "";
-      const version = state.selectionVersion;
+      if (instruction && selection===state.selectionVersion && $("steer-instruction").value===submittedInstruction) $("steer-instruction").value = "";
+      const version = selection;
       const run = await api(`/api/runs/${encodeURIComponent(id)}`);
       if (version === state.selectionVersion && state.selectedRun?.id === id) { state.selectedRun = run; renderRun(); }
     } catch (error) { toast(error.message, true); }
-    finally { buttons.forEach((button) => { button.disabled = false; }); if (state.selectedRun) renderRun(); }
+    finally { state.controlPending=false; buttons.forEach((button) => { button.disabled = false; }); if (state.selectedRun) renderRun(); }
   }
   async function login(method) {
     if (state.loginPending) return;
@@ -875,7 +937,49 @@
     }catch(error){if(version===state.historyVersion)empty($("history-list"),"История временно недоступна",error.message);}finally{if(version===state.historyVersion)$("history-list").removeAttribute("aria-busy");}
   }
   function renderRunList() { const c=$("runs-list");if(!state.runs.length){empty(c,"Пока нет запусков","Создайте первую задачу на странице «Обзор».");return;}c.replaceChildren(...state.runs.slice(0,12).map(run=>{const b=node("button","run-card");b.type="button";b.append(node("span","run-card-icon","▷"));const d=node("div");d.append(node("strong","run-card-title",run.task),node("div","run-card-meta mono",run.worktree?.path||run.workspace));b.append(d,badge(run.state));b.addEventListener("click",()=>selectRun(run.id));return b;})); }
-  function renderActivePipeline() { const run=state.selectedRun;if(!run)return;$("active-pipeline").replaceChildren(...availableRoles(run).map(role=>{const result=run.results?.[role],verdict=normalizedState(result?.verdict),working=run.current_role===role&&activeStates.has(normalizedState(run.state));let cls="",label="Ожидание";if(working){cls="working";label="● Выполняется";}else if(verdict==="USER_DECISION_REQUIRED"){cls="attention";label="! Нужно решение";}else if(["FAIL","CHANGES_REQUIRED"].includes(verdict)){cls="failed";label="× Нужны исправления";}else if(result){cls="good";label="✓ Завершён";}const li=node("li",`pipeline-step ${cls}`,roleName(role));li.append(node("span","",label));return li;}));const elapsed=run.elapsed_seconds??0;$("detail-elapsed").textContent=`Время: ${Math.floor(elapsed/60)} мин ${Math.floor(elapsed%60)} с`;$("detail-branch").textContent=`Ветка: ${run.worktree?.branch||run.branch||"не передана"}`; $("detail-worktree-path").textContent=text(run.worktree?.path||run.worktree?.workspace||run.worktree||run.workspace); const tokens=summaryTotals(run).total;$("detail-token-total").textContent=tokens===null?"—":formatNumber.format(tokens); const tests=Object.values(run.results||{}).flatMap(r=>list(r?.tests)),failed=tests.filter(t=>typeof t.exit_code==="number"&&t.exit_code!==0).length;$("detail-test-total").textContent=tests.length?`${tests.length} · ошибок: ${failed}`:"Пока нет результатов";$("detail-file-total").textContent=Array.isArray(run.changed_files)?run.changed_files.length:run.changed_files_count??"Во вкладке diff";$("detail-task-text").textContent=run.task;$("detail-full-task").hidden=(run.task||"").length<150;$("open-worktree-button").hidden=typeof desktopBridge()?.open_worktree!=="function"||!run.worktree||Boolean(run.worktree_deleted);renderRunArtifacts(); }
+  function renderActivePipeline() {
+    const run=state.selectedRun;if(!run)return;
+    const attempts=MissionControl.attempts(run,state.stageEvents,state.eventsLoaded&&!state.eventsHasMore);
+    if(state.selectedAttempt&&!attempts.some(a=>a.key===state.selectedAttempt)){
+      const match=attempts.find(a=>a.role===state.selectedAttemptInfo?.role&&(state.selectedAttemptInfo?.resultNumber?a.resultNumber===state.selectedAttemptInfo.resultNumber:a.number===state.selectedAttemptInfo?.number));
+      state.selectedAttempt=match?.key||null;
+    }
+    const signature=JSON.stringify([run.id,attempts,state.selectedAttempt]);
+    const pipeline=$("active-pipeline");
+    if(pipeline.dataset.signature!==signature){
+      const focusedKey=Array.from(pipeline.children).find(li=>li.querySelector?.("button")===document.activeElement)?.dataset.key;
+      pipeline.dataset.signature=signature;
+      pipeline.replaceChildren(...attempts.map(attempt=>{
+        const li=node("li","pipeline-step");li.dataset.key=attempt.key;
+        const button=node("button","mission-stage");button.type="button";
+        button.setAttribute("aria-pressed",String(state.selectedAttempt===attempt.key));
+        const status=normalizedState(attempt.state);
+        const indicatorClass=["PASS","APPROVED","IMPLEMENTED","PLAN","ANALYSIS","DONE","COMPLETED"].includes(status)?"good":["FAIL","FAILED","CHANGES_REQUIRED"].includes(status)?"failed":activeStates.has(status)?"working":["USER_DECISION_REQUIRED","AUTH_REQUIRED","USAGE_LIMIT","PAUSED","INTERRUPTED","STOPPED"].includes(status)?"attention":"waiting";
+        const indicator=node("span",`mission-indicator ${indicatorClass}`,{good:"✓",failed:"×",working:"",attention:"!",waiting:"◷"}[indicatorClass]);indicator.setAttribute("aria-hidden","true");
+        button.append(indicator,node("strong","",roleName(attempt.role)),badge(attempt.state));
+        button.append(node("span","muted",attempt.historyOnly?`Сохранённый результат ${attempt.resultNumber}`:attempt.number?`Попытка ${attempt.number}${attempt.iteration?` · итерация ${attempt.iteration}`:""}`:attempt.call?`Вызов ${attempt.call} · время не загружено`:"Этап запланирован"));
+        if(attempt.started)button.append(node("time","muted",`${prettyDate(attempt.started,true)}${attempt.ended?` → ${prettyDate(attempt.ended,true)}`:""}`));
+        button.addEventListener("click",()=>{state.selectedRole=attempt.role;state.selectedAttempt=attempt.key;state.selectedAttemptInfo={role:attempt.role,number:attempt.number,resultNumber:attempt.resultNumber};setDetailTab("overview");renderActivePipeline();$("role-inspector").focus();});
+        li.append(button);return li;
+      }));
+      if(focusedKey)Array.from(pipeline.children).find(li=>li.dataset.key===focusedKey)?.querySelector("button")?.focus();
+    }
+    $("mission-current-role").textContent=run.current_role?roleName(run.current_role):"Агент ещё не начал работу";
+    const lastActivity=state.events.filter(e=>e.role===run.current_role).at(-1);
+    $("mission-current-activity").textContent=state.eventsHasMore?"История загружена частично. Продолжение доступно во вкладке «Логи».":lastActivity?`${prettyDate(lastActivity.created_at,true)} · ${eventLabels[lastActivity.type]||lastActivity.type}${eventSummary(lastActivity.payload)?` · ${eventSummary(lastActivity.payload)}`:""}`:"Нет данных о последнем действии";
+    $("mission-steer-button").hidden=terminalStates.has(normalizedState(run.state));
+    $("mission-steer-button").disabled=state.controlPending||!state.online;
+    const completed=attempts.filter(a=>a.result).length,required=state.actions.filter(a=>a.run_id===run.id).length;
+    $("mission-summary").textContent=`Результатов попыток: ${completed} · требуется решений: ${required}${state.eventsHasMore?" · загружается история этапов":""}`;
+    const requests=state.events.filter(e=>["pause_requested","stop_requested","run_state","resumed","recovered"].includes(e.type));
+    const latest=requests.at(-1);
+    if(activeStates.has(normalizedState(run.state))){
+      if(latest?.type==="pause_requested")$("pause-button").disabled=true;
+      if(latest?.type==="stop_requested")$("stop-button").disabled=true;
+    }
+    $("pause-button").textContent=latest?.type==="pause_requested"&&activeStates.has(normalizedState(run.state))?"Пауза запрошена":"Пауза";
+    $("stop-button").textContent=latest?.type==="stop_requested"&&activeStates.has(normalizedState(run.state))?"Остановка запрошена":"Стоп";
+    const elapsed=run.elapsed_seconds;$("detail-elapsed").textContent=typeof elapsed!=="number"?"Время: Нет данных":`Время: ${Math.floor(elapsed/60)} мин ${Math.floor(elapsed%60)} с`;$("detail-branch").textContent=`Ветка: ${run.worktree?.branch||run.branch||"не передана"}`; $("detail-worktree-path").textContent=text(run.worktree?.path||run.worktree?.workspace||run.worktree||run.workspace); const tokens=summaryTotals(run).total;$("detail-token-total").textContent=tokens===null?"—":formatNumber.format(tokens); const tests=Object.values(run.results||{}).flatMap(r=>list(r?.tests)),failed=tests.filter(t=>typeof t.exit_code==="number"&&t.exit_code!==0).length;$("detail-test-total").textContent=tests.length?`${tests.length} · ошибок: ${failed}`:"Пока нет результатов";$("detail-file-total").textContent=Array.isArray(run.changed_files)?run.changed_files.length:run.changed_files_count??"Нет данных";$("detail-task-text").textContent=run.task;$("detail-full-task").hidden=(run.task||"").length<150;$("open-worktree-button").hidden=typeof desktopBridge()?.open_worktree!=="function"||!run.worktree||Boolean(run.worktree_deleted);renderRunArtifacts(); }
   function renderRunProblem(run) {
     const c=$("run-error"),kind=normalizedState(run.error_info?.category||run.state);c.replaceChildren();c.hidden=!run.error&&!run.error_info;
     c.classList.toggle("error",!["USER_DECISION_REQUIRED","USER_ACTION_REQUIRED","AUTH_REQUIRED","PERMISSION_REQUIRED","CONFIGURATION_REQUIRED","USAGE_LIMIT","INTERRUPTED"].includes(kind));
@@ -887,11 +991,23 @@
   }
   async function confirmOperation(title,description,scope="",accept="Подтвердить") { const dialog=$("confirm-dialog");if(typeof dialog.showModal!=="function")return window.confirm(`${title}\n\n${description}\n\n${scope}`);$("confirm-title").textContent=title;$("confirm-description").textContent=description;$("confirm-scope").textContent=scope;$("confirm-scope").hidden=!scope;$("confirm-accept").textContent=accept;dialog.returnValue="cancel";return new Promise(resolve=>{dialog.addEventListener("close",()=>resolve(dialog.returnValue==="confirm"),{once:true});dialog.showModal();$("confirm-cancel").focus();}); }
   async function loadActions() { if(state.actionsLoading)return;state.actionsLoading=true;try{const response=await api("/api/actions?status=pending");state.actions=Array.isArray(response)?response:response.items||response.actions||[];state.actionsError=null;renderActions();}catch(error){state.actionsError=error.status===404?"Центр действий недоступен в этой версии сервера.":error.message;renderActions();}finally{state.actionsLoading=false;} }
+  function syncActionCards(container,actions,where) {
+    const existing=new Map(Array.from(container.children).filter(el=>el.dataset.actionId).map(el=>[el.dataset.actionId,el]));
+    const ids=new Set(actions.map(a=>a.id));
+    for(const [id,card] of existing)if(!ids.has(id))card.remove();
+    if(!existing.size)container.replaceChildren();
+    for(const action of actions){
+      const signature=JSON.stringify(action),old=existing.get(action.id);
+      if(old?.dataset.signature===signature)continue;
+      const card=renderActionCard(action,where);card.dataset.actionId=action.id;card.dataset.signature=signature;
+      if(old)old.remove();container.append(card);
+    }
+  }
   function renderActions() {
-    $("actions-count").textContent=state.actions.length;$("actions-count").hidden=!state.actions.length;renderDashboard();
+    $("actions-count").textContent=state.actions.length;$("actions-count").hidden=!state.actions.length;renderDashboard();if(state.selectedRun)renderActivePipeline();
     const signature=JSON.stringify([state.actions,state.actionsError,state.selectedRun?.id]);if(signature===state.actionsSignature)return;state.actionsSignature=signature;
-    const c=$("actions-list");if(state.actionsError)empty(c,"Запросы временно недоступны",state.actionsError);else if(!state.actions.length)empty(c,"Сейчас ваше действие не требуется","Когда команде понадобится разрешение или решение, запрос появится здесь.");else c.replaceChildren(...state.actions.map(action=>renderActionCard(action,"center")));
-    const relevant=state.actions.filter(a=>a.run_id===state.selectedRun?.id);$("run-actions").hidden=!relevant.length;$("run-actions").replaceChildren(...relevant.map(action=>renderActionCard(action,"run")));
+    const c=$("actions-list");if(state.actionsError)empty(c,"Запросы временно недоступны",state.actionsError);else if(!state.actions.length)empty(c,"Сейчас ваше действие не требуется","Когда команде понадобится разрешение или решение, запрос появится здесь.");else syncActionCards(c,state.actions,"center");
+    const relevant=state.actions.filter(a=>a.run_id===state.selectedRun?.id);$("run-actions").hidden=!relevant.length;syncActionCards($("run-actions"),relevant,"run");
   }
   function renderActionCard(action,where) {
     const card=node("article","action-card"),heading=node("div","action-header");heading.append(node("h3","",action.kind==="permission"?`${roleName(action.role)}: требуется разрешение`:`${roleName(action.role)}: нужно решение`),node("span","state-badge state-warning","ТРЕБУЕТСЯ ДЕЙСТВИЕ"));card.append(heading,node("p","action-reason",action.reason||action.title));
@@ -921,10 +1037,12 @@
     const details=node("details","raw-details");details.append(node("summary","","Подробности запроса"),node("pre","code-block",text(action.details||{})));card.append(details);return card;
   }
   async function resolveAction(action,decision,answers={},instruction=null,card,budget=null) {
-    let confirmed=false;if(["allow_once","allow_run"].includes(decision)&&action.requires_confirmation){confirmed=await confirmOperation("Подтвердите запрошенное разрешение","Проверьте команду, рабочую папку и scope. Разрешение относится только к этому запросу официальной сессии Codex.",[action.command,action.cwd,action.scope,action.limitation].filter(Boolean).map(text).join("\n"),decisionLabels[decision]);if(!confirmed)return;}
+    if(state.pendingActions.has(action.id))return;state.pendingActions.add(action.id);state.runRevision++;
+    const selection=state.selectionVersion;
+    let confirmed=false;if(["allow_once","allow_run"].includes(decision)&&action.requires_confirmation){confirmed=await confirmOperation("Подтвердите запрошенное разрешение","Проверьте команду, рабочую папку и scope. Разрешение относится только к этому запросу официальной сессии Codex.",[action.command,action.cwd,action.scope,action.limitation].filter(Boolean).map(text).join("\n"),decisionLabels[decision]);if(!confirmed){state.pendingActions.delete(action.id);return;}}
     const buttons=Array.from(card?.querySelectorAll("button")||[]);buttons.forEach(b=>b.disabled=true);
-    try{await api(`/api/actions/${encodeURIComponent(action.id)}/resolve`,"POST",{decision,answers,...(instruction?{instruction}:{}),...(decision==="resume"&&budget?{budget}:{}),confirmed});toast("Решение передано. Состояние команды обновляется.");state.actionsSignature="";await loadActions();if(state.selectedRun?.id===action.run_id){state.selectedRun=await api(`/api/runs/${encodeURIComponent(action.run_id)}`);renderRun();}}
-    catch(error){toast(error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}
+    try{await api(`/api/actions/${encodeURIComponent(action.id)}/resolve`,"POST",{decision,answers,...(instruction?{instruction}:{}),...(decision==="resume"&&budget?{budget}:{}),confirmed});state.runRevision++;toast("Решение передано. Состояние команды обновляется.");state.actionsSignature="";await loadActions();if(state.selectedRun?.id===action.run_id){const run=await api(`/api/runs/${encodeURIComponent(action.run_id)}`);if(selection===state.selectionVersion&&state.selectedRun?.id===action.run_id){state.selectedRun=run;renderRun();}}}
+    catch(error){toast(error.message,true);}finally{state.pendingActions.delete(action.id);buttons.forEach(b=>b.disabled=false);}
   }
   function renderRunArtifacts() {
     const run=state.selectedRun,finished=run&&["DONE","COMPLETED","STOPPED","FAILED","INTERRUPTED"].includes(normalizedState(run.state));
@@ -1011,7 +1129,10 @@
     $("workspace").addEventListener("input",()=>{renderDashboard();renderProjectPreflight();});
     qa("[data-preset]").forEach(b=>b.addEventListener("click",()=>{const preset={fast:{mode:"quick",iterations:1,calls:6,duration:15},balanced:{mode:"standard",iterations:3,calls:15,duration:30},thorough:{mode:"deep",iterations:5,calls:30,duration:60}}[b.dataset.preset];$("run-mode").value=preset.mode;$("max-iterations").value=preset.iterations;$("max-calls").value=preset.calls;$("max-duration").value=preset.duration;qa("[data-preset]").forEach(item=>{const active=item===b;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});renderPreview();}));
     $("run-pack").addEventListener("change",()=>{const pack=state.packs.find(p=>p.name===$("run-pack").value);if(pack?.default_mode){$("run-mode").value=pack.default_mode;renderPreview();}});
-    $("open-diff-button").addEventListener("click",()=>{setDetailTab("diff");$("detail-diff").scrollIntoView({block:"nearest"});});$("more-diff-button").addEventListener("click",()=>{state.diffLimit+=1000;if(state.diffHasMore&&state.diffLimit>state.diffLines.length)loadDiff(true);else renderDiff();});$("more-events-button").addEventListener("click",()=>fetchEvents(state.selectedRun.id,state.selectionVersion));
+    $("open-diff-button").addEventListener("click",()=>{setDetailTab("diff");$("detail-diff").scrollIntoView({block:"nearest"});});$("more-diff-button").addEventListener("click",()=>{state.diffLimit+=1000;if(state.diffHasMore&&state.diffLimit>state.diffLines.length)loadDiff(true);else renderDiff();});$("more-events-button").addEventListener("click",()=>{if(state.selectedRun)return fetchEvents(state.selectedRun.id,state.selectionVersion);});
+    $("mission-steer-button").addEventListener("click",()=>{$("steer-form").scrollIntoView({block:"nearest"});$("steer-instruction").focus();});
+    $("mission-logs-button").addEventListener("click",()=>{setDetailTab("activity");$("detail-activity").scrollIntoView({block:"nearest"});$("tab-activity").focus();});
+    $("event-filter").addEventListener("change",()=>{state.eventFilter=$("event-filter").value;renderEvents();});
     $("open-worktree-button").addEventListener("click",()=>nativeOperation("open_worktree",state.selectedRun?.id));$("refresh-actions-button").addEventListener("click",loadActions);
     $("archive-run-button").addEventListener("click",()=>manageRunArtifact("archive"));$("delete-worktree-button").addEventListener("click",()=>manageRunArtifact("worktree"));
     $("history-prev").addEventListener("click",()=>{state.historyPage=Math.max(0,state.historyPage-1);loadHistory();});$("history-next").addEventListener("click",()=>{state.historyPage++;loadHistory();});
@@ -1064,7 +1185,7 @@
   $("add-agent-button").addEventListener("click", () => openAgentEditor());
   ["close-agent-editor", "cancel-agent-button"].forEach((id) => $(id).addEventListener("click", () => { $("agent-editor").hidden = true; }));
   $("run-form").addEventListener("submit", async (event) => {
-    event.preventDefault(); if (!$("run-form").reportValidity()) return;
+    event.preventDefault(); if (state.creatingRun || !$("run-form").reportValidity()) return;
     const workspace = $("workspace").value.trim(); const task = $("task").value.trim();
     if (!workspace || !task) { showFormError("run-form-error", "Укажите путь к проекту и непустую задачу."); return; }
     const request = {
@@ -1075,14 +1196,14 @@
       specialists: ["deep", "audit"].includes($("run-mode").value) ? qa("#specialist-options input:checked").map((input) => input.value) : [],
     };
     const packError=validateComposerPack();if(packError){showFormError("run-form-error",packError);return;}
-    const button = $("start-button"); button.disabled = true; button.textContent = "Подготовка запуска…"; showFormError("run-form-error", "");
+    state.creatingRun=true;const button = $("start-button"); button.disabled = true; button.textContent = "Подготовка запуска…"; showFormError("run-form-error", "");
     try {
       const run = await api("/api/runs", "POST", request);
       try { localStorage.setItem("codex-team-workspace", workspace); } catch (_) { /* storage may be disabled */ }
       state.runs = [run, ...state.runs.filter((item) => item.id !== run.id)]; renderRuns(true);
       toast("Задача передана координатору."); await selectRun(run.id);
     } catch (error) { showFormError("run-form-error", error); }
-    finally { button.textContent = "Запустить команду ↗"; renderConnection(); }
+    finally { state.creatingRun=false;button.textContent = "Запустить команду ↗"; renderConnection(); }
   });
   $("agent-form").addEventListener("submit", async (event) => {
     event.preventDefault(); if (!$("agent-form").reportValidity()) return;

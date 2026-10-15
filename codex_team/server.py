@@ -414,6 +414,10 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def home():
         return FileResponse(static_root / "index.html")
 
+    @app.get("/mission-control.js")
+    def mission_control_script():
+        return FileResponse(static_root / "mission-control.js", media_type="text/javascript")
+
     @app.get("/app.js")
     def js():
         return FileResponse(static_root / "app.js", media_type="text/javascript")
