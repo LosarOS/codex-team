@@ -85,6 +85,39 @@ def test_notification_ledger_suppresses_old_history_and_deduplicates_across_rest
     assert restarted.accept({"notifications": [notification], "next_cursor": 2}) == []
 
 
+def test_diagnostics_identifies_selected_profile_without_exporting_history(tmp_path, monkeypatch):
+    root = tmp_path / "Profile" / "CodexTeam"
+    database = root / ".ai-team/team.sqlite3"
+    database.parent.mkdir(parents=True)
+    database.write_bytes(b"private database contents")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "Profile"))
+    paths = []
+    def request(path):
+        paths.append(path)
+        if path == "/api/runs?summary=true&limit=1&archived=true":
+            return {"total": 12, "items": [{"task": "private task"}]}
+        return {}
+    monkeypatch.setattr(services.subprocess, "run", lambda *a, **kw: SimpleNamespace(returncode=0, stdout="git test"))
+    report = services.DiagnosticBundle(root, "rc", SimpleNamespace(request=request)).collect()
+    profile = report["data_profile"]
+    assert profile["run_count"] == 12 and profile["database_exists"] is True
+    assert profile["root"] == "%USERPROFILE%" + str(root)[len(str(tmp_path / "Profile")):]
+    assert profile["database"].endswith("team.sqlite3")
+    assert "private" not in json.dumps(report)
+    assert "archived=true" in paths[0]
+    assert database.read_bytes() == b"private database contents"
+
+
+def test_diagnostics_offline_profile_does_not_claim_empty_history_or_create_database(tmp_path, monkeypatch):
+    def unavailable(path):
+        raise OSError("offline")
+    monkeypatch.setattr(services.subprocess, "run", lambda *a, **kw: SimpleNamespace(returncode=0, stdout="git test"))
+    report = services.DiagnosticBundle(tmp_path, "rc", SimpleNamespace(request=unavailable)).collect()
+    assert report["data_profile"]["run_count"] is None
+    assert report["data_profile"]["database_exists"] is False
+    assert not (tmp_path / ".ai-team").exists()
+
+
 def test_portable_data_root_uses_adjacent_data_and_respects_explicit_override(tmp_path, monkeypatch):
     executable = tmp_path / "CodexTeam.exe"
     executable.write_bytes(b"exe")
