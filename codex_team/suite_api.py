@@ -45,6 +45,13 @@ class Checkpoint(Body):
 class Restore(Body):
     preview_token: str=Field(max_length=128)
     confirmed: bool=False
+class RetentionPolicy(Body):
+    enabled: bool=Field(default=False,strict=True)
+    keep_latest: int|None=Field(default=None,ge=1,le=100000,strict=True)
+    max_age_days: int|None=Field(default=None,ge=1,le=100000,strict=True)
+class RetentionConfirmation(Body):
+    preview_token: str=Field(min_length=1,max_length=128)
+    confirmed: bool=Field(default=False,strict=True)
 class QAConfig(Body):
     image: str=Field(max_length=300)
     commands: list[dict]=Field(max_length=12)
@@ -179,6 +186,20 @@ def install_suite(app,root,store,engine,qa_runner=None):
         with engine.lock:
             if engine.active: raise ValueError('Дождитесь завершения активного запуска')
             return machine.restore(row['project_id'],checkpoint_id,body.preview_token,body.confirmed)
+    @router.get('/projects/{project_id}/retention')
+    def checkpoint_retention(project_id:str):
+        return machine.retention(project_id)
+    @router.put('/projects/{project_id}/retention')
+    def checkpoint_retention_policy(project_id:str,body:RetentionPolicy):
+        return machine.set_retention_policy(project_id,body.model_dump())
+    @router.post('/projects/{project_id}/retention/preview')
+    def checkpoint_retention_preview(project_id:str):
+        return machine.retention_preview(project_id)
+    @router.post('/projects/{project_id}/retention/confirm')
+    def checkpoint_retention_confirm(project_id:str,body:RetentionConfirmation):
+        with engine.lock:
+            if engine.active: raise ValueError('Дождитесь завершения активного запуска перед очисткой точек')
+            return machine.retention_confirm(project_id,body.preview_token,body.confirmed)
     @router.get('/projects/{project_id}/qa/config')
     def qa_config(project_id:str): return arena.configuration(project_id)
     @router.put('/projects/{project_id}/qa/config')
