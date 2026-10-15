@@ -166,8 +166,15 @@ def test_docker_adapter_has_mandatory_isolation_and_no_host_shell(arena, monkeyp
         from pathlib import Path
         mount = argv[argv.index("--mount") + 1]
         source = Path(mount.split("source=", 1)[1].split(",target=", 1)[0])
-        assert source.stat().st_mode & 0o777 == 0o755
-        assert (source / "app.py").stat().st_mode & 0o777 == 0o644
+        import os
+        assert source.is_dir() and not source.is_symlink()
+        assert (source / "app.py").read_bytes() == (path / "app.py").read_bytes()
+        assert os.access(source / "app.py", os.R_OK)
+        # NTFS chmod/stat do not model POSIX owner/group execute bits. Docker's
+        # read-only mount and isolation flags below remain required on Windows.
+        if os.name != "nt":
+            assert source.stat().st_mode & 0o777 == 0o755
+            assert (source / "app.py").stat().st_mode & 0o777 == 0o644
         assert kwargs.get("shell") is not True
         return Process()
     monkeypatch.setattr("codex_team.qa_arena.subprocess.Popen", popen)
