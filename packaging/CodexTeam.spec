@@ -8,6 +8,10 @@ sys.path.insert(0, str(ROOT / "packaging"))
 from runtime_payload import python_payload
 datas = [(str(ROOT / folder), folder) for folder in ("agents", "packs", "desktop-assets")]
 datas += python_payload()
+git_root = ROOT / ".build-tools/git"
+if not (git_root / "cmd/git.exe").is_file():
+    raise RuntimeError("Verified bundled MinGit payload is missing")
+datas += [(str(git_root), "runtime/git")]
 datas += [(str(ROOT / "codex_team" / "static"), "codex_team/static")]
 binaries = []
 hiddenimports = ["codex_cli_bin", "uvicorn.logging", "uvicorn.loops.auto", "uvicorn.loops.asyncio", "uvicorn.protocols.http.auto", "uvicorn.protocols.http.h11_impl", "uvicorn.lifespan.on", "uvicorn.lifespan.off"]

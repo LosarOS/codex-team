@@ -275,6 +275,8 @@ def main():
     parser.add_argument("--instance-token")
     parser.add_argument("--parent-pid", type=int)
     args = parser.parse_args()
+    from .desktop_runtime import configure_bundled_tools
+    configure_bundled_tools()
     if args.desktop_backend:
         if not args.data_root or not args.instance_token or not args.parent_pid:
             parser.error("Backend mode is owned by the desktop launcher")

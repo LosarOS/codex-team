@@ -57,6 +57,19 @@ if (-not $IsccPath) {
     if ($compilerInstall.ExitCode -ne 0) { throw 'Official Inno compiler installation failed' }
     $IsccPath = Join-Path $compilerDirectory 'ISCC.exe'
 }
+# Private Git runtime: exact upstream archive and SHA-256, never host PATH/registry.
+$gitManifest = Get-Content -LiteralPath 'packaging/git-runtime.json' -Raw | ConvertFrom-Json
+$gitArchive = Join-Path $PSScriptRoot ('.build-tools/prerequisites/' + $gitManifest.archive)
+if (-not (Test-Path -LiteralPath $gitArchive)) { Invoke-WebRequest -Uri $gitManifest.url -OutFile $gitArchive }
+if ((Get-FileHash -Algorithm SHA256 -LiteralPath $gitArchive).Hash.ToLowerInvariant() -ne $gitManifest.sha256) { throw 'Bundled Git archive checksum mismatch' }
+$gitPayload = Join-Path $PSScriptRoot '.build-tools/git'
+if (Test-Path -LiteralPath $gitPayload) {
+    $gitItems = @(Get-Item -Force -LiteralPath $gitPayload; Get-ChildItem -Force -Recurse -LiteralPath $gitPayload)
+    if ($gitItems | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) { throw 'Linked Git build payload refused' }
+    Remove-Item -LiteralPath $gitPayload -Recurse -Force
+}
+Expand-Archive -LiteralPath $gitArchive -DestinationPath $gitPayload
+if (-not (Test-Path -LiteralPath (Join-Path $gitPayload 'cmd/git.exe')) -or -not (Test-Path -LiteralPath (Join-Path $gitPayload 'LICENSE.txt'))) { throw 'Bundled Git executable or licenses are missing' }
 $webviewBootstrapper = Join-Path $PSScriptRoot '.build-tools/prerequisites/MicrosoftEdgeWebview2Setup.exe'
 if (-not (Test-Path -LiteralPath $webviewBootstrapper)) {
     Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $webviewBootstrapper
@@ -81,6 +94,8 @@ if (Test-Path -LiteralPath $desktopDistPath) {
 $buildWorkPath = Join-Path $PSScriptRoot ('.build-tools/pyinstaller-' + [guid]::NewGuid().ToString('N'))
 & $python -m PyInstaller --noconfirm --clean --log-level WARN --distpath dist --workpath $buildWorkPath packaging/CodexTeam.spec
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller desktop build failed' }
+Copy-Item -LiteralPath 'packaging/FIRST_RUN_RU.txt' -Destination 'dist/CodexTeam/НАЧАЛО.txt'
+Copy-Item -LiteralPath 'packaging/THIRD-PARTY-NOTICES.txt' -Destination 'dist/CodexTeam/THIRD-PARTY-NOTICES.txt'
 & $python packaging/verify_bundle.py
 if ($LASTEXITCODE -ne 0) { throw 'Frozen desktop bundle verification failed' }
 Write-Host 'Compiling per-user desktop installer...'
@@ -88,4 +103,4 @@ Write-Host 'Compiling per-user desktop installer...'
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installer compilation failed' }
 & $python packaging/archive.py
 if ($LASTEXITCODE -ne 0) { throw 'Desktop portable archive generation failed' }
-Write-Host 'Desktop build complete: installer/CodexTeam-Setup-x64.exe and dist/CodexTeam-Portable-x64.zip'
+Write-Host 'Desktop build complete: dist/CodexTeam-Setup-x64.zip and dist/CodexTeam-Portable-x64.zip'
