@@ -141,8 +141,10 @@ class DockerRunner:
                             break
                 finally:
                     if process.poll() is None:
-                        subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=15)
-                        process.kill()
+                        try:
+                            subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=15)
+                        finally:
+                            process.kill()
                     process.wait(timeout=10)
                     reader.join(timeout=3)
                 return {"exit_code": process.returncode, "duration_seconds": round(time.monotonic() - started, 3), "log": output.decode("utf-8", errors="replace"), "error": reason}
@@ -174,10 +176,18 @@ class QAArena:
         self.cancel = threading.Event()
         self.active = None
         self.previews = {}
-        for item in self._page("qa_result", limit=200)["items"]:
-            if item.get("status") == "RUNNING":
-                item.update(status="BLOCKED", error="Приложение завершилось во время проверки")
-                self._save("qa_result", item["project_id"], item)
+        # Collect IDs before updates reorder the page by updated_at.
+        interrupted = []
+        offset = 0
+        while True:
+            page = self._page("qa_result", limit=200, offset=offset)
+            interrupted.extend(item for item in page["items"] if item.get("status") == "RUNNING")
+            offset += len(page["items"])
+            if offset >= page["total"]:
+                break
+        for item in interrupted:
+            item.update(status="BLOCKED", error="Приложение завершилось во время проверки")
+            self._save("qa_result", item["project_id"], item)
 
     def _save(self, kind, project_id, data):
         return self._unpack(self.suite.put(kind, project_id, data, record_id=data.get("id")))
