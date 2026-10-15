@@ -11,9 +11,12 @@ def main():
     bundle = ROOT / "dist/CodexTeam"
     internal = bundle / "_internal"
     app_metadata = list(internal.glob("codex_team-*.dist-info/METADATA"))
-    if len(app_metadata) != 1 or "Version: 1.0.0rc1" not in app_metadata[0].read_text(encoding="utf-8").splitlines():
+    if len(app_metadata) != 1 or f"Version: {importlib.metadata.version('codex-team')}" not in app_metadata[0].read_text(encoding="utf-8").splitlines():
         raise SystemExit("Application distribution metadata missing or wrong version")
-    required = [bundle / "CodexTeam.exe", internal / "agents/qa.md", internal / "packs/software-development.json",
+    required = [bundle / "CodexTeam.exe", bundle / "НАЧАЛО.txt", bundle / "THIRD-PARTY-NOTICES.txt",
+                internal / "runtime/git/cmd/git.exe", internal / "runtime/git/LICENSE.txt",
+                internal / "codex_team/static/api-client.js", internal / "codex_team/static/design-system.css",
+                internal / "codex_team/static/suite.js", internal / "codex_team/static/mission-control.js", internal / "agents/qa.md", internal / "packs/software-development.json",
                 internal / "codex_team/static/index.html", internal / "desktop-assets/codex-team.ico",
                 internal / "codex_cli_bin/codex-package.json", internal / "codex_cli_bin/bin/codex.exe",
                 internal / "codex_cli_bin/bin/codex-code-mode-host.exe", internal / "codex_cli_bin/codex-path/rg.exe",
@@ -31,6 +34,10 @@ def main():
     for path in bundle.rglob("*"):
         if path.is_file() and any(part.lower() in forbidden or part.lower().startswith(".env") for part in path.relative_to(bundle).parts):
             raise SystemExit(f"Sensitive build input accidentally bundled: {path}")
+    git = subprocess.run([str(internal / "runtime/git/cmd/git.exe"), "--version"], capture_output=True,
+                         text=True, encoding="utf-8", errors="replace", timeout=30)
+    if git.returncode != 0 or "2.56.0.windows.2" not in git.stdout:
+        raise SystemExit(f"Bundled Git version check failed: {git.stderr}")
     result = subprocess.run([str(internal / "codex_cli_bin/bin/codex.exe"), "--version"], capture_output=True,
                             text=True, encoding="utf-8", errors="replace", timeout=30)
     if result.returncode != 0 or "0.162.1" not in result.stdout:
@@ -39,7 +46,7 @@ def main():
                             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     if python.returncode != 0:
         raise SystemExit(f"Relocated bundled Python failed: {python.stderr}")
-    manifest = {"bundle": str(bundle), "app_version": importlib.metadata.version("codex-team"), "sdk_cli_version": result.stdout.strip(), "sdk": importlib.metadata.version("openai-codex"),
+    manifest = {"bundle": str(bundle), "app_version": importlib.metadata.version("codex-team"), "sdk_cli_version": result.stdout.strip(), "git_version": git.stdout.strip(), "sdk": importlib.metadata.version("openai-codex"),
                 "pywebview": importlib.metadata.version("pywebview"), "pyinstaller": importlib.metadata.version("pyinstaller"), "bundled_python": json.loads(python.stdout),
                 "required_files_checked": len(required), "sensitive_paths_found": 0,
                 "files": sum(1 for f in bundle.rglob("*") if f.is_file()),

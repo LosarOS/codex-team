@@ -1,0 +1,16 @@
+Codex Team — сторонние компоненты
+
+В комплект входят Python, официальный Codex SDK/CLI, FastAPI, pywebview,
+Python.NET и их зависимости. Метаданные и лицензии пакетов находятся в _internal.
+
+Git for Windows / MinGit 2.56.0.windows.2 распространяется без изменений.
+Лицензия Git: GNU GPL version 2. Полный комплект upstream-лицензий сохранён в
+_internal/runtime/git/LICENSE.txt и подкаталогах share/licenses / ucrt64/share/licenses.
+Исходный код и материалы сборки точной версии:
+https://github.com/git-for-windows/git/tree/v2.56.0.windows.2
+Дистрибутив и исходные архивы:
+https://github.com/git-for-windows/git/releases/tag/v2.56.0.windows.2
+
+Microsoft Edge WebView2 Runtime распространяется Microsoft на своих условиях.
+В установщик включён подписанный Microsoft загрузчик; при необходимости он
+запускается только после отдельного подтверждения пользователя.

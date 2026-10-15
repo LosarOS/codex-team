@@ -1,0 +1,141 @@
+name: Windows installer and release
+
+on:
+  push:
+    branches: [master, codex/windows-installer]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (for example v1.0.0-rc2)'
+        required: true
+        default: v1.0.0-rc2
+        type: string
+      publish:
+        description: Publish verified binaries as a GitHub prerelease
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      commit: ${{ steps.metadata.outputs.commit }}
+      tag: ${{ steps.metadata.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Validate release metadata
+        id: metadata
+        env:
+          INPUT_TAG: ${{ inputs.release_tag }}
+          REF_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          $version = (& python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read source version' }
+          $match = [regex]::Match($version, '^(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?$')
+          if (-not $match.Success) { throw 'Only stable, alpha, beta or release-candidate source versions can be released' }
+          $expectedTag = 'v' + $match.Groups[1].Value
+          if ($match.Groups[2].Success) { $expectedTag += '-' + $match.Groups[2].Value + $match.Groups[3].Value }
+          $tag = if ($env:REF_TAG) { $env:REF_TAG } elseif ($env:INPUT_TAG) { $env:INPUT_TAG } else { $expectedTag }
+          if ($tag -cne $expectedTag) { throw "Release tag must match source version: $expectedTag" }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
+      - name: Check PowerShell syntax
+        run: |
+          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1')) {
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$null, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+          }
+      - name: Test and build Windows binaries
+        run: |
+          ./build-desktop.ps1 -PythonPath (Get-Command python).Source
+      - name: Silent per-user installation and installed backend smoke
+        run: |
+          ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
+      - name: Stage verified downloadable files
+        run: |
+          New-Item -ItemType Directory -Force release-assets | Out-Null
+          $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json')
+          foreach ($file in $required) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
+            Copy-Item -LiteralPath $file -Destination release-assets
+          }
+          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", 'Automated checks: source tests, frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: codex-team-windows-x64
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-build-diagnostics
+          path: |
+            packaging/build-verification.json
+            packaging/installed-smoke.json
+            .build-tools/installed-smoke/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: codex-team-windows-x64
+          path: release-assets
+      - name: Publish verified Windows prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to replace existing downloadable binaries."
+            exit 1
+          fi
+          existing_refs=$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')
+          if grep -Fxq "refs/tags/$RELEASE_TAG" <<< "$existing_refs"; then
+            tagged_commit=$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')
+            if [ "$tagged_commit" != "$SOURCE_COMMIT" ]; then
+              echo "Existing tag points to a different source commit; refusing to mislabel binaries."
+              exit 1
+            fi
+          fi
+          cat > release-notes.md <<'NOTES'
+          Готовая Windows x64 сборка Codex Team.
+
+          **Установка:** скачайте `CodexTeam-Setup-x64.zip`, распакуйте и запустите `CodexTeam-Setup-x64.exe`. Установка выполняется для текущего пользователя. Можно скачать установщик `.exe` напрямую.
+
+          **Без установки:** распакуйте `CodexTeam-Portable-x64.zip` целиком и запустите `CodexTeam.exe` внутри папки.
+
+          Сборка проверена автоматическими тестами, проверкой замороженного пакета, тихой установкой, запуском установленного локального backend и удалением тестовой установки. Отчёты и SHA256 приложены. GUI WebView2, настоящий Windows DPI и live Codex не заявляются проверенными. Подпись приложения отсутствует; Windows SmartScreen может показать предупреждение.
+          NOTES
+          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease

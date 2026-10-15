@@ -14,7 +14,7 @@ import urllib.request
 from contextlib import closing
 from pathlib import Path
 
-VERSION = "1.0.0-rc1"
+VERSION = "1.0.0-rc2"
 
 def hide_child_consoles():
     """Desktop-only process presentation; official SDK requests stay unchanged."""
@@ -30,6 +30,22 @@ def hide_child_consoles():
 
 def resource_root():
     return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])).resolve()
+
+def configure_bundled_tools(resources=None, environ=None, frozen=None):
+    """Use private bundled Git only inside this process and its children."""
+    if frozen is None:
+        frozen = bool(getattr(sys, "frozen", False))
+    if not frozen:
+        return None
+    resources = Path(resources or resource_root()).resolve()
+    executable = resources / "runtime/git/cmd/git.exe"
+    if executable.is_symlink() or not executable.is_file() or not executable.resolve().is_relative_to(resources):
+        raise RuntimeError("В комплекте отсутствует Git. Повторно установите приложение из полного официального архива.")
+    environ = os.environ if environ is None else environ
+    command_dir = str(executable.parent)
+    entries = environ.get("PATH", "").split(os.pathsep)
+    environ["PATH"] = os.pathsep.join([command_dir, *[entry for entry in entries if entry and os.path.normcase(entry) != os.path.normcase(command_dir)]])
+    return executable
 
 def data_root():
     override = os.environ.get("CODEX_TEAM_DATA_ROOT")
