@@ -1,7 +1,9 @@
-#ifndef BuildRoot
+﻿#ifndef BuildRoot
   #define BuildRoot ".."
 #endif
-#define AppVersion "1.0.0-rc1"
+#ifndef AppVersion
+  #define AppVersion "1.0.0-rc2"
+#endif
 
 [Setup]
 AppId={{A8024F47-5105-41CC-91F4-AD0786CD418F}
@@ -22,17 +24,21 @@ UninstallDisplayIcon={app}\CodexTeam.exe
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+DisableWelcomePage=no
+DisableReadyPage=no
+ShowLanguageDialog=no
+InfoAfterFile={#BuildRoot}\packaging\FIRST_RUN_RU.txt
+UninstallDisplayName=Codex Team
 CloseApplications=yes
 CloseApplicationsFilter=CodexTeam.exe
 RestartApplications=no
 SetupLogging=yes
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
+Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"
 
 [Files]
 Source: "{#BuildRoot}\dist\CodexTeam\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -40,14 +46,16 @@ Source: "{#BuildRoot}\.build-tools\prerequisites\MicrosoftEdgeWebview2Setup.exe"
 
 [Icons]
 Name: "{group}\Codex Team"; Filename: "{app}\CodexTeam.exe"; WorkingDir: "{app}"
-Name: "{group}\Uninstall Codex Team"; Filename: "{uninstallexe}"
+Name: "{group}\Удалить Codex Team"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Codex Team"; Filename: "{app}\CodexTeam.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\CodexTeam.exe"; Description: "Launch Codex Team"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\CodexTeam.exe"; Description: "Запустить Codex Team"; Flags: nowait postinstall skipifsilent
 
 [Code]
 const
+  { Official Evergreen Runtime application ID, documented by Microsoft:
+    https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution }
   EdgeUpdateKey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
 
 function HasWebView2InRoot(RootKey: Integer): Boolean;
@@ -70,18 +78,23 @@ begin
   Result := '';
   if HasWebView2() then Exit;
   if WizardSilent then begin
-    Result := 'Microsoft Edge WebView2 Runtime is required. Install the Evergreen Runtime from https://developer.microsoft.com/microsoft-edge/webview2/ and retry.';
+    Result := 'Для окна Codex Team необходим Microsoft Edge WebView2 Runtime. Установите Evergreen Runtime с официального сайта https://developer.microsoft.com/microsoft-edge/webview2/ и повторите установку. Тихая установка не загружает компоненты без подтверждения.';
     Exit;
   end;
-  if MsgBox('Codex Team requires Microsoft Edge WebView2 Runtime. Install it now using the bundled, Microsoft-signed bootstrapper? Internet access is required. You can also download it from https://developer.microsoft.com/microsoft-edge/webview2/.', mbConfirmation, MB_YESNO) <> IDYES then begin
-    Result := 'WebView2 Runtime installation was declined. Install it from the official Microsoft site and retry.';
+  if MsgBox('Для интерфейса Codex Team необходим Microsoft Edge WebView2 Runtime.' + #13#10 + #13#10 + 'Установить его сейчас с помощью включённого установщика Microsoft? Для загрузки Runtime потребуется интернет. Установщик Microsoft может запросить дополнительные разрешения.' + #13#10 + #13#10 + 'Вы также можете установить Evergreen Runtime самостоятельно: https://developer.microsoft.com/microsoft-edge/webview2/.', mbConfirmation, MB_YESNO) <> IDYES then begin
+    Result := 'Установка WebView2 отменена. Приложение и ваши данные не изменены. Установите Evergreen Runtime с официального сайта Microsoft и повторите установку Codex Team.';
     Exit;
   end;
   ExtractTemporaryFile('MicrosoftEdgeWebview2Setup.exe');
   if not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then begin
-    Result := 'Microsoft WebView2 bootstrapper could not be started.';
+    Result := 'Не удалось запустить установщик Microsoft WebView2. Установите Evergreen Runtime с официального сайта Microsoft и повторите установку Codex Team.';
+    Exit;
+  end;
+  if ResultCode = 3010 then begin
+    NeedsRestart := True;
+    Result := 'Установка WebView2 требует перезагрузки Windows. Перезагрузите компьютер и повторите установку Codex Team.';
     Exit;
   end;
   if (ResultCode <> 0) or not HasWebView2() then
-    Result := 'WebView2 Runtime is not available yet. Complete its installation, then rerun Codex Team Setup.';
+    Result := 'WebView2 пока недоступен. Проверьте подключение к интернету, завершите установку Evergreen Runtime и повторите установку Codex Team. Код установщика Microsoft: ' + IntToStr(ResultCode) + '.';
 end;
