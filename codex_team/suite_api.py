@@ -57,6 +57,9 @@ class QAConfig(Body):
     commands: list[dict]=Field(max_length=12)
     required_categories: list[str]=Field(default_factory=lambda:['test'],max_length=5)
     timeout_seconds: int=Field(default=120,ge=1,le=600)
+class QASetupVerify(Body):
+    image: str=Field(min_length=1,max_length=300)
+    confirmed: bool=False
 class QAPreview(Body):
     run_id: str|None=None
 class QAStart(QAPreview):
@@ -206,6 +209,11 @@ def install_suite(app,root,store,engine,qa_runner=None):
     def qa_configure(project_id:str,body:QAConfig): return arena.configure(project_id,body.model_dump())
     @router.get('/projects/{project_id}/qa/discover')
     def discover_qa(project_id:str): return arena.discover(project_id)
+    @router.get('/projects/{project_id}/qa/setup')
+    def setup_qa(project_id:str): return arena.setup(project_id)
+    @router.post('/projects/{project_id}/qa/setup/verify')
+    def verify_qa_setup(project_id:str,body:QASetupVerify):
+        return arena.verify_setup(project_id,body.image,body.confirmed)
     @router.post('/projects/{project_id}/qa/preview')
     def preview_qa(project_id:str,body:QAPreview): return arena.preview(project_id,body.run_id)
     @router.post('/projects/{project_id}/qa')
