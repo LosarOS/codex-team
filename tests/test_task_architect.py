@@ -225,3 +225,12 @@ def test_ai_routes_expose_status_cancel_and_do_not_close_provider(intelligence, 
     assert client.get(base+'/status').json()['active'] is False
     assert client.post(base+'/cancel',json={}).json()['state'] == 'idle'
     assert client.post(base+'/cancel',json={'unexpected':True}).status_code == 422
+
+
+def test_ai_invalid_json_has_russian_error_and_preserves_draft(ai_lifecycle, monkeypatch):
+    service, draft, Fake = ai_lifecycle
+    Fake.close_release.set()
+    monkeypatch.setattr(Fake, 'execute', lambda *args: {'text': '{invalid json'})
+    with pytest.raises(ValueError, match='Codex вернул некорректный формат ТЗ; черновик сохранён'):
+        service.ai_refine(draft['id'], Fake(), True, draft['version'])
+    assert service.get(draft['id'])['version'] == draft['version']

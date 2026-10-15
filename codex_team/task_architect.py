@@ -184,7 +184,10 @@ class TaskArchitectService:
                 payload=result["value"]
                 sections=payload.get("text",payload.get("output",payload.get("result",payload)))
                 if isinstance(sections,str):
-                    sections=json.loads(sections)
+                    try:
+                        sections=json.loads(sections)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError("Codex вернул некорректный формат ТЗ; черновик сохранён") from exc
                 # The worker never writes storage. Cancellation and the final
                 # version-checked save are serialized at this one commit point.
                 saved=self.save(row["id"],sections,expected_version)

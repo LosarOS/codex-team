@@ -140,7 +140,7 @@ def install_suite(app,root,store,engine,qa_runner=None):
     @router.post('/specifications/{record_id}/launch')
     def launch_spec(record_id:str,body:Launch):
         with engine.lock:
-            if engine.active: raise ValueError('Another run is active')
+            if engine.active: raise ValueError('Уже выполняется другой запуск. Дождитесь его завершения.')
             row=architect.get(record_id)
             task=architect.launch_text(record_id,body.expected_version)
             launch_key=f'launch_{record_id}_{body.expected_version}'
@@ -229,7 +229,7 @@ def install_suite(app,root,store,engine,qa_runner=None):
     def qa_result(result_id:str): return arena.get_result(result_id)
     @router.post('/qa/{result_id}/baseline')
     def qa_baseline(result_id:str,body:Confirm):
-        if body.confirmed is not True: raise ValueError('Подтвердите изменение baseline')
+        if body.confirmed is not True: raise ValueError('Подтвердите изменение эталона проверок')
         row=arena.get_result(result_id)
         return arena.promote_baseline(row['project_id'],result_id)
     @router.get('/qa/{result_id}/report')
