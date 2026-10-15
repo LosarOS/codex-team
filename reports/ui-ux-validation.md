@@ -5,13 +5,21 @@ Baseline: `1d91d21` (`master`). No live model execution or paid API inference.
 | Check | Actual outcome |
 | --- | --- |
 | Baseline `python -m pytest -q` | 389 passed, 9 failed, 3 skipped |
-| Changed tree `python -m pytest -q` | 392 passed, 9 failed, 3 skipped |
-| Failure-set comparison | Same exact nine test node IDs; no new failing test |
+| Final full `python -m pytest -q` | 391 passed, 10 failed, 3 skipped |
+| Failure-set comparison | Nine baseline node IDs unchanged; one additional 200 ms lifecycle timing assertion |
+| Isolated lifecycle repeat after load ended | `test_pre_turn_config_rpc_has_a_local_deadline`: 1 passed (3.41 s) |
 | Final UI/API/diagnostic subset | 59 passed (UI contracts, UI/server integration, server, desktop services) |
 | JavaScript | `node --check` app.js and mission-control.js; projection and synthetic DOM scenarios pass |
 | Real Chromium fixtures | See [browser validation](ui-browser-validation.md); separate from live/Windows acceptance |
 
-The existing failures are in `tests/test_runtimes.py`: base Python executable,
+The extra full-run failure was the unchanged provider lifecycle test waiting only
+200 ms for a thread (`execution.join(0.2)`). Its isolated repeat passed after the
+parallel browser workload ended. This is consistent with scheduling contention,
+not a proven provider regression; neither provider.py nor that test was modified.
+It remains visible here rather than being skipped or called a green full suite.
+An earlier full run of the changed UI had 392 passed / 9 failed / 3 skipped.
+
+The nine existing failures are in `tests/test_runtimes.py`: base Python executable,
 node/dotnet/java/cargo availability, PowerShell command construction, and three
 PowerShell unittest invocation cases. They reproduce on unmodified master in this
 Linux environment (including missing `powershell`). Runtime behavior and tests
