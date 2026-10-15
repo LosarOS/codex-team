@@ -257,3 +257,6 @@ tbody tr:hover {background:var(--accent-soft)}
 .run-card>div {min-width:0}
 .run-card-meta.mono {display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:750px){#runs-list .run-card {grid-template-columns:minmax(0,1fr)}#runs-list .run-card>.state-badge {justify-self:start}}
+
+/* Multiline validation errors remain readable at narrow widths. */
+.form-error>span,.suite-status {white-space:pre-line;overflow-wrap:anywhere}

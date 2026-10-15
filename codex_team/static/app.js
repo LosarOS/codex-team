@@ -21,8 +21,8 @@
     coordinator: ["Координатор", "План и организация работы"],
     analyst: ["Аналитик", "Архитектура и критерии приёмки"],
     developer: ["Разработчик", "Изменения кода и тестов"],
-    qa: ["QA", "Независимая проверка и регрессии"],
-    reviewer: ["Ревьюер", "Финальная проверка решения"],
+    qa: ["Тестировщик", "Независимая проверка и регрессии"],
+    reviewer: ["Проверка кода", "Финальная проверка решения"],
     architect: ["Архитектор", "Проектирование решения"],
     "final-audit": ["Финальный аудит", "Проверка всех результатов"],
     specialists: ["Специалисты", "Предметная экспертиза"],
@@ -40,6 +40,7 @@
     PAUSED: "Пауза", STOPPING: "Остановка", STOPPED: "Остановлен",
     INTERRUPTED: "Прерван", DONE: "Завершён", COMPLETED: "Завершён",
     FAILED: "Ошибка", USER_DECISION_REQUIRED: "Нужно решение", AUTH_REQUIRED: "Нужен вход", USAGE_LIMIT: "Лимит Codex",
+    BLOCKED:"Заблокировано", PARTIAL:"Выполнено частично", "NOT RUN":"Не запускалось", PENDING:"Ожидает решения",
     PLAN: "План", ANALYSIS: "Анализ", IMPLEMENTED: "Реализовано", PASS: "Проверено",
     FAIL: "Проверка не пройдена", APPROVED: "Одобрено", CHANGES_REQUIRED: "Нужны исправления",
   };
@@ -47,15 +48,15 @@
     run_created: "Запуск создан", created: "Запуск создан", state_changed: "Состояние изменено",
     state: "Состояние", stage_started: "Этап начат", agent_started: "Агент запущен",
     agent_completed: "Агент завершил работу", agent_result: "Результат агента",
-    turn_started: "Turn начат", turn_completed: "Turn завершён", turn_complete: "Turn завершён",
-    turn_failed: "Ошибка turn", command: "Команда", command_execution: "Выполнение команды",
+    turn_started: "Шаг агента начат", turn_completed: "Шаг агента завершён", turn_complete: "Шаг агента завершён",
+    turn_failed: "Ошибка шага агента", command: "Команда", command_execution: "Выполнение команды",
     tool: "Действие инструмента", item: "Действие Codex", usage: "Использование",
     completed: "Запуск завершён", failed: "Ошибка выполнения", paused: "Приостановлен",
     resumed: "Продолжен", stopped: "Остановлен", recovered: "Восстановление после перезапуска",
     instruction: "Указание пользователя", steering: "Указание команде", queued_instruction: "Указание в очереди",
     retry: "Повторная проверка", pipeline: "План выполнения", workspace: "Рабочая копия",
-    "item/started": "Действие начато", "item/completed": "Действие завершено", "turn/started": "Turn начат", "turn/completed": "Turn завершён",
-    "thread/tokenUsage/updated": "Token usage обновлён", thread_ready: "Независимый thread готов", run_state: "Состояние запуска",
+    "item/started": "Действие начато", "item/completed": "Действие завершено", "turn/started": "Шаг агента начат", "turn/completed": "Шаг агента завершён",
+    "thread/tokenUsage/updated": "Расход токенов обновлён", thread_ready: "Независимая сессия готова", run_state: "Состояние запуска",
     repair_requested: "Возврат на исправление", user_instruction: "Указание пользователя", pause_requested: "Пауза запрошена", stop_requested: "Остановка запрошена", approval_required: "Требуется разрешение",
   };
   const activeStates = new Set(["RUNNING", "QUEUED", "PAUSING", "STOPPING"]);
@@ -116,19 +117,9 @@
     if(error?.technical){const d=node("details","raw-details");d.append(node("summary","","Технические подробности"),node("pre","code-block",text(error.technical)));el.append(d);}
   }
   function errorMessage(body,fallback) {
-    const detail=body?.detail;
-    if(Array.isArray(detail)){const labels={workspace:"Проект",task:"Задача",name:"Идентификатор",role:"Название роли",instructions:"Инструкции",permission:"Разрешения",model:"Модель",reasoning_effort:"Reasoning effort",description:"Описание",enabled_modes:"Режимы"};return detail.map(e=>`${labels[e.loc?.at(-1)]||e.loc?.slice(1).join(".")||"Параметр"}: ${e.msg}`).join("\n");}
-    const raw=typeof detail==="string"?detail:detail?.message||body?.message||body?.error;
-    if(typeof raw==="string"){
-      if(/dirty|uncommitted|clean (?:tree|repository)|unclean/i.test(raw))return "В проекте есть несохранённые Git-изменения. Для изолированной рабочей копии нужен чистый репозиторий. Проверьте состояние на странице «Проекты».";
-      if(/another run is active/i.test(raw))return "Сначала завершите, остановите или приостановите текущий запуск.";
-      if(/agent.*(?:absent|disabled)|core roles|required.*roles/i.test(raw))return "Проверьте состав набора: нужные роли должны быть включены для выбранного режима.";
-      if(/API key|credential|separate billing|billing.*acknowledge/i.test(raw))return "Проверьте настройки provider, сохранённый ключ и подтверждение отдельной оплаты API.";
-      if(/no longer waiting|no longer pending/i.test(raw))return "Запрос уже завершён или больше не ожидает решения. Обновите центр действий.";
-      if(/[А-Яа-яЁё]/.test(raw)&&!/(?:Traceback|\{\s*")/.test(raw))return raw;
-    }
-    return detail?.category==="AUTH_REQUIRED"?"Для этого действия требуется официальный вход Codex.":fallback||"Не удалось завершить действие. Проверьте параметры и повторите попытку.";
+    return window.CodexApi.formatError(body,fallback);
   }
+
   function api(path, method = "GET", body, options={}) {
     return window.CodexApi.request(path,method,body,{...options,formatError:errorMessage});
   }
@@ -190,21 +181,21 @@
     $("browse-project-button").hidden = !canChooseProject; $("project-browse-button").hidden = !canChooseProject; $("tray-setting-row").hidden=!bridge; $("export-diagnostics-button").hidden = typeof bridge?.export_diagnostics!=="function";
     $("open-logs-button").hidden = !canOpenLogs;
     $("desktop-settings-panel").hidden = !canOpenLogs && !state.health;
-    $("desktop-mode-badge").textContent = state.desktopReady ? "DESKTOP" : "ЛОКАЛЬНЫЙ СЕРВЕР";
+    $("desktop-mode-badge").textContent = state.desktopReady ? "ПРИЛОЖЕНИЕ" : "ЛОКАЛЬНЫЙ СЕРВЕР";
     const checks = $("health-checks");
     checks.hidden = !state.health;
     if (state.health) {
       const health = state.health; if(health.version) $("about-version").textContent=`Версия ${health.version}`;
       const entries = [];
       const healthStatus = health.status || (health.ok === true ? "ok" : null);
-      if (healthStatus) entries.push(["Состояние сервера", ["ok", "healthy", "ready"].includes(String(healthStatus).toLowerCase()) ? "Готов" : healthStatus]);
+      if (healthStatus) entries.push(["Состояние сервера", ["ok", "healthy", "ready"].includes(String(healthStatus).toLowerCase()) ? "Готов" : "Требуется проверка"]);
       if (health.app || health.service || health.name) entries.push(["Приложение", health.app || health.service || health.name]);
       if (health.version) entries.push(["Версия", health.version]);
       if (health.checks && typeof health.checks === "object") entries.push(...Object.entries(health.checks));
-      const labels = {database: "База данных", storage: "Хранилище", git: "Git", codex: "Codex", backend: "Backend", data_directory: "Каталог данных"};
+      const labels = {database: "База данных", storage: "Хранилище", git: "Git", codex: "Codex", backend: "Серверная часть", data_directory: "Каталог данных"};
       checks.replaceChildren(...entries.map(([key, value]) => {
         const row = node("div", "capability-row");
-        const display = typeof value === "boolean" ? value ? "Готов" : "Недоступно" : value?.status ? value.status + (value.detail ? ` · ${value.detail}` : "") : text(value);
+        const display = typeof value === "boolean" ? value ? "Готов" : "Недоступно" : value?.status ? ({ok:"Готов",ready:"Готов",available:"Доступно",unavailable:"Недоступно",error:"Ошибка",missing:"Не найдено",failed:"Ошибка"}[String(value.status).toLowerCase()]||"Требуется проверка")+(value.detail?` · ${errorMessage({detail:value.detail},"Подробности доступны в диагностике.")}`:"") : text(value);
         row.append(node("span", "", labels[key] || key), node("span", "muted", display));
         return row;
       }));
@@ -269,12 +260,12 @@
     const connected = runReady();
     const apiActive=(state.providers?.active||state.status?.settings?.execution_backend)==="openai_api";
     const dotClass=!state.online?"red":connected?apiActive&&state.providers?.openai_api?.status!=="CONNECTED"?"yellow":"green":"yellow";
-    $("connection-status").replaceChildren(node("span", `status-dot ${dotClass}`), document.createTextNode(!state.online ? "Сервер недоступен" : connected ? apiActive ? "OpenAI API настроен" : "Codex подключён" : apiActive ? "Нужен API key" : "Нужен вход"));
+    $("connection-status").replaceChildren(node("span", `status-dot ${dotClass}`), document.createTextNode(!state.online ? "Сервер недоступен" : connected ? apiActive ? "OpenAI API настроен" : "Codex подключён" : apiActive ? "Нужен ключ API" : "Нужен вход"));
     $("sidebar-auth-dot").className = `status-dot ${dotClass}`;
-    $("sidebar-auth-label").textContent=!state.online?"Нет связи с сервером":apiActive?connected?"API key настроен":"API key требуется":connected?"Аккаунт подключён":"Авторизация требуется"; $("sidebar-provider-label").textContent=apiActive?"OpenAI API":"ChatGPT / Codex"; $("compose-provider-label").replaceChildren(node("span",`status-dot ${apiActive?"yellow":"green"}`),document.createTextNode(apiActive?"Отдельная оплата OpenAI API":"Через ваш аккаунт Codex")); $("api-required-banner").hidden=!state.online||!apiActive||connected;
+    $("sidebar-auth-label").textContent=!state.online?"Нет связи с сервером":apiActive?connected?"Ключ API настроен":"Требуется ключ API":connected?"Аккаунт подключён":"Авторизация требуется"; $("sidebar-provider-label").textContent=apiActive?"OpenAI API":"ChatGPT / Codex"; $("compose-provider-label").replaceChildren(node("span",`status-dot ${apiActive?"yellow":"green"}`),document.createTextNode(apiActive?"Отдельная оплата OpenAI API":"Через ваш аккаунт Codex")); $("api-required-banner").hidden=!state.online||!apiActive||connected;
     $("auth-banner").hidden = !state.online || connected || apiActive;
     $("start-button").disabled = state.creatingRun || !state.online || !connected || state.runs.some((run) => activeStates.has(normalizedState(run.state)));
-    $("start-button").title=state.runs.some(run=>activeStates.has(normalizedState(run.state)))?"Сначала завершите, остановите или приостановите текущий запуск.":!connected?apiActive?"Сохраните API key или выберите Codex в настройках.":"Войдите через официальный Codex.":"";
+    $("start-button").title=state.runs.some(run=>activeStates.has(normalizedState(run.state)))?"Сначала завершите, остановите или приостановите текущий запуск.":!connected?apiActive?"Сохраните ключ API или выберите Codex в настройках.":"Войдите через официальный Codex.":"";
     qa(".login-button").forEach((button) => { button.disabled = !state.online || state.loginPending; }); renderProviderChoice();
   }
   function renderStatus() {
@@ -283,20 +274,20 @@
     const account = auth.account || {};
     const details = $("settings-auth-details");
     details.replaceChildren();
-    details.append(node("p", "", `Состояние: ${authConnected() ? "аккаунт подключён" : auth.status || "недоступно"}`));
+    details.append(node("p", "", `Состояние: ${authConnected() ? "аккаунт подключён" : ({AUTH_REQUIRED:"нужен вход",UNAVAILABLE:"подключение недоступно",ERROR:"ошибка подключения",NOT_LOGGED_IN:"нужен вход"}[auth.status] || "нет подключения")}`));
     if (typeof account === "string") details.append(node("p", "", account));
     else for (const [key, label] of [["email", "Аккаунт"], ["planType", "План"], ["plan_type", "План"], ["type", "Тип"]]) {
       if (account[key]) details.append(node("p", "", `${label}: ${account[key]}`));
     }
-    if (auth.error) details.append(node("p", "", text(auth.error)));
+    if (auth.error) details.append(node("p", "", errorMessage({detail:auth.error},"Не удалось проверить вход. Повторите проверку или войдите в Codex заново.")));
     const capabilities = state.status?.capabilities || {};
     const capabilityLabels = {
-      threads: "Независимые threads", thread_start: "Создание thread", thread_resume: "Продолжение thread", resume: "Продолжение thread",
-      thread_fork: "Fork thread", fork: "Fork thread", streaming: "Поток событий", stream: "Поток событий",
-      usage: "Token usage", token_usage: "Token usage", steering: "Направление turn", steer: "Направление turn",
-      interrupt: "Прерывание turn", sandbox: "Codex sandbox", models: "Модели", chatgpt_auth: "Авторизация ChatGPT",
-      sdk: "Официальный SDK", version: "Версия", device_code_login: "Вход по коду", auto_review: "Auto-review",
-      parallel: "Параллельные агенты", rate_limits: "Лимиты аккаунта", python_sdk: "Python SDK",
+      threads: "Независимые сессии", thread_start: "Создание сессии", thread_resume: "Продолжение сессии", resume: "Продолжение сессии",
+      thread_fork: "Ответвление сессии", fork: "Ответвление сессии", streaming: "Поток событий", stream: "Поток событий",
+      usage: "Расход токенов", token_usage: "Расход токенов", steering: "Указания во время работы агента", steer: "Указания во время работы агента",
+      interrupt: "Прерывание работы агента", sandbox: "Изолированная среда Codex", models: "Модели", chatgpt_auth: "Авторизация ChatGPT",
+      sdk: "Официальный SDK", version: "Версия", device_code_login: "Вход по коду", auto_review: "Автоматическая проверка",
+      parallel: "Параллельные агенты", rate_limits: "Лимиты аккаунта", python_sdk: "Python SDK", approvals:"Разрешения", openai_api:"Подключение через API", parallel_writers:"Одновременная запись агентов", multi_solution:"Несколько вариантов решения",
     };
     const capabilityContainer = $("capabilities-list");
     const entries = Object.entries(capabilities);
@@ -305,7 +296,9 @@
       const row = node("div", "capability-row");
       let display = value;
       if (typeof value === "boolean") display = value ? "Поддерживается" : "Не поддерживается";
-      if (value?.status) display = value.status + (value.detail ? ` · ${value.detail}` : "");
+      if (value?.status) display = ({CONNECTED:"Подключено",AVAILABLE:"Доступно",UNAVAILABLE:"Недоступно",ERROR:"Ошибка"}[value.status]||"Нет данных");
+      if(typeof value==="string"&&key==="approvals")display="Поддерживаемые запросы — через Центр действий; остальные отклоняются";
+      if(typeof value==="string"&&key==="openai_api")display="Необязательное подключение с отдельной оплатой; без автоматического переключения";
       row.append(node("span", "", capabilityLabels[key] || key), node("span", "muted", text(display)));
       return row;
     }));
@@ -369,7 +362,7 @@
       heading.append(title, node("span", `state-badge ${agent.enabled !== false ? "state-good" : ""}`, agent.enabled !== false ? "Включён" : "Выключен"));
       card.append(heading, node("p", "agent-instructions-preview", agent.description || agent.instructions || "Инструкции не заданы"));
       const footer = node("div", "agent-card-footer");
-      const permission = node("span", "agent-permission", agent.permission === "workspace-write" ? "Чтение и запись в workspace" : "Только чтение");
+      const permission = node("span", "agent-permission", agent.permission === "workspace-write" ? "Чтение и запись в рабочей папке" : "Только чтение");
       const edit = node("button", "button text-button", "Изменить →"); edit.type = "button";
       edit.addEventListener("click", () => openAgentEditor(agent));
       footer.append(permission, edit); card.append(footer);
@@ -442,7 +435,7 @@
     $("detail-iteration").textContent = run.iteration ?? "—";
     $("detail-calls").textContent = run.calls ?? "—";
     const workspace = run.worktree?.path || run.worktree?.workspace || run.worktree;
-    $("detail-isolation").textContent = workspace ? "Git worktree" : run.isolated === false ? "Основной workspace" : "Ожидание подготовки";
+    $("detail-isolation").textContent = workspace ? "Изолированная рабочая копия Git" : run.isolated === false ? "Исходная рабочая папка" : "Ожидание подготовки";
     $("detail-isolation").title = workspace ? text(workspace) : "";
     renderRunProblem(run); renderActivePipeline();
     const currentState = normalizedState(run.state);
@@ -523,7 +516,7 @@
     const recent=state.events.filter(e=>e.role===role).slice(-5);
     if(recent.length)appendResultSection(container,"Последние события роли",recent.map(e=>`${prettyDate(e.created_at,true)} · ${eventLabels[e.type]||e.type}: ${eventSummary(e.payload)}`),true);
     const thread = run.threads?.[role];
-    if (thread) container.append(node("div", "thread-id mono", `Thread: ${typeof thread === "string" ? thread : thread.id || thread.thread_id || text(thread)}`));
+    if (thread) container.append(node("div", "thread-id mono", `Сессия: ${typeof thread === "string" ? thread : thread.id || thread.thread_id || text(thread)}`));
     if (!result) {
       container.append(node("p", "muted", run.current_role === role ? "Результат появится после завершения этапа. Действия агента доступны во вкладке «События»." : "Роль ещё не завершила свой этап."));
       return;
@@ -540,7 +533,7 @@
       const section = node("section", "result-section"); section.append(node("h3", "", "Замечания и доказательства"));
       result.findings.forEach((finding) => {
         const card = node("div", "test-card");
-        const title = node("div", "test-card-heading"); title.append(node("strong", "", finding.problem || finding.title || "Замечание"), node("span", `state-badge ${["critical", "high"].includes(finding.severity) ? "state-error" : "state-warning"}`, finding.severity || ""));
+        const title = node("div", "test-card-heading"); title.append(node("strong", "", finding.problem || finding.title || "Замечание"), node("span", `state-badge ${["critical", "high"].includes(finding.severity) ? "state-error" : "state-warning"}`, ({critical:"Критическая",high:"Высокая",medium:"Средняя",low:"Низкая",info:"Информация"}[finding.severity] || finding.severity || "")));
         card.append(title);
         if (finding.file) card.append(node("div", "mono muted", finding.file));
         appendResultSection(card, "Доказательство", finding.evidence);
@@ -554,9 +547,9 @@
   }
   function renderDiff() {
     const run=state.selectedRun;if(!run)return;
-    if(state.diffError){$("diff-content").textContent=`Не удалось загрузить diff: ${state.diffError}`;$("more-diff-button").hidden=true;return;}
+    if(state.diffError){$("diff-content").textContent=`Не удалось загрузить изменения: ${state.diffError}`;$("more-diff-button").hidden=true;return;}
     $("diff-stat").textContent=text(state.diffStat||run.diff_stat||"Изменённые файлы пока не зарегистрированы.");
-    if(!state.diffLines.length){$("diff-content").textContent=state.diffLoading?"Загрузка diff…":"Git diff пуст. Он появится после изменения файлов.";$("more-diff-button").hidden=!state.diffHasMore;return;}
+    if(!state.diffLines.length){$("diff-content").textContent=state.diffLoading?"Загрузка изменений…":"Изменений в Git пока нет. Они появятся после редактирования файлов.";$("more-diff-button").hidden=!state.diffHasMore;return;}
     const fragment=document.createDocumentFragment();state.diffLines.slice(0,state.diffLimit).forEach(line=>{const cls=line.startsWith("+++")||line.startsWith("---")||line.startsWith("@@")||line.startsWith("diff ")?"header":line.startsWith("+")?"addition":line.startsWith("-")?"deletion":"";fragment.append(node("span",`diff-line ${cls}`,line||" "));});$("diff-content").replaceChildren(fragment);$("more-diff-button").hidden=!state.diffHasMore&&state.diffLimit>=state.diffLines.length;$("more-diff-button").disabled=state.diffLoading;
   }
   async function loadDiff(more=false) {
@@ -714,7 +707,7 @@
       });
       if (group.childElementCount > 1) content.append(group);
     });
-    container.textContent = content.childElementCount ? "Данные официального account/rateLimits/read. Лимиты общие для аккаунта, включая другие сессии Codex." : "SDK не передал доступные окна лимитов аккаунта.";
+    container.textContent = content.childElementCount ? "Данные официального сервиса Codex. Лимиты общие для аккаунта, включая другие сессии Codex." : "SDK не передал доступные окна лимитов аккаунта.";
     if (content.childElementCount) parent.insertBefore(content, refreshButton);
   }
 
@@ -723,7 +716,7 @@
     if (!payload) return "";
     const item = payload.item || payload;
     if(Array.isArray(item.changes)&&item.changes.some(c=>c.path))return `Файлы: ${item.changes.map(c=>c.path).filter(Boolean).join(", ").slice(0,1200)}`;
-    return text(item.command || item.summary || item.message || item.instruction || item.state || item.verdict || item.error || item.type || "").slice(0, 1200);
+    return text(item.command || item.summary || item.message || item.instruction || stateLabels[normalizedState(item.state||item.verdict)] || item.state || item.verdict || item.error || eventLabels[item.type] || item.type || "").slice(0, 1200);
   }
   function showEventError(error) {
     $("events-error").hidden=false;$("events-error").textContent=error.message;
@@ -896,15 +889,17 @@
   function renderModeChecks(container,selected,showAll=false) { container.replaceChildren(...Object.entries(modes).map(([id,mode])=>{const l=node("label","specialist-option"),i=node("input");i.type="checkbox";i.value=id;i.checked=showAll||selected.includes(id);l.append(i,document.createTextNode(mode.title));return l;})); }
   function runReady() { return (state.providers?.active||state.status?.settings?.execution_backend)==="openai_api"?state.providers?.openai_api?.configured===true:authConnected(); }
   function modelEffortOptions(modelId) {const model=state.availableModels?.find(m=>(m.model||m.id)===modelId)||(!modelId?state.availableModels?.find(m=>m.isDefault||m.is_default):null);return list(model?.supportedReasoningEfforts||model?.supported_reasoning_efforts).map(e=>typeof e==="string"?e:e.reasoningEffort||e.reasoning_effort||e.effort).filter(Boolean);}
-  function updateEffortOptions(modelId,selectId) {const select=typeof selectId==="string"?$(selectId):selectId,selected=select.value,official=modelEffortOptions(modelId);const values=official.length?official:["none","minimal","low","medium","high","xhigh","max","ultra"];const def=node("option","","По умолчанию Codex");def.value="";select.replaceChildren(def,...values.map(value=>{const o=node("option","",value);o.value=value;return o;}));select.value=values.includes(selected)?selected:"";}
+  function effortLabelText(value) {return {none:"Без дополнительного анализа",minimal:"Минимальная",low:"Низкая",medium:"Средняя",high:"Высокая",xhigh:"Очень высокая",max:"Максимальная",ultra:"Предельная"}[value]||value;}
+  function scopeLabel(value) {return {turn:"Текущий шаг агента",session:"Текущая сессия",run:"Этот запуск",project:"Этот проект",once:"Однократно",command:"Эта команда",workspace:"Рабочая папка",network:"Доступ к сети"}[value]||value;}
+  function updateEffortOptions(modelId,selectId) {const select=typeof selectId==="string"?$(selectId):selectId,selected=select.value,official=modelEffortOptions(modelId);const values=official.length?official:["none","minimal","low","medium","high","xhigh","max","ultra"];const def=node("option","","По умолчанию Codex");def.value="";select.replaceChildren(def,...values.map(value=>{const o=node("option","",effortLabelText(value));o.value=value;return o;}));select.value=values.includes(selected)?selected:"";}
   function renderRoleModelDefaults() {
     if(state.roleDefaultsDirty)return;
     const signature=JSON.stringify([state.agents.map(a=>[a.name,a.role,a.model,a.reasoning_effort]),state.status?.settings?.role_model_defaults,state.modelsLoaded]);if(signature===state.roleDefaultsSignature)return;state.roleDefaultsSignature=signature;
     const defaults=state.status?.settings?.role_model_defaults||{};state.roleDefaultInputs=new Map();
     if(!state.agents.length){empty($("role-defaults-list"),"Роли ещё не загружены","Обновите данные, чтобы настроить модели команды.");return;}
-    $("role-defaults-list").replaceChildren(...state.agents.map(agent=>{const row=node("fieldset","role-default-row");row.append(node("legend","",roleName(agent.name)));const grid=node("div","form-row"),model=node("input"),effort=node("select");model.id=`role-model-${agent.name}`;model.value=defaults[agent.name]?.model||"";model.placeholder="Общая модель по умолчанию";model.setAttribute("list","supported-models");model.autocomplete="off";model.spellcheck=false;model.setAttribute("aria-label",`Модель по умолчанию: ${roleName(agent.name)}`);effort.id=`role-effort-${agent.name}`;effort.value=defaults[agent.name]?.reasoning_effort||"";effort.setAttribute("aria-label",`Reasoning effort по умолчанию: ${roleName(agent.name)}`);updateEffortOptions(model.value,effort);effort.value=defaults[agent.name]?.reasoning_effort||"";const modelLabel=node("label","","Модель"),effortLabel=node("label","","Reasoning effort");modelLabel.append(model);effortLabel.append(effort);grid.append(modelLabel,effortLabel);row.append(grid);if(agent.model||agent.reasoning_effort)row.append(node("p","field-note",`У агента задано: ${agent.model?`модель ${agent.model}`:""}${agent.model&&agent.reasoning_effort?"; ":""}${agent.reasoning_effort?`effort ${agent.reasoning_effort}`:""}. Эти индивидуальные значения имеют приоритет над соответствующим общим значением роли.`));model.addEventListener("input",()=>{state.roleDefaultsDirty=true;});model.addEventListener("change",()=>updateEffortOptions(model.value.trim(),effort));effort.addEventListener("change",()=>{state.roleDefaultsDirty=true;});state.roleDefaultInputs.set(agent.name,{model,effort});return row;}));
+    $("role-defaults-list").replaceChildren(...state.agents.map(agent=>{const row=node("fieldset","role-default-row");row.append(node("legend","",roleName(agent.name)));const grid=node("div","form-row"),model=node("input"),effort=node("select");model.id=`role-model-${agent.name}`;model.value=defaults[agent.name]?.model||"";model.placeholder="Общая модель по умолчанию";model.setAttribute("list","supported-models");model.autocomplete="off";model.spellcheck=false;model.setAttribute("aria-label",`Модель по умолчанию: ${roleName(agent.name)}`);effort.id=`role-effort-${agent.name}`;effort.value=defaults[agent.name]?.reasoning_effort||"";effort.setAttribute("aria-label",`Глубина анализа по умолчанию: ${roleName(agent.name)}`);updateEffortOptions(model.value,effort);effort.value=defaults[agent.name]?.reasoning_effort||"";const modelLabel=node("label","","Модель"),effortLabel=node("label","","Глубина анализа");modelLabel.append(model);effortLabel.append(effort);grid.append(modelLabel,effortLabel);row.append(grid);if(agent.model||agent.reasoning_effort)row.append(node("p","field-note",`У агента задано: ${agent.model?`модель ${agent.model}`:""}${agent.model&&agent.reasoning_effort?"; ":""}${agent.reasoning_effort?`глубина анализа: ${effortLabelText(agent.reasoning_effort)}`:""}. Эти индивидуальные значения имеют приоритет над соответствующим общим значением роли.`));model.addEventListener("input",()=>{state.roleDefaultsDirty=true;});model.addEventListener("change",()=>updateEffortOptions(model.value.trim(),effort));effort.addEventListener("change",()=>{state.roleDefaultsDirty=true;});state.roleDefaultInputs.set(agent.name,{model,effort});return row;}));
   }
-  function validateModel(modelId,effort) {if(!state.modelsLoaded)return null;if(modelId&&!state.availableModels.some(m=>(m.model||m.id)===modelId))return "Выберите модель из официального списка или оставьте поле пустым.";const values=modelEffortOptions(modelId);if(effort&&values.length&&!values.includes(effort))return "Выбранная модель не поддерживает этот reasoning effort.";return null;}
+  function validateModel(modelId,effort) {if(!state.modelsLoaded)return null;if(modelId&&!state.availableModels.some(m=>(m.model||m.id)===modelId))return "Выберите модель из официального списка или оставьте поле пустым.";const values=modelEffortOptions(modelId);if(effort&&values.length&&!values.includes(effort))return "Выбранная модель не поддерживает эту глубину анализа.";return null;}
   function summaryTotals(run) { if(run?.usage_total&&typeof run.usage_total==="object")return {input:run.usage_total.input??null,output:run.usage_total.output??null,cached:run.usage_total.cached??null,total:run.usage_total.total??null};if(typeof run?.usage_total==="number")return {input:null,output:null,cached:null,total:run.usage_total};return aggregateUsage(list(run?.usage)); }
   function loadedUsageTotals() { if(state.allUsage)return state.allUsage;const totals={input:null,output:null,cached:null,total:null};state.runs.forEach(run=>{Object.entries(summaryTotals(run)).forEach(([key,v])=>{if(typeof v==="number")totals[key]=(totals[key]??0)+v;});});return totals; }
   async function setOnboarding(dismissed) { $("onboarding").hidden=dismissed;storageSet("codex-team-onboarding",dismissed?"dismissed":"");if(state.online){try{const saved=await api("/api/settings","POST",{onboarding_dismissed:dismissed});if(state.status)state.status.settings=saved;}catch(error){toast("Начало работы сохранено локально. Серверные настройки временно недоступны.",true);}} }
@@ -982,7 +977,7 @@
     c.classList.toggle("error",!["USER_DECISION_REQUIRED","USER_ACTION_REQUIRED","AUTH_REQUIRED","PERMISSION_REQUIRED","CONFIGURATION_REQUIRED","USAGE_LIMIT","INTERRUPTED"].includes(kind));
     if(c.hidden)return;
     const titles={USER_DECISION_REQUIRED:"Команде нужно ваше решение",USER_ACTION_REQUIRED:"Требуется действие",AUTH_REQUIRED:"Подключите аккаунт ChatGPT",PERMISSION_REQUIRED:"Требуется разрешение",CONFIGURATION_REQUIRED:"Проекту нужна настройка",USAGE_LIMIT:"Доступный лимит Codex исчерпан",INTERRUPTED:"Запуск прерван",RECOVERABLE_ERROR:"Запуск не смог продолжиться",FAILED:"Запуск не смог продолжиться",FATAL_ERROR:"Выполнение остановлено"};
-    c.append(node("strong","",titles[kind]||"Выполнение остановлено"),node("p","",kind==="USAGE_LIMIT"?"Проверьте время сброса лимита и продолжите запуск позже. Provider выбирается отдельно в настройках.":kind==="INTERRUPTED"?"Сохранённые результаты доступны. Можно продолжить запуск с прерванного этапа.":kind==="AUTH_REQUIRED"?"Откройте настройки и войдите через официальный Codex.":"Проверьте запросы в центре действий и результат текущей роли. Добавьте указание, если команде нужен контекст."));
+    c.append(node("strong","",titles[kind]||"Выполнение остановлено"),node("p","",kind==="USAGE_LIMIT"?"Проверьте время сброса лимита и продолжите запуск позже. Способ подключения выбирается отдельно в настройках.":kind==="INTERRUPTED"?"Сохранённые результаты доступны. Можно продолжить запуск с прерванного этапа.":kind==="AUTH_REQUIRED"?"Откройте настройки и войдите через официальный Codex.":"Проверьте запросы в центре действий и результат текущей роли. Добавьте указание, если команде нужен контекст."));
     const row=node("div","button-row");row.append(actionButton("Центр действий →",()=>setPage("actions")),actionButton("Копировать диагностику",copyDiagnostics));if(kind==="AUTH_REQUIRED")row.append(actionButton("Открыть настройки",()=>setPage("settings")));c.append(row);
     const details=node("details","raw-details");details.append(node("summary","","Технические подробности"),node("pre","code-block",text(run.error_info?.message||run.error)));c.append(details);
   }
@@ -1009,10 +1004,10 @@
   function renderActionCard(action,where) {
     const card=node("article","action-card"),heading=node("div","action-header");heading.append(node("h3","",action.kind==="permission"?`${roleName(action.role)}: требуется разрешение`:`${roleName(action.role)}: нужно решение`),node("span","state-badge state-warning","ТРЕБУЕТСЯ ДЕЙСТВИЕ"));card.append(heading,node("p","action-reason",action.reason||action.title));
     if(action.command)card.append(node("pre","code-block",text(action.command)));
-    const meta=node("div","action-meta");for(const [label,value]of [["Рабочая папка",action.cwd],["Scope",action.scope],["Риск",{low:"Низкий",medium:"Средний",high:"Высокий"}[action.risk]||action.risk]])if(value)meta.append(node("div","",`${label}: ${text(value)}`));card.append(meta);
+    const meta=node("div","action-meta");for(const [label,value]of [["Рабочая папка",action.cwd],["Область действия",scopeLabel(action.scope)],["Риск",{low:"Низкий",medium:"Средний",high:"Высокий"}[action.risk]||action.risk]])if(value)meta.append(node("div","",`${label}: ${text(value)}`));card.append(meta);
     if(action.limitation)card.append(node("p","limitation",action.limitation));
     const allowed=new Set(action.allowed_decisions||[]),form=node("form"),questions=list(action.questions),hasSecret=questions.some(q=>q.isSecret),inputs=[];
-    questions.forEach((question,index)=>{const field=node("fieldset","action-question"),legend=node("legend","",question.question||question.header||"Вопрос");field.append(legend);if(question.isSecret){field.append(node("p","muted","Секреты вводятся только в настройках provider или в официальном окне входа."));form.append(field);return;}
+    questions.forEach((question,index)=>{const field=node("fieldset","action-question"),legend=node("legend","",question.question||question.header||"Вопрос");field.append(legend);if(question.isSecret){field.append(node("p","muted","Секреты вводятся только в настройках подключения или в официальном окне входа."));form.append(field);return;}
       const name=`${where}-${action.id}-q${index}`,options=list(question.options);const group={question,radios:[],other:null};options.forEach(option=>{const label=node("label","answer-option"),radio=node("input");radio.type="radio";radio.name=name;radio.value=option.label;radio.required=true;const content=node("span","",option.label);if(option.description)content.append(node("small","",option.description));label.append(radio,content);field.append(label);group.radios.push(radio);});
       if(question.isOther||!options.length){const input=node("textarea");input.rows=2;input.maxLength=10000;input.setAttribute("aria-label",`${question.header||"Вопрос"}: свой ответ`);if(options.length){const l=node("label","answer-option"),radio=node("input");radio.type="radio";radio.name=name;radio.value="__other__";radio.required=true;l.append(radio,document.createTextNode("Свой ответ"));field.append(l);group.radios.push(radio);}else input.required=true;field.append(input);group.other=input;}inputs.push(group);form.append(field);});
     const actions=node("div","button-row");
@@ -1021,7 +1016,7 @@
       const run=state.selectedRun?.id===action.run_id?state.selectedRun:state.runs.find(r=>r.id===action.run_id),current=run||action.details?.run||{};
       const note=node("p","muted",`Уже использовано — итерации: ${current.iteration??"—"}; вызовы: ${current.calls??"—"}; время: ${current.elapsed_seconds===undefined?"—":Math.floor(current.elapsed_seconds)} с.`);form.append(note);
       const label=node("label","check-label");budgetEnabled=node("input");budgetEnabled.type="checkbox";label.append(budgetEnabled,node("span","","Изменить общие лимиты перед продолжением"));form.append(label);
-      const field=node("fieldset","action-budget");field.hidden=true;field.append(node("legend","","Общие лимиты этого запуска"),node("p","field-note","Это новые общие пределы, включая уже использованные ресурсы. Значения не добавляются к прежнему бюджету. Увеличение может привести к дополнительным вызовам выбранного provider."));budgetInputs={};
+      const field=node("fieldset","action-budget");field.hidden=true;field.append(node("legend","","Общие лимиты этого запуска"),node("p","field-note","Это новые общие пределы, включая уже использованные ресурсы. Значения не добавляются к прежнему бюджету. Увеличение может привести к дополнительным вызовам выбранного сервиса выполнения."));budgetInputs={};
       const grid=node("div","form-row");for(const [key,title,min,max,fallback]of [["max_iterations","Итерации",1,10,3],["max_agent_calls","Вызовы агентов",1,100,15],["max_run_duration","Время, секунды",30,86400,1800]]){const wrap=node("label","",title),input=node("input");input.type="number";input.min=String(min);input.max=String(max);input.step="1";input.value=String(current[key]??state.status?.settings?.[key]??fallback);input.required=true;input.disabled=true;input.setAttribute("aria-label",`Общий лимит: ${title.toLowerCase()}`);wrap.append(input);grid.append(wrap);budgetInputs[key]=input;}field.append(grid);form.append(field);
       budgetEnabled.addEventListener("change",()=>{field.hidden=!budgetEnabled.checked;Object.values(budgetInputs).forEach(i=>i.disabled=!budgetEnabled.checked);});
       productInstruction=node("textarea");productInstruction.rows=2;productInstruction.maxLength=10000;productInstruction.placeholder="Необязательное указание для продолжения или объяснения";productInstruction.setAttribute("aria-label","Указание для продолжения");form.append(productInstruction);
@@ -1036,7 +1031,7 @@
   async function resolveAction(action,decision,answers={},instruction=null,card,budget=null) {
     if(state.pendingActions.has(action.id))return;state.pendingActions.add(action.id);state.runRevision++;
     const selection=state.selectionVersion;
-    let confirmed=false;if(["allow_once","allow_run"].includes(decision)&&action.requires_confirmation){confirmed=await confirmOperation("Подтвердите запрошенное разрешение","Проверьте команду, рабочую папку и scope. Разрешение относится только к этому запросу официальной сессии Codex.",[action.command,action.cwd,action.scope,action.limitation].filter(Boolean).map(text).join("\n"),decisionLabels[decision]);if(!confirmed){state.pendingActions.delete(action.id);return;}}
+    let confirmed=false;if(["allow_once","allow_run"].includes(decision)&&action.requires_confirmation){confirmed=await confirmOperation("Подтвердите запрошенное разрешение","Проверьте команду, рабочую папку и область действия разрешения. Разрешение относится только к этому запросу официальной сессии Codex.",[action.command,action.cwd,action.scope,action.limitation].filter(Boolean).map(text).join("\n"),decisionLabels[decision]);if(!confirmed){state.pendingActions.delete(action.id);return;}}
     const buttons=Array.from(card?.querySelectorAll("button")||[]);buttons.forEach(b=>b.disabled=true);
     try{await api(`/api/actions/${encodeURIComponent(action.id)}/resolve`,"POST",{decision,answers,...(instruction?{instruction}:{}),...(decision==="resume"&&budget?{budget}:{}),confirmed});state.runRevision++;toast("Решение передано. Состояние команды обновляется.");state.actionsSignature="";await loadActions();if(state.selectedRun?.id===action.run_id){const run=await api(`/api/runs/${encodeURIComponent(action.run_id)}`);if(selection===state.selectionVersion&&state.selectedRun?.id===action.run_id){state.selectedRun=run;renderRun();}}}
     catch(error){toast(error.message,true);}finally{state.pendingActions.delete(action.id);buttons.forEach(b=>b.disabled=false);}
@@ -1067,7 +1062,7 @@
       if(project.error)card.append(node("p","project-runtime","Не удалось проверить папку. Убедитесь, что проект доступен, затем обновите данные."));else if(project.ready===false&&!project.dirty)card.append(node("p","project-runtime","Для изолированного запуска нужен первый Git commit в проекте."));
       if(runtime?.missing?.length)card.append(node("p","field-note","Приложение обнаруживает доступные среды автоматически. После настройки среды обновите проект. Если доступный runtime не найден, экспортируйте диагностику из настроек."));
       const row=node("div","project-actions");row.append(actionButton("Выбрать проект",()=>useProject(project),"primary"),actionButton("Настроить команды",()=>openProjectEditor(project)));
-      if(project.dirty)row.append(actionButton("Открыть diff",()=>openProjectDiff(project)));
+      if(project.dirty)row.append(actionButton("Посмотреть изменения",()=>openProjectDiff(project)));
       if(project.last_run)row.append(actionButton("Последний запуск",()=>selectRun(typeof project.last_run==="string"?project.last_run:project.last_run.id)));
       if(typeof desktopBridge()?.open_project==="function")row.append(actionButton("Открыть папку ↗",()=>nativeOperation("open_project",project.id)));
       row.append(actionButton("Убрать из списка",async()=>{if(await confirmOperation("Убрать проект из списка?","Файлы проекта, Git-история и сохранённые запуски останутся на компьютере.",project.path,"Убрать из списка")){try{await api(`/api/projects/${encodeURIComponent(project.id)}`,"DELETE",{});await loadProjects();}catch(e){toast(e.message,true);}}},"text-button"));card.append(row);
@@ -1077,10 +1072,10 @@
   async function openProjectDiff(project) {
     setPage("projects");const version=state.projectDiffVersion=(state.projectDiffVersion||0)+1;$("project-diff-panel").hidden=false;$("project-diff-title").textContent=`Изменения: ${project.name||project.path}`;$("project-diff-body").replaceChildren(node("p","loading-state","Читаем изменения исходного проекта…"));$("project-diff-panel").scrollIntoView({block:"start"});
     try{const response=await api(`/api/projects/${encodeURIComponent(project.id)}/diff`);if(version!==state.projectDiffVersion)return;const lines=(response.diff||"").split("\n"),chunk=node("pre","code-block diff-block",lines.slice(0,1000).join("\n"));$("project-diff-body").replaceChildren(node("p","muted","Просмотр не изменяет файлы. Для изолированного запуска сохраните или отмените изменения в своём Git-инструменте."),node("pre","code-block",response.diff_stat||""),chunk);if(!response.diff)chunk.textContent="Текстовых изменений нет.";if(lines.length>1000){let limit=1000;const more=actionButton("Показать ещё 1000 строк",()=>{limit+=1000;chunk.textContent=lines.slice(0,limit).join("\n");more.hidden=limit>=lines.length;});$("project-diff-body").append(more);}}
-    catch(error){if(version===state.projectDiffVersion)empty($("project-diff-body"),"Не удалось прочитать diff",error.message);}
+    catch(error){if(version===state.projectDiffVersion)empty($("project-diff-body"),"Не удалось прочитать изменения",error.message);}
   }
   function useProject(project) { $("workspace").value=project.path;storageSet("codex-team-workspace",project.path);renderProjectPreflight();renderDashboard();setPage("workbench");$("task").focus(); }
-  function renderProjectPreflight() { const project=state.projects.find(p=>p.path?.toLowerCase()===$("workspace").value.trim().toLowerCase()),c=$("project-preflight");c.replaceChildren();c.hidden=!project?.dirty&&!project?.runtime_status?.missing?.length;if(c.hidden)return;if(project.dirty){c.append(node("strong","","В проекте есть несохранённые Git-изменения"),node("p","","Изолированная рабочая копия требует чистого репозитория. Сохраните или отмените изменения в своём Git-инструменте, затем обновите проект."));const d=node("details","raw-details");d.append(node("summary","","Изменённые файлы"),node("pre","code-block",text(project.changed_files||[])));c.append(d);}if(project.runtime_status?.missing?.length)c.append(node("p","",`Проекту нужна среда: ${project.runtime_status.missing.join(", ")}. Откройте состояние проекта и рекомендации настройки.`));const row=node("div","button-row");row.append(actionButton("Состояние проекта",()=>setPage("projects")),actionButton("Обновить",loadProjects));if(project.dirty)row.append(actionButton("Открыть diff",()=>openProjectDiff(project)));c.append(row); }
+  function renderProjectPreflight() { const project=state.projects.find(p=>p.path?.toLowerCase()===$("workspace").value.trim().toLowerCase()),c=$("project-preflight");c.replaceChildren();c.hidden=!project?.dirty&&!project?.runtime_status?.missing?.length;if(c.hidden)return;if(project.dirty){c.append(node("strong","","В проекте есть несохранённые Git-изменения"),node("p","","Изолированная рабочая копия требует чистого репозитория. Сохраните или отмените изменения в своём Git-инструменте, затем обновите проект."));const d=node("details","raw-details");d.append(node("summary","","Изменённые файлы"),node("pre","code-block",text(project.changed_files||[])));c.append(d);}if(project.runtime_status?.missing?.length)c.append(node("p","",`Проекту нужна среда: ${project.runtime_status.missing.join(", ")}. Откройте состояние проекта и рекомендации настройки.`));const row=node("div","button-row");row.append(actionButton("Состояние проекта",()=>setPage("projects")),actionButton("Обновить",loadProjects));if(project.dirty)row.append(actionButton("Посмотреть изменения",()=>openProjectDiff(project)));c.append(row); }
   async function addProject(path) { const project=await api("/api/projects","POST",{path});await loadProjects();return project; }
   function openProjectEditor(project) {state.editingProject=project.id;$("project-editor-title").textContent=`Команды: ${project.name||project.path}`;for(const [kind,id]of [["test","project-test-command"],["build","project-build-command"],["run","project-run-command"]])$(id).value=JSON.stringify(project.commands?.[kind]||project.config?.commands?.[kind]||[]);$("project-editor").hidden=false;$("project-test-command").focus();}
   async function nativeOperation(method,id) { const bridge=desktopBridge();if(typeof bridge?.[method]!=="function")return;try{const result=await bridge[method](...(id===undefined?[]:[id]));if(result?.error||result?.ok===false)throw new Error(result.error||"Действие недоступно.");if(result?.path&&method==="export_diagnostics")toast(`Диагностика сохранена: ${result.path}`);}catch(error){toast(error.message,true);} }
@@ -1112,10 +1107,10 @@
   function renderPacks() { const c=$("packs-list");if(!state.packs.length){empty(c,"Наборы пока не загружены","Используйте встроенный набор или создайте собственный.");return;}c.replaceChildren(...state.packs.filter(pack=>{const q=$("packs-search").value.trim().toLowerCase();return !q||`${pack.name} ${pack.title||""} ${pack.description||""}`.toLowerCase().includes(q);}).map(pack=>{const card=node("article","panel pack-card");card.append(node("h3","",pack.title||pack.name),node("p","role-id mono muted",pack.name),node("p","agent-instructions-preview",pack.description||"Описание не задано"));card.append(node("p","muted",`Режим: ${modes[pack.default_mode||"standard"]?.title||pack.default_mode} · Специалисты: ${(pack.specialists||[]).length}`));const row=node("div","registry-actions");row.append(actionButton("Изменить",()=>openPackEditor(pack)),actionButton("Дублировать",()=>openPackEditor({...pack,name:"",title:`${pack.title||pack.name} · копия`,builtin:false},true)),actionButton("Экспорт",()=>exportJSON(`${pack.name}.pack.json`,packPayload(pack))));if(!pack.builtin)row.append(actionButton("Удалить",()=>deleteRegistry("packs",pack),"danger"));card.append(row);return card;})); }
   function openPackEditor(pack,duplicate=false) {state.editingPack=pack?.name&&!duplicate?pack.name:null;$("pack-editor-title").textContent=state.editingPack?`Набор: ${pack.title||pack.name}`:"Новый набор";$("pack-name").value=pack?.name||"";$("pack-name").readOnly=Boolean(state.editingPack);$("pack-title").value=pack?.title||"";$("pack-description").value=pack?.description||"";$("pack-mode").value=pack?.default_mode||"standard";const choices=(container,filter,selected)=>{container.replaceChildren(...state.agents.filter(filter).map(agent=>{const l=node("label","specialist-option"),i=node("input");i.type="checkbox";i.value=agent.name;i.checked=selected.includes(agent.name);l.append(i,document.createTextNode(roleName(agent.name)));return l;}));};choices($("pack-agent-options"),a=>a.name==="developer"||a.permission==="read-only",pack?.agents?.length?pack.agents:(modes[pack?.default_mode||"standard"].pipeline.filter(id=>id!=="specialists")));choices($("pack-specialist-options"),a=>!standardRoles.has(a.name)&&a.permission==="read-only",pack?.specialists||[]);syncPackModeChoices();$("pack-editor").hidden=false;showFormError("pack-form-error","");$("pack-name").focus();}
   async function importRegistry(kind,file) { if(!file)return;try{if(file.size>1024*1024)throw new Error("JSON-файл должен быть не больше 1 МБ.");const data=JSON.parse(await file.text());if(!data||Array.isArray(data)||typeof data!=="object")throw new Error("Ожидается один JSON-объект.");if(kind==="agents")openAgentEditor({...agentPayload(data),name:""});else openPackEditor({...packPayload(data),name:""},true);toast("Файл загружен в редактор. Проверьте поля и задайте уникальный идентификатор перед сохранением.");}catch(error){toast(`Не удалось импортировать: ${error.message}`,true);} }
-  async function loadProviders() {try{state.providers=await api("/api/providers");renderProviders();renderConnection();}catch(error){$("api-key-status").textContent=error.status===404?"API provider недоступен в этой версии сервера.":"Состояние provider временно недоступно.";} }
-  function renderProviders() {const p=state.providers;if(!p)return;$("provider-active-label").textContent=p.active==="openai_api"?"OPENAI API · ОТДЕЛЬНАЯ ОПЛАТА":"CODEX / CHATGPT";const labels={CONNECTED:"Подключён",CONFIGURED:"Ключ сохранён","NOT CONFIGURED":"Не настроен",ERROR:"Ошибка подключения",AUTH_REQUIRED:"Нужен вход",UNAVAILABLE:"Недоступен"};$("codex-provider-status").textContent=labels[p.codex?.status]||p.codex?.status||"Недоступен";$("api-provider-status").textContent=labels[p.openai_api?.status]||p.openai_api?.status||"Не настроен";$("api-key-status").textContent=p.openai_api?.configured?`Ключ сохранён: ${p.openai_api.key_hint||"••••••••"}${p.openai_api.tested_at?` · Проверка: ${prettyDate(p.openai_api.tested_at)}`:" · Подключение ещё не проверено"}`:"Ключ не настроен";$("test-api-key").disabled=!p.openai_api?.configured;$("remove-api-key").disabled=!p.openai_api?.configured;if(!state.providerTouched)qa('input[name="provider"]').forEach(r=>r.checked=r.value===p.active);renderProviderChoice();if(p.openai_api?.error)showFormError("api-key-error",p.openai_api.error);}
+  async function loadProviders() {try{state.providers=await api("/api/providers");renderProviders();renderConnection();}catch(error){$("api-key-status").textContent=error.status===404?"Подключение через API недоступно в этой версии сервера.":"Сведения о подключении временно недоступны.";} }
+  function renderProviders() {const p=state.providers;if(!p)return;$("provider-active-label").textContent=p.active==="openai_api"?"OPENAI API · ОТДЕЛЬНАЯ ОПЛАТА":"CODEX / CHATGPT";const labels={CONNECTED:"Подключён",CONFIGURED:"Ключ сохранён","NOT CONFIGURED":"Не настроен",ERROR:"Ошибка подключения",AUTH_REQUIRED:"Нужен вход",UNAVAILABLE:"Недоступен"};$("codex-provider-status").textContent=labels[p.codex?.status]||p.codex?.status||"Недоступен";$("api-provider-status").textContent=labels[p.openai_api?.status]||p.openai_api?.status||"Не настроен";$("api-key-status").textContent=p.openai_api?.configured?`Ключ сохранён: ${p.openai_api.key_hint||"••••••••"}${p.openai_api.tested_at?` · Проверка: ${prettyDate(p.openai_api.tested_at)}`:" · Подключение ещё не проверено"}`:"Ключ не настроен";$("test-api-key").disabled=!p.openai_api?.configured;$("remove-api-key").disabled=!p.openai_api?.configured;if(!state.providerTouched)qa('input[name="provider"]').forEach(r=>r.checked=r.value===p.active);renderProviderChoice();if(p.openai_api?.error)showFormError("api-key-error",errorMessage({detail:p.openai_api.error},"Не удалось проверить подключение к API. Проверьте ключ и доступ к сети."));}
   function renderProviderChoice() {const apiSelected=qa('input[name="provider"]').some(r=>r.checked&&r.value==="openai_api");$("provider-billing-note").hidden=!apiSelected;$("save-provider-button").disabled=!state.online||(apiSelected&&!$("provider-billing-confirmed").checked);}
-  async function copyDiagnostics() { const data={app:"Codex Team",version:state.health?.version||"unknown",server:state.health?.status||"unavailable",auth:state.status?.auth?.status||"unavailable",provider:state.providers?.active||state.status?.settings?.execution_backend||"codex_chatgpt",run:state.selectedRun?{id:state.selectedRun.id,state:state.selectedRun.state,role:state.selectedRun.current_role}:null};try{await navigator.clipboard.writeText(JSON.stringify(data,null,2));toast("Диагностика скопирована. Секреты и текст задачи не включены.");}catch(_){toast("Буфер обмена недоступен. Используйте экспорт диагностики или папку логов.",true);} }
+  async function copyDiagnostics() { const data={app:"Codex Team",version:state.health?.version||"unknown",server:state.health?.status||"unavailable",auth:state.status?.auth?.status||"unavailable",provider:state.providers?.active||state.status?.settings?.execution_backend||"codex_chatgpt",run:state.selectedRun?{id:state.selectedRun.id,state:state.selectedRun.state,role:state.selectedRun.current_role}:null};try{await navigator.clipboard.writeText(JSON.stringify(data,null,2));toast("Диагностика скопирована. Секреты и текст задачи не включены.");}catch(_){toast("Буфер обмена недоступен. Используйте экспорт диагностики или папку журналов.",true);} }
   async function loadRecovery() {if(typeof desktopBridge()?.recovery_status!=="function")return;try{const r=await desktopBridge().recovery_status();$("recovery-banner").hidden=!r?.abnormal;if(r?.message)$("recovery-message").textContent=r.message;}catch(_){/* optional native status */} }
   async function savePartialSettings(values,errorId) {try{const saved=await api("/api/settings","POST",values);if(state.status)state.status.settings=saved;showFormError(errorId,"");toast("Настройки сохранены.");return saved;}catch(error){showFormError(errorId,error.message);return null;} }
   function bindFeatures() {
@@ -1145,10 +1140,10 @@
     $("settings-theme").addEventListener("change",()=>applyAppearance($("settings-theme").value,state.appearance.accent_color));$("settings-accent").addEventListener("input",()=>applyAppearance(state.appearance.theme,$("settings-accent").value));qa("[data-accent]").forEach(b=>b.addEventListener("click",()=>applyAppearance(state.appearance.theme,b.dataset.accent||null)));$("appearance-form").addEventListener("submit",async event=>{event.preventDefault();applyAppearance(state.appearance.theme,state.appearance.accent_color);await savePartialSettings(state.appearance,"appearance-form-error");});
     $("policy-form").addEventListener("submit",async event=>{event.preventDefault();const permission_policy={};Object.keys(permissionLabels).forEach(key=>permission_policy[key]=$("permission-"+key).value);await savePartialSettings({...(desktopBridge()?{minimize_to_tray:$("settings-minimize-to-tray").checked}:{}),permission_policy,notifications:{task_complete:$("notify-task-complete").checked,needs_attention:$("notify-needs-attention").checked,stage_complete:$("notify-stage-complete").checked}},"policy-form-error");});
     qa('input[name="provider"]').forEach(r=>r.addEventListener("change",()=>{state.providerTouched=true;renderProviderChoice();}));$("provider-billing-confirmed").addEventListener("change",renderProviderChoice);
-    $("provider-form").addEventListener("submit",async event=>{event.preventDefault();const provider=qa('input[name="provider"]').find(r=>r.checked)?.value;if(provider==="openai_api"&&!$("provider-billing-confirmed").checked){showFormError("provider-form-error","Подтвердите отдельную оплату API.");return;}$("save-provider-button").disabled=true;try{await api("/api/providers/select","POST",{provider,acknowledge_billing:provider==="openai_api"&&$("provider-billing-confirmed").checked});state.providerTouched=false;await loadProviders();state.lastStatus=0;await poll();toast("Provider выбран явно. Новые запуски используют этот provider.");showFormError("provider-form-error","");}catch(error){showFormError("provider-form-error",error);}finally{renderProviderChoice();}});
-    $("api-key-form").addEventListener("submit",async event=>{event.preventDefault();const key=$("api-key-input").value.trim();if(!key){showFormError("api-key-error","Введите API key для сохранения.");return;}$("save-api-key").disabled=true;try{await api("/api/providers/openai/key","POST",{key});$("api-key-input").value="";showFormError("api-key-error","");await loadProviders();toast("Ключ сохранён в защищённом хранилище Windows.");}catch(error){showFormError("api-key-error",error);}finally{$("save-api-key").disabled=false;}});
+    $("provider-form").addEventListener("submit",async event=>{event.preventDefault();const provider=qa('input[name="provider"]').find(r=>r.checked)?.value;if(provider==="openai_api"&&!$("provider-billing-confirmed").checked){showFormError("provider-form-error","Подтвердите отдельную оплату API.");return;}$("save-provider-button").disabled=true;try{await api("/api/providers/select","POST",{provider,acknowledge_billing:provider==="openai_api"&&$("provider-billing-confirmed").checked});state.providerTouched=false;await loadProviders();state.lastStatus=0;await poll();toast("Подключение сохранено. Оно будет использоваться для новых запусков.");showFormError("provider-form-error","");}catch(error){showFormError("provider-form-error",error);}finally{renderProviderChoice();}});
+    $("api-key-form").addEventListener("submit",async event=>{event.preventDefault();const key=$("api-key-input").value.trim();if(!key){showFormError("api-key-error","Введите ключ API, который нужно сохранить.");return;}$("save-api-key").disabled=true;try{await api("/api/providers/openai/key","POST",{key});$("api-key-input").value="";showFormError("api-key-error","");await loadProviders();toast("Ключ сохранён в защищённом хранилище Windows.");}catch(error){showFormError("api-key-error",error);}finally{$("save-api-key").disabled=false;}});
     $("test-api-key").addEventListener("click",async()=>{$("test-api-key").disabled=true;try{await api("/api/providers/openai/test","POST",{});showFormError("api-key-error","");await loadProviders();toast("Подключение проверено без генерации модели.");}catch(error){showFormError("api-key-error",error);}finally{$("test-api-key").disabled=!state.providers?.openai_api?.configured;}});
-    $("remove-api-key").addEventListener("click",async()=>{if(!await confirmOperation("Удалить сохранённый API key?","API provider будет недоступен, пока вы не сохраните новый ключ. Provider не переключается автоматически.","","Удалить ключ"))return;try{await api("/api/providers/openai/key","DELETE",{});$("api-key-input").value="";await loadProviders();toast("Ключ удалён.");}catch(error){showFormError("api-key-error",error);}});
+    $("remove-api-key").addEventListener("click",async()=>{if(!await confirmOperation("Удалить сохранённый ключ API?","Запуски через API будут недоступны, пока вы не сохраните новый ключ. Способ подключения автоматически не изменится.","","Удалить ключ"))return;try{await api("/api/providers/openai/key","DELETE",{});$("api-key-input").value="";await loadProviders();toast("Ключ удалён.");}catch(error){showFormError("api-key-error",error);}});
     $("copy-diagnostics-button").addEventListener("click",copyDiagnostics);$("export-diagnostics-button").addEventListener("click",()=>nativeOperation("export_diagnostics"));
   }
 

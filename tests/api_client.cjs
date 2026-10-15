@@ -9,4 +9,13 @@ context.fetch=async()=>({ok:true,status:200,headers:{get:()=> 'text/html'},text:
 context.fetch=async()=>{throw new TypeError('network')};await assert.rejects(api('/api/status'),e=>e.kind==='offline');
 context.fetch=async(path,init)=>new Promise((resolve,reject)=>{const abort=()=>{const e=new Error('abort');e.name='AbortError';reject(e)};if(init.signal.aborted)abort();else init.signal.addEventListener('abort',abort,{once:true})});
 await assert.rejects(api('/api/status','GET',undefined,{timeoutMs:5}),e=>e.kind==='timeout');const controller=new AbortController();controller.abort();await assert.rejects(api('/api/status','GET',undefined,{signal:controller.signal}),e=>e.kind==='cancelled');
+const format=context.CodexApi.formatError;
+for(const [type,ctx,expected]of [['missing',{},'Заполните'],['string_too_short',{min_length:3},'не менее 3'],['int_parsing',{},'число'],['literal_error',{},'доступного списка'],['extra_forbidden',{},'не поддерживается']]){
+ const result=format({detail:[{loc:['body','task'],type,ctx,msg:'English validation message',input:'SECRET-FIXTURE'}]});assert(result.includes('Задача:'));assert(result.includes(expected));assert(!result.includes('English'));assert(!result.includes('SECRET-FIXTURE'));
+}
+assert(!format({detail:'arbitrary English stack message'}).includes('English'));
+context.fetch=async()=>({ok:false,status:422,headers:{get:()=> 'application/json'},json:async()=>({detail:[{loc:['body','key'],type:'string_type',msg:'Input should be a valid string',input:'SECRET-FIXTURE'}]})});
+await assert.rejects(api('/api/settings'),e=>e.message.includes('Ключ API: Введите текст.')&&!JSON.stringify(e.technical).includes('SECRET-FIXTURE'));
+context.fetch=async()=>({ok:false,status:403,headers:{get:()=> 'application/json'},json:async()=>({detail:'Forbidden'})});
+await assert.rejects(api('/api/settings'),e=>e.message.includes('Доступ к действию запрещён'));
 console.log(JSON.stringify({result:'PASS'}));})().catch(e=>{console.error(e);process.exitCode=1});
