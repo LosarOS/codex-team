@@ -65,3 +65,27 @@ def test_wizard_tasks_and_finish_are_russian_and_help_is_packaged():
     assert "CODEX_TEAM_DATA_ROOT" in help_text
     assert "Docker и образы не входят в комплект" in help_text
     assert "сохраняет историю, настройки, проекты" in help_text
+
+
+def test_readme_inside_installer_zip_names_the_setup_executable(tmp_path):
+    import importlib.util
+    import zipfile
+
+    spec = importlib.util.spec_from_file_location("installer_archive_contract", ROOT / "packaging" / "archive.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    app = tmp_path / "dist" / "CodexTeam"
+    app.mkdir(parents=True)
+    (tmp_path / "installer").mkdir()
+    (tmp_path / "packaging").mkdir()
+    (app / "CodexTeam.exe").write_bytes(b"fixture application, not a Windows executable")
+    (tmp_path / "installer" / "CodexTeam-Setup-x64.exe").write_bytes(b"fixture setup, not a Windows executable")
+    help_bytes = (ROOT / "packaging" / "FIRST_RUN_RU.txt").read_bytes()
+    assert help_bytes.startswith(b"\xef\xbb\xbf")
+    (app / "НАЧАЛО.txt").write_bytes(help_bytes)
+    module.create_archives(tmp_path)
+    with zipfile.ZipFile(tmp_path / "dist" / "CodexTeam-Setup-x64.zip") as archive:
+        readme = archive.read("INSTALL-WINDOWS.txt").decode("utf-8-sig")
+    assert "CodexTeam-Setup-x64.exe" in readme
+    assert "распакуйте архив целиком" in readme
+    assert "CodexTeam-Portable-x64.zip" in readme
