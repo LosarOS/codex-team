@@ -252,3 +252,8 @@ tbody tr:hover {background:var(--accent-soft)}
 .architect-entry .button {flex-shrink:0}
 @media(max-width:1200px){.pipeline-preview {display:block}}
 @media(max-width:650px){.runs-filterbar {grid-template-columns:1fr;padding:16px}.architect-entry {align-items:stretch;flex-direction:column;padding:18px;gap:14px}}
+/* Runs list has two cells; the dashboard card also includes a leading icon. */
+#runs-list .run-card {grid-template-columns:minmax(0,1fr) auto}
+.run-card>div {min-width:0}
+.run-card-meta.mono {display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:750px){#runs-list .run-card {grid-template-columns:minmax(0,1fr)}#runs-list .run-card>.state-badge {justify-self:start}}

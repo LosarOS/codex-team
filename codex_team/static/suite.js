@@ -12,7 +12,7 @@
   const data=x=>x?.data || x || {};
   const pretty=x=>typeof x==='string'?x:JSON.stringify(x,null,2);
   const endpoint=path=>'/api/suite'+path;
-  const req=(path,method='GET',payload)=>bridge.api(endpoint(path),method,payload);
+  const req=(path,method='GET',payload)=>window.CodexApi.request(endpoint(path),method,payload,{formatError:(body,fallback)=>typeof body?.detail==='string'?body.detail:body?.error?.message||fallback});
   const pid=()=>encodeURIComponent(project.value);
   const ppath=suffix=>`/projects/${pid()}/${suffix}`;
   function message(text,error=false){status.textContent=text;status.classList.toggle('suite-error',error);status.setAttribute('role',error?'alert':'status');}
