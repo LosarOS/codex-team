@@ -110,3 +110,11 @@ def test_primary_markup_uses_russian_labels_instead_of_internal_terms():
         r"\b(?:provider|workspace|API key|Reasoning effort|Quality Gate|Baseline|Mission Control)\b|LOCAL CONTROL CENTER|OFFICIAL CODEX SDK",
         "\n".join(copy.labels), re.IGNORECASE,
     )
+
+
+def test_builtin_pack_titles_and_descriptions_are_russian():
+    for path in (REPOSITORY / "packs").glob("*.json"):
+        pack = json.loads(path.read_text(encoding="utf-8"))
+        assert re.search("[А-Яа-яЁё]", pack["title"]) or pack["title"] == "ELMA365"
+        assert re.search("[А-Яа-яЁё]", pack["description"])
+        assert pack["name"] == path.stem

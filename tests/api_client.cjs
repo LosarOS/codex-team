@@ -16,6 +16,8 @@ for(const [type,ctx,expected]of [['missing',{},'Заполните'],['string_to
 assert(!format({detail:'arbitrary English stack message'}).includes('English'));
 context.fetch=async()=>({ok:false,status:422,headers:{get:()=> 'application/json'},json:async()=>({detail:[{loc:['body','key'],type:'string_type',msg:'Input should be a valid string',input:'SECRET-FIXTURE'}]})});
 await assert.rejects(api('/api/settings'),e=>e.message.includes('Ключ API: Введите текст.')&&!JSON.stringify(e.technical).includes('SECRET-FIXTURE'));
+context.fetch=async()=>({ok:false,status:422,headers:{get:()=> 'application/json'},json:async()=>({detail:'Проверьте поля ввода.',validation_errors:[{loc:['body','task'],type:'string_too_short',ctx:{min_length:3},msg:'String should have at least 3 characters'}]})});
+await assert.rejects(api('/api/settings'),e=>e.message.includes('Задача: Введите не менее 3 символов.'));
 context.fetch=async()=>({ok:false,status:403,headers:{get:()=> 'application/json'},json:async()=>({detail:'Forbidden'})});
 await assert.rejects(api('/api/settings'),e=>e.message.includes('Доступ к действию запрещён'));
 console.log(JSON.stringify({result:'PASS'}));})().catch(e=>{console.error(e);process.exitCode=1});

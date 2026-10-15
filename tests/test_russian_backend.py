@@ -34,7 +34,11 @@ def test_russian_validation_and_access_errors_do_not_echo_input(local_app):
     client, *_ = local_app
     response = client.post('/api/runs', json={'workspace': None, 'task': 'secret-input-value'})
     assert response.status_code == 422
-    assert response.json()['detail'].startswith('Проверьте поля ввода:')
+    assert response.json()['detail'] == 'Проверьте поля ввода.'
+    issue=response.json()['validation_errors'][0]
+    assert issue['loc'] == ['body', 'workspace']
+    assert issue['type'] == 'string_type'
+    assert 'input' not in issue
     assert 'secret-input-value' not in response.text
     denied = client.post('/api/settings', json={}, headers={'origin': 'https://evil.invalid'})
     assert denied.status_code == 403

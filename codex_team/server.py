@@ -123,9 +123,14 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         return JSONResponse({"detail":sanitize(str(exc)),"error":describe_error("CONFIGURATION_REQUIRED",str(exc))}, status_code=400)
     @app.exception_handler(RequestValidationError)
     async def invalid_input(request,exc):
-        fields = [".".join(str(x) for x in error["loc"] if x != "body") for error in exc.errors()]
-        # Pydantic errors include raw input, including a rejected secret. Never echo it.
-        return JSONResponse({"detail":"Проверьте поля ввода: " + ", ".join(fields[:20])},status_code=422)
+        # Keep the existing detail string and expose only safe structured metadata
+        # for localized field guidance. Pydantic's raw input must never be echoed.
+        errors=[]
+        for error in exc.errors()[:20]:
+            context={key:value for key,value in error.get("ctx",{}).items()
+                     if key in {"min_length","max_length","ge","le","gt","lt"} and isinstance(value,(int,float))}
+            errors.append({"loc":error["loc"],"type":error["type"],"msg":sanitize(error["msg"]),"ctx":context})
+        return JSONResponse({"detail":"Проверьте поля ввода.","validation_errors":errors},status_code=422)
     @app.exception_handler(KeyError)
     async def not_found(request, exc):
         return JSONResponse({"detail": "Запрошенный элемент не найден."}, status_code=404)

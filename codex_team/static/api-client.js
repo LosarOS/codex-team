@@ -30,7 +30,7 @@
     return /[А-Яа-яЁё]/.test(message)?message:"Проверьте значение поля.";
   }
   function formatError(body,fallback="Не удалось завершить действие. Проверьте параметры и повторите попытку.") {
-    const detail=body?.detail;
+    const detail=body?.validation_errors||body?.detail;
     if(Array.isArray(detail))return detail.slice(0,12).map(error=>{
       const path=(error.loc||[]).filter(key=>!["body","query","path"].includes(key));
       const label=path.map(key=>typeof key==="number"?`элемент ${key+1}`:fieldNames[key]||"Параметр").join(" · ")||"Данные запроса";
@@ -65,7 +65,7 @@
       try{data=json?await response.json():{detail:(await response.text()).slice(0,4000)};}
       catch(error){if(error.name==="AbortError")throw error;throw new ApiError("Сервер вернул некорректный ответ. Обновите данные и повторите запрос.",{status:response.status,kind:"protocol"});}
       if(response.ok&&!json)throw new ApiError("Сервер вернул ответ в неподдерживаемом формате.",{status:response.status,kind:"protocol"});
-      if(!response.ok){const fallback=httpMessage(response.status);const detail=data?.detail||data?.error||null;const technical=Array.isArray(detail)?detail.map(({loc,type,msg})=>({loc,type,msg})):detail;throw new ApiError((options.formatError||formatError)(data,fallback)||fallback,{status:response.status,technical});}
+      if(!response.ok){const fallback=httpMessage(response.status);const detail=data?.validation_errors||data?.detail||data?.error||null;const technical=Array.isArray(detail)?detail.map(({loc,type,msg})=>({loc,type,msg})):detail;throw new ApiError((options.formatError||formatError)(data,fallback)||fallback,{status:response.status,technical});}
       return data;
     }catch(error){
       if(error.name==="AbortError")throw new ApiError(timedOut?"Сервер не ответил вовремя. Проверьте локальное приложение и повторите попытку.":"Запрос отменён.",{kind:timedOut?"timeout":"cancelled"});
