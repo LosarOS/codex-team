@@ -178,3 +178,50 @@ def test_ai_result_cannot_overwrite_user_edit(ai_lifecycle):
     assert not caller.is_alive() and errors
     assert service.get(draft['id'])['version'] == saved['version']
     assert service.get(draft['id'])['data']['sections']['Цель'] == 'Ручная правка'
+
+
+def test_ai_shutdown_is_bounded_and_preserves_owned_resources(ai_lifecycle):
+    import threading
+    import time
+    service, draft, Fake = ai_lifecycle
+    service.AI_TIMEOUT_SECONDS = 5
+    errors = []
+    def call():
+        try: service.ai_refine(draft['id'], Fake(), True, draft['version'])
+        except ValueError as exc: errors.append(str(exc))
+    caller = threading.Thread(target=call); caller.start()
+    assert Fake.execute_entered.wait(1)
+    started = time.monotonic()
+    service.close()
+    assert time.monotonic() - started < .5
+    assert Fake.workspace.exists()
+    with pytest.raises(ValueError, match='завершает работу'):
+        service.ai_refine(draft['id'], Fake(), True, draft['version'])
+    caller.join(1)
+    assert not caller.is_alive() and errors
+    assert service.get(draft['id'])['version'] == draft['version']
+
+
+def test_ai_routes_expose_status_cancel_and_do_not_close_provider(intelligence, monkeypatch):
+    from types import SimpleNamespace
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from codex_team.suite_api import install_suite
+    intel, _ = intelligence
+    app = FastAPI()
+    install_suite(app, intel.root, intel.store, SimpleNamespace(active=False))
+    service = app.state.suite['architect']
+    draft = service.create('p', 'Исправить авторизацию auth')
+    class Fake:
+        backend = 'codex_chatgpt'
+        def __init__(self, *args): pass
+        def close(self):
+            raise AssertionError('Route must not close service-owned lifecycle')
+    monkeypatch.setattr('codex_team.suite_api.CodexProvider', Fake)
+    monkeypatch.setattr(service, 'ai_refine', lambda *args: {'ok': True})
+    client = TestClient(app)
+    base = f"/api/suite/specifications/{draft['id']}/ai"
+    assert client.post(base, json={'confirmed':True,'expected_version':draft['version']}).json() == {'ok':True}
+    assert client.get(base+'/status').json()['active'] is False
+    assert client.post(base+'/cancel',json={}).json()['state'] == 'idle'
+    assert client.post(base+'/cancel',json={'unexpected':True}).status_code == 422

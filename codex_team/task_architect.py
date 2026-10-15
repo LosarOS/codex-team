@@ -19,6 +19,7 @@ class TaskArchitectService:
         self._ai_lock = threading.Lock()
         self._job_guard = threading.RLock()
         self._ai_job = None
+        self._closed = False
         self.suite = suite or SuiteStore(store)
         self.intelligence = intelligence or IntelligenceService(root,store,self.suite)
 
@@ -64,6 +65,9 @@ class TaskArchitectService:
         return "\n\n".join(f"## {name}\n{row['data']['sections'][name]}" for name in SECTIONS)
 
     def ai_refine(self, record_id, provider, confirmed=False, expected_version=None):
+        with self._job_guard:
+            if self._closed:
+                raise ValueError("Task Architect завершает работу")
         if confirmed is not True:
             raise ValueError("Требуется явное подтверждение вызова Codex")
         if getattr(provider,"backend",None) != "codex_chatgpt":
@@ -81,6 +85,16 @@ class TaskArchitectService:
             self._ai_lock.release()
             raise
         return self._refine(row, isolated, expected_version)
+
+    def close(self):
+        """Cancel owned work without blocking application shutdown indefinitely."""
+        with self._job_guard:
+            self._closed = True
+            job = self._ai_job
+            if job:
+                self._request_cancel(job)
+        if job:
+            job["cleaned"].wait(self.CLEANUP_WAIT_SECONDS)
 
     def ai_status(self, record_id):
         self.get(record_id)
@@ -125,6 +139,10 @@ class TaskArchitectService:
                "interrupt_started": False, "committed": False, "state": "running"}
         job["interrupt_done"].set()
         with self._job_guard:
+            if self._closed:
+                self._ai_lock.release()
+                threading.Thread(target=isolated.close, daemon=True, name="architect-unused-close").start()
+                raise ValueError("Task Architect завершает работу")
             self._ai_job = job
         temporary = None
         execution_started = False

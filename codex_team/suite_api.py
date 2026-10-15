@@ -119,8 +119,14 @@ def install_suite(app,root,store,engine,qa_runner=None):
             raise ValueError('Для Task Architect выберите официальный Codex / ChatGPT. Платный API не используется.')
         if engine.active: raise ValueError('Дождитесь завершения активной команды перед отдельной AI-подготовкой')
         provider=CodexProvider(root)
-        try: return architect.ai_refine(record_id,provider,True,body.expected_version)
-        finally: provider.close()
+        # ai_refine owns its isolated provider and deferred cleanup lifecycle.
+        return architect.ai_refine(record_id,provider,True,body.expected_version)
+    @router.get('/specifications/{record_id}/ai/status')
+    def ai_status(record_id:str):
+        return architect.ai_status(record_id)
+    @router.post('/specifications/{record_id}/ai/cancel')
+    def cancel_ai(record_id:str,body:Body):
+        return architect.cancel_ai(record_id)
     @router.post('/specifications/{record_id}/launch')
     def launch_spec(record_id:str,body:Launch):
         with engine.lock:
