@@ -35,6 +35,8 @@ def test_access_reaches_provider_without_escalating_other_roles(rig, level):
         assert all(a['permission'] == 'read-only' for a in provider.seen)
     if level == 'full-access':
         assert developer['can_execute'] and developer['can_network']
+        assert 'package installation and network access are approved' in developer['instructions']
+        assert all('Run-specific owner decision' not in a['instructions'] for a in provider.seen if a['name'] != 'developer')
         assert all(a['access_level'] != 'full-access' for a in provider.seen if a['name'] != 'developer')
     assert 'confirmed_full_access' not in store.run(run['id'])
 
