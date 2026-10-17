@@ -1128,5 +1128,10 @@ window.CodexI18nCatalog = {
   "Голубой акцент": "Blue accent",
   "Золотой акцент": "Gold accent",
   "Свой акцентный цвет": "Custom accent color",
-  "Изменения видны сразу. Нажмите «Сохранить оформление», чтобы применять их при следующем запуске.": "Changes are previewed immediately. Click Save appearance to apply them at the next launch."
+  "Изменения видны сразу. Нажмите «Сохранить оформление», чтобы применять их при следующем запуске.": "Changes are previewed immediately. Click Save appearance to apply them at the next launch.",
+  "Проверка безопасности и производительности": "Security and performance review",
+  "Бизнес-процессы и интеграции ELMA365": "ELMA365 business processes and integrations",
+  "Проверка игровой логики, сценария и выполнения игры": "Game logic, narrative and runtime verification",
+  "Разработка программного обеспечения с проверкой безопасности и производительности": "Software development with security and performance review",
+  "Разработка и проверка интерфейса, серверной части и безопасности": "Frontend, backend and security development and review"
 };
