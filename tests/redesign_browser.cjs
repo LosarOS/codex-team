@@ -62,7 +62,7 @@ function fixture(url,method,body){const p=url.pathname;
  }
  unknown.push(p);return {detail:'Unmapped explicit fixture: '+p};
 }
-const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture(url,req.method,raw?JSON.parse(raw):{})));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
+const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture(url,req.method,raw?JSON.parse(raw):{})));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -71,10 +71,12 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
  try{
   const page=await browser.newPage({viewport:{width:1366,height:768}});
   page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error'&&/Content Security|Refused to|MIME|nosniff/i.test(message.text()))errors.push(message.text());});
+  page.on('response',response=>{const path=new URL(response.url()).pathname;if(!path.startsWith('/api/')&&path!=='/health'&&path!=='/favicon.ico'&&response.status()>=400)errors.push(`Static asset ${path}: ${response.status()}`);});
   let cancelLanguage=false,warned=false;page.on('dialog',async dialog=>{if(cancelLanguage){warned=true;await dialog.dismiss();}else await dialog.accept();});
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.waitForFunction(()=>window.CodexTeamSuite?.state?.status);
-  const screens=['workbench','projects','runs-list','runs','agents','packs','history','actions','usage','settings','intelligence','architect','budget','git','qa'];
+  const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
   const visit=async name=>{
    if(process.env.QA_VERBOSE)console.log('visit',name);
    if(['intelligence','architect','budget','git','qa'].includes(name)){
@@ -110,7 +112,7 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
       checks.push({phase,language,theme,name,...dims});
       if(language==='en'&&theme==='obsidian-violet'&&width===1366){const labels=await page.evaluate(()=>[...document.querySelectorAll('button,label,legend,summary,option,h1,h2,h3,th')].filter(n=>n.getClientRects().length&&!n.closest('pre,code')).map(n=>n.textContent.trim()).filter(text=>/[А-Яа-яЁё]/.test(text)&&!/(?:ТЕСТ|Тестов|тестов|Русский)/.test(text)));for(const text of labels)untranslated.push({name,text});}
 
-      if(width===1366&&((theme==='obsidian-violet')||(name==='intelligence'&&language==='ru'))){
+      if(width===1366&&((theme==='obsidian-violet')||(name==='intelligence'))){
        await page.screenshot({path:path.join(output,`${phase}-${language}-${theme}-${name}.png`),fullPage:true});
       }
      }
