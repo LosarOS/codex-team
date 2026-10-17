@@ -1127,5 +1127,6 @@ window.CodexI18nCatalog = {
   "Фиолетовый акцент": "Purple accent",
   "Голубой акцент": "Blue accent",
   "Золотой акцент": "Gold accent",
-  "Свой акцентный цвет": "Custom accent color"
+  "Свой акцентный цвет": "Custom accent color",
+  "Изменения видны сразу. Нажмите «Сохранить оформление», чтобы применять их при следующем запуске.": "Changes are previewed immediately. Click Save appearance to apply them at the next launch."
 };

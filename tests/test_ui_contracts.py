@@ -132,3 +132,15 @@ def test_localization_preserves_user_data_and_contract_keys():
     report = json.loads(result.stdout.strip())
     assert report["result"] == "PASS"
     assert report["catalog"] >= 1000
+
+
+def test_suite_retains_actionable_localized_error_messages():
+    node = os.environ.get("CODEX_TEAM_TEST_NODE") or shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for localized error contracts")
+    result = subprocess.run(
+        [node, str(Path(__file__).with_name("suite_messages.cjs")), str(STATIC)],
+        capture_output=True, text=True, encoding="utf-8", timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS" in result.stdout
