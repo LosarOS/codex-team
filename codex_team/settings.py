@@ -29,7 +29,10 @@ class Settings(BaseModel):
     max_agent_calls: int = Field(default=15,ge=1,le=100)
     max_parallel_agents: int = Field(default=2,ge=1,le=4)
     max_run_duration: int = Field(default=1800,ge=30,le=86400)
-    theme: Literal["system","light","dark","purple-neon","dark-fantasy"] = "system"
+    # Existing identifiers remain valid for preferences saved by older releases.
+    theme: Literal["system","light","dark","purple-neon","dark-fantasy",
+                   "obsidian-violet","neon-blue","emerald-tech","crimson-night"] = "obsidian-violet"
+    language: Literal["ru","en"] = "ru"
     accent_color: str | None = Field(default=None,pattern=r"^#[0-9a-fA-F]{6}$")
     notifications: Notifications = Field(default_factory=Notifications)
     permission_policy: dict[PermissionCategory,Literal["ask","deny"]] = Field(default_factory=dict)

@@ -150,13 +150,19 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         message = "Не удалось завершить запрос. Откройте диагностику и повторите попытку."
         return JSONResponse({"detail": message, "error": describe_error("FATAL_ERROR", message)}, status_code=500)
 
+    def effective_settings():
+        # Status is the first settings consumer during startup; expose the same
+        # defaults as the settings page without overwriting legacy preferences.
+        return {**Settings().model_dump(exclude={"execution_backend"}),
+                "execution_backend":"codex_chatgpt", **db.settings()}
+
     @app.get("/api/status")
     def status():
         try:
             account = auth.account_status()
         except Exception as exc:
             account = {"status": "UNAVAILABLE", "account": None, "error": "Codex не ответил. Проверьте настройки и повторите попытку.","details":sanitize(str(exc))}
-        return {"auth": account, "capabilities": auth.capabilities, "settings": {"execution_backend": "codex_chatgpt", **db.settings()}}
+        return {"auth": account, "capabilities": auth.capabilities, "settings": effective_settings()}
 
     @app.post("/api/login")
     def login(body: Login):
@@ -257,7 +263,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
 
     @app.get("/api/settings")
     def get_settings():
-        return {**Settings().model_dump(exclude={"execution_backend"}),"execution_backend":"codex_chatgpt",**db.settings()}
+        return effective_settings()
 
     @app.post("/api/settings")
     def settings(body: Settings):
