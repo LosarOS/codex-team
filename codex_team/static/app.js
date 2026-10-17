@@ -956,8 +956,8 @@
       const row=node("button","dashboard-row dashboard-project-row");row.type="button";
       const icon=node("span","dashboard-row-icon","Git"),copy=node("span","dashboard-row-copy");
       copy.append(node("strong","",project.name||project.path),node("span","mono muted",project.path));
-      const status=node("span",`status-dot ${project.error?"red":project.dirty?"yellow":project.dirty===false?"green":""}`);
-      status.title=project.error?I.t("Нужна проверка"):project.dirty?I.t("Есть изменения"):project.dirty===false?I.t("Чистый Git"):I.t("Нет данных");
+      const status=node("span",`status-dot ${project.error?"red":project.dirty?"yellow":project.dirty===false&&project.ready===true?"green":""}`);
+      status.title=project.error?I.t("Нужна проверка"):project.dirty?I.t("Есть изменения"):project.dirty===false&&project.ready===true?I.t("Чистый Git"):I.t("Нет данных");
       row.append(icon,copy,status);row.addEventListener("click",()=>useProject(project));projects.append(row);
     }
     if(!state.projects.length)projects.append(node("p","dashboard-empty muted",state.projectsError||I.t("Подключите проект, чтобы начать работу.")));
