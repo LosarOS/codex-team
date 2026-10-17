@@ -20,4 +20,13 @@ context.fetch=async()=>({ok:false,status:422,headers:{get:()=> 'application/json
 await assert.rejects(api('/api/settings'),e=>e.message.includes('Задача: Введите не менее 3 символов.'));
 context.fetch=async()=>({ok:false,status:403,headers:{get:()=> 'application/json'},json:async()=>({detail:'Forbidden'})});
 await assert.rejects(api('/api/settings'),e=>e.message.includes('Доступ к действию запрещён'));
+// English startup uses the shared localization layer and keeps technical payloads private.
+const english={AbortController,setTimeout,clearTimeout,TypeError,localStorage:{getItem:()=> 'en'},fetch:async()=>({ok:false,status:422,headers:{get:()=> 'application/json'},json:async()=>({validation_errors:[{loc:['body','task'],type:'string_too_short',ctx:{min_length:3},msg:'raw English validator',input:'SECRET-FIXTURE'}]})})};
+english.window=english;vm.createContext(english);
+for(const file of ['i18n.js','api-client.js'])vm.runInContext(fs.readFileSync(process.argv[2]+'/'+file,'utf8'),english);
+await assert.rejects(english.CodexApi.request('/api/settings'),e=>e.message==='Task: Enter at least 3 characters.'&&!JSON.stringify(e.technical).includes('SECRET-FIXTURE'));
+english.fetch=async()=>{throw new TypeError('network')};
+await assert.rejects(english.CodexApi.request('/api/settings'),e=>e.kind==='offline'&&e.message==='Cannot reach the local server. Make sure the application is running.');
+english.fetch=async()=>({ok:false,status:400,headers:{get:()=> 'application/json'},json:async()=>({detail:'Неизвестная ошибка с пользовательским содержимым'})});
+await assert.rejects(english.CodexApi.request('/api/settings'),e=>!/[А-Яа-яЁё]/.test(e.message)&&e.technical==='Неизвестная ошибка с пользовательским содержимым');
 console.log(JSON.stringify({result:'PASS'}));})().catch(e=>{console.error(e);process.exitCode=1});

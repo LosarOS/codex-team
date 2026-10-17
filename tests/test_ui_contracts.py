@@ -118,3 +118,17 @@ def test_builtin_pack_titles_and_descriptions_are_russian():
         assert re.search("[А-Яа-яЁё]", pack["title"]) or pack["title"] == "ELMA365"
         assert re.search("[А-Яа-яЁё]", pack["description"])
         assert pack["name"] == path.stem
+
+
+def test_localization_preserves_user_data_and_contract_keys():
+    node = os.environ.get("CODEX_TEAM_TEST_NODE") or shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for localization contracts")
+    result = subprocess.run(
+        [node, str(Path(__file__).with_name("i18n.cjs")), str(STATIC)],
+        capture_output=True, text=True, encoding="utf-8", timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout.strip())
+    assert report["result"] == "PASS"
+    assert report["catalog"] >= 1000
