@@ -2,6 +2,15 @@
 
 (() => {
   const I = (typeof window !== "undefined" ? window.CodexI18n : null) || {language:"ru",setLanguage:()=>{},t:v=>v,tr:(s,...v)=>s.reduce((a,x,i)=>a+x+(v[i]??""),"")};
+  I.register?.({
+    "Ваша команда для разработки, анализа и сопровождения проектов":"Your team for development, analysis and project maintenance",
+    "Активные запуски":"Active runs", "Создать задачу":"Create task", "Текущие запуски":"Current runs", "Последние проекты":"Recent projects",
+    "Все проекты →":"All projects →", "Все действия →":"All actions →",
+    "Последние обновления запусков":"Recent run updates", "Все запросы обработаны":"All requests handled",
+    "Нет ожидающих решений. Команда продолжит работу в рамках выбранных разрешений.":"No pending decisions. The team continues within the selected permissions.",
+    "Подключите проект, чтобы начать работу.":"Connect a project to get started.",
+    "Здесь появятся состояния и время обновления ваших запусков.":"Run statuses and update times will appear here."
+  });
   const $ = (id) => document.getElementById(id);
   const qa = (selector) => Array.from(document.querySelectorAll(selector));
   const state = {
@@ -157,7 +166,7 @@
     if(page==="agents"||page==="settings")loadModels();
     if(page==="history")loadHistory();
     if(page==="history")loadProjects();
-    if(page==="projects")loadProjects();
+    if(page==="projects"||page==="workbench")loadProjects();
     if(page==="packs")renderPacks();
     if(page==="actions")loadActions();
     if(page==="settings")loadProviders();
@@ -805,7 +814,7 @@
       if(responses[3].status==="fulfilled")state.packs=Array.isArray(responses[3].value)?responses[3].value:responses[3].value.packs||[];
       if(responses[2].status==="fulfilled"||responses[3].status==="fulfilled"){renderRegistry();state.lastRegistry=Date.now();}
       if(responses[5].status==="fulfilled"){state.providers=responses[5].value;renderProviders();renderConnection();}
-      if(state.online){await loadActions();if(["projects","history"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
+      if(state.online){await loadActions();if(["projects","history","workbench"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
       if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
     }catch(error){toast(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
   }
@@ -931,9 +940,41 @@
   async function setOnboarding(dismissed) { $("onboarding").hidden=dismissed;storageSet("codex-team-onboarding",dismissed?"dismissed":"");if(state.online){try{const saved=await api("/api/settings","POST",{onboarding_dismissed:dismissed});if(state.status)state.status.settings=saved;}catch(error){toast(I.t("Начало работы сохранено локально. Серверные настройки временно недоступны."),true);}} }
   function renderDashboard() {
     const path=$("workspace").value.trim();$("dashboard-project").textContent=path?path.split(/[\\/]/).filter(Boolean).pop():I.t("Не выбран");$("dashboard-project").title=path;
-    const active=state.runs.find(r=>activeStates.has(normalizedState(r.state)));$("dashboard-active").textContent=active?`${roleName(active.current_role)} · ${stateLabels[normalizedState(active.state)]||active.state}`:I.t("Нет активной задачи");
+    const active=state.runs.filter(r=>activeStates.has(normalizedState(r.state)));$("dashboard-active").textContent=formatNumber.format(active.length);
+    renderWorkspacePanels();
     $("dashboard-actions").textContent=state.actions.length;const total=loadedUsageTotals().total;$("dashboard-usage").textContent=total===null?"—":formatNumber.format(total);
     $("onboarding-codex").textContent=state.health?.checks?.codex===false?I.t("Codex: требуется настройка"):I.t("Проверить Codex");$("onboarding-auth").textContent=authConnected()?I.t("ChatGPT подключён ✓"):I.t("Подключить ChatGPT");
+  }
+  function renderWorkspacePanels() {
+    const signature=JSON.stringify([state.projects,state.projectsError,state.actions,state.actionsError,state.runs.map(r=>[r.id,r.task,r.state,r.updated_at,r.created_at])]);
+    if(signature===state.dashboardSignature)return;
+    state.dashboardSignature=signature;
+    const projects=$("dashboard-project-list"),attention=$("dashboard-attention-list"),activity=$("dashboard-activity-list");
+    if(!projects||!attention||!activity)return;
+    projects.replaceChildren();attention.replaceChildren();activity.replaceChildren();
+    for(const project of state.projects.slice(0,4)){
+      const row=node("button","dashboard-row dashboard-project-row");row.type="button";
+      const icon=node("span","dashboard-row-icon","Git"),copy=node("span","dashboard-row-copy");
+      copy.append(node("strong","",project.name||project.path),node("span","mono muted",project.path));
+      const status=node("span",`status-dot ${project.error?"red":project.dirty?"yellow":project.dirty===false?"green":""}`);
+      status.title=project.error?I.t("Нужна проверка"):project.dirty?I.t("Есть изменения"):project.dirty===false?I.t("Чистый Git"):I.t("Нет данных");
+      row.append(icon,copy,status);row.addEventListener("click",()=>useProject(project));projects.append(row);
+    }
+    if(!state.projects.length)projects.append(node("p","dashboard-empty muted",state.projectsError||I.t("Подключите проект, чтобы начать работу.")));
+    for(const action of state.actions.slice(0,3)){
+      const row=node("button","dashboard-row dashboard-action-row");row.type="button";
+      const copy=node("span","dashboard-row-copy");copy.append(node("strong","",roleName(action.role)||I.t("Требуется действие")),node("span","muted",action.reason||I.t("Нужно решение пользователя")));
+      row.append(node("span","dashboard-row-icon attention-icon","!"),copy);row.addEventListener("click",()=>setPage("actions"));attention.append(row);
+    }
+    if(!state.actions.length){attention.append(node("strong",state.actionsError?"dashboard-error":"dashboard-clear",state.actionsError||I.t("Все запросы обработаны")));if(!state.actionsError)attention.append(node("p","muted",I.t("Нет ожидающих решений. Команда продолжит работу в рамках выбранных разрешений.")));}
+    const recent=[...state.runs].sort((a,b)=>(Date.parse(b.updated_at||b.created_at)||0)-(Date.parse(a.updated_at||a.created_at)||0)).slice(0,5);
+    for(const run of recent){
+      const row=node("button","dashboard-row dashboard-update-row");row.type="button";
+      const copy=node("span","dashboard-row-copy");copy.append(node("strong","",run.task||run.id),node("span","muted",stateLabels[normalizedState(run.state)]||run.state));
+      const time=node("time","muted",prettyDate(run.updated_at||run.created_at));if(run.updated_at||run.created_at)time.dateTime=run.updated_at||run.created_at;
+      row.append(node("span",`status-dot ${normalizedState(run.state)==="FAILED"?"red":normalizedState(run.state)==="DONE"?"green":"yellow"}`),copy,time);row.addEventListener("click",()=>selectRun(run.id));activity.append(row);
+    }
+    if(!recent.length)activity.append(node("p","dashboard-empty muted",I.t("Здесь появятся состояния и время обновления ваших запусков.")));
   }
   function acceptRuns(response) { state.runs=Array.isArray(response)?response:response.items||response.runs||[];state.runTotal=response.total??state.runs.length;state.allUsage=response.usage_total||null;renderRuns();renderDashboard(); }
   async function loadHistory(reset=false) {
@@ -1077,8 +1118,14 @@
     try{await api(`/api/runs/${encodeURIComponent(run.id)}/${kind}`,removing?"DELETE":"POST",removing?{confirmed:true}:{});toast(removing?I.t("Рабочая копия удалена. История сохранена."):I.t("Запуск архивирован. Результаты сохранены."));await refresh();}
     catch(error){toast(error.message,true);}finally{button.disabled=false;}
   }
-  async function loadProjects() { try{const response=await api("/api/projects");state.projects=Array.isArray(response)?response:response.items||response.projects||[];state.projectsError=null;const selected=$("history-project").value,all=node("option","",I.t("Все проекты"));all.value="";$("history-project").replaceChildren(all,...state.projects.map(p=>{const o=node("option","",p.name||p.path);o.value=p.path;return o;}));$("history-project").value=selected;renderProjects();renderProjectPreflight();}catch(error){state.projectsError=error.status===404?I.t("Управление проектами недоступно в этой версии сервера."):error.message;renderProjects();} }
+  function loadProjects() {
+    if(state.projectsRequest)return state.projectsRequest;
+    state.projectsRequest=loadProjectsData().finally(()=>{state.projectsRequest=null;});
+    return state.projectsRequest;
+  }
+  async function loadProjectsData() { try{const response=await api("/api/projects");state.projects=Array.isArray(response)?response:response.items||response.projects||[];state.projectsError=null;const selected=$("history-project").value,all=node("option","",I.t("Все проекты"));all.value="";$("history-project").replaceChildren(all,...state.projects.map(p=>{const o=node("option","",p.name||p.path);o.value=p.path;return o;}));$("history-project").value=selected;renderProjects();renderProjectPreflight();}catch(error){state.projectsError=error.status===404?I.t("Управление проектами недоступно в этой версии сервера."):error.message;renderProjects();} }
   function renderProjects() {
+    renderDashboard();
     const c=$("projects-list");if(state.projectsError){empty(c,I.t("Проекты временно недоступны"),state.projectsError);return;}if(!state.projects.length){empty(c,I.t("Добавьте свой первый проект"),I.t("Выберите локальный Git-репозиторий. Его файлы останутся на месте."));return;}
     c.replaceChildren(...state.projects.map(project=>{
       const card=node("article","panel project-card");card.append(node("h3","",project.name||project.path?.split(/[\\/]/).pop()),node("p","project-path mono muted",project.path));
@@ -1140,6 +1187,11 @@
   async function loadRecovery() {if(typeof desktopBridge()?.recovery_status!=="function")return;try{const r=await desktopBridge().recovery_status();$("recovery-banner").hidden=!r?.abnormal;if(r?.message)$("recovery-message").textContent=r.message;}catch(_){/* optional native status */} }
   async function savePartialSettings(values,errorId) {try{const saved=await api("/api/settings","POST",values);if(state.status)state.status.settings=saved;showFormError(errorId,"");toast(I.t("Настройки сохранены."));return saved;}catch(error){showFormError(errorId,error.message);return null;} }
   function bindFeatures() {
+    qa("[data-dashboard-text]").forEach(el=>el.textContent=I.t(el.dataset.dashboardText));
+    $("dashboard-create-task")?.addEventListener("click",()=>{
+      $("task-composer").scrollIntoView({block:"start",behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+      $("task").focus({preventScroll:true});
+    });
     document.querySelector(".skip-link")?.addEventListener("click",event=>{event.preventDefault();$("main").focus();});
     $("agents-search").addEventListener("input",()=>{state.agentsSignature="";renderRegistry();});$("packs-search").addEventListener("input",renderPacks);
     $("role-defaults-form").addEventListener("submit",async event=>{event.preventDefault();const defaults={...(state.status?.settings?.role_model_defaults||{})};for(const [name,{model,effort}]of state.roleDefaultInputs||[]){const modelId=model.value.trim(),reasoning=effort.value||null,error=validateModel(modelId,reasoning);if(error){showFormError("role-defaults-error",`${roleName(name)}: ${error}`);model.focus();return;}if(modelId||reasoning)defaults[name]={model:modelId||null,reasoning_effort:reasoning};else delete defaults[name];}$("save-role-defaults-button").disabled=true;try{const saved=await savePartialSettings({role_model_defaults:defaults},"role-defaults-error");if(saved){state.roleDefaultsDirty=false;renderRoleModelDefaults();}}finally{$("save-role-defaults-button").disabled=false;}});
