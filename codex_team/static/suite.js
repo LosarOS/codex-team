@@ -67,7 +67,7 @@
       button(I.t('История архитектуры'),async()=>output(top,await req(ppath('architecture')+'?limit=20&offset=0'))),
       button(I.t('Обновить анализ'),async()=>{message(I.t('Анализ файлов…'));await req(ppath('intelligence'),'POST',{refresh:true});await load();},true));
     top.append(toolbar);
-    cards(top,[[I.t('Исходные файлы'),d.file_count??paths.length],[I.t('Модули проекта'),moduleItems.length],[I.t('Технологии'),technologies.length],[I.t('Версия контекста'),response?.version??I.t('Нет данных')]]);
+    cards(top,[[I.t('Исходные файлы'),d.file_count??(Array.isArray(d.files)?paths.length:null)],[I.t('Модули проекта'),Array.isArray(d.modules)?moduleItems.length:null],[I.t('Технологии'),Array.isArray(d.technologies)?technologies.length:null],[I.t('Версия контекста'),response?.version??I.t('Нет данных')]]);
     const meta=el('div','intelligence-meta');meta.append(el('code','',d.head||d.git_head||I.t('Нет данных')));
     if(d.duration_ms!=null)meta.append(el('span','suite-muted',I.tr`Время локального анализа: ${d.duration_ms} мс`));top.append(meta);
     if(d.limited)top.append(el('p','suite-muted',I.t('Частичные данные: достигнут лимит анализа файлов.')));
