@@ -60,3 +60,20 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
     assert '"$tagged_commit" != "$SOURCE_COMMIT"' in WORKFLOW
     assert 'refusing to mislabel binaries' in WORKFLOW
     assert 'git push --force' not in WORKFLOW
+
+
+def test_release_uses_russian_notes_from_the_same_verified_source():
+    assert 'docs/releases/v1.0.0-rc5.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    notes = (ROOT / 'docs/releases/v1.0.0-rc5.md').read_text(encoding='utf-8')
+    for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
+        assert label in notes
+
+
+def test_installed_package_checks_localized_settings_and_i18n_asset():
+    assert "'/i18n.js'" in SMOKE
+    assert '$report.appearance_settings_verified = $true' in SMOKE
+    assert "'/api/settings'" in SMOKE
+    verification = (ROOT / 'packaging/verify_bundle.py').read_text()
+    assert 'codex_team/static/i18n.js' in verification

@@ -60,7 +60,7 @@ try {
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -69,6 +69,12 @@ try {
     $agents = @(Invoke-RestMethod -Uri ($baseUrl + '/api/agents') -TimeoutSec 10)
     $packs = @(Invoke-RestMethod -Uri ($baseUrl + '/api/packs') -TimeoutSec 10)
     if (-not $agents.Count -or -not $packs.Count) { throw 'Installed agent/pack resources were not loaded.' }
+    # Verify actual persisted language/theme settings in the installed frozen backend.
+    $appearance = '{"theme":"neon-blue","language":"en"}'
+    $null = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -Method Post -ContentType 'application/json' -Body $appearance -TimeoutSec 10
+    $savedSettings = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
+    if ($savedSettings.theme -ne 'neon-blue' -or $savedSettings.language -ne 'en') { throw 'Installed appearance settings did not persist.' }
+    $report.appearance_settings_verified = $true
     $report.agent_count = $agents.Count
     $report.pack_count = $packs.Count
     $newProject = @{ name = 'Проверка проекта'; path = (Join-Path $temporary 'Новый проект') } | ConvertTo-Json
