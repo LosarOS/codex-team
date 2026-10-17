@@ -65,3 +65,20 @@ def test_observed_base64_here_string_qa_process_tracks_exact_variable_chain(wrap
 def test_direct_python_literal_mentions_are_not_test_invocations():
     assert not is_test_execution(command('python -c "print(\'unittest.TextTestRunner().run(suite)\')"'))
     assert not is_test_execution(command('python -c "print(\'pytest.main([])\')"'))
+
+
+@pytest.mark.parametrize('executable', [
+    'python', 'python3', 'python3.12', '/usr/bin/python3.12',
+    "'/opt/Python Runtime/bin/python3.13'", '"C:\\Python\\python3.12.exe"',
+])
+def test_versioned_python_test_invocations_are_recognized(executable):
+    script = executable + " -c 'import unittest; unittest.main()'"
+    assert successful_test_execution(command(script))
+
+
+@pytest.mark.parametrize('executable', [
+    'notpython3.12', '/tmp/notpython3.12', 'python3.12-backup',
+    "'/tmp/notpython3.12'", 'python3.12.exe.bak',
+])
+def test_similar_executable_names_do_not_fabricate_test_execution(executable):
+    assert not is_test_execution(command(executable + " -c 'import unittest; unittest.main()'"))

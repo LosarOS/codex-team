@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -74,10 +75,12 @@ def test_source_uses_base_interpreter_not_application_executable(tmp_path, monke
     project = tmp_path / "project"
     project.mkdir()
     monkeypatch.setattr(sys, "base_prefix", str(base))
-    monkeypatch.setattr(sys, "executable", str(tmp_path / "application/CodexTeam.exe"))
+    executable = base / ("python.exe" if os.name == "nt" else "python")
+    executable.write_bytes(b"interpreter fixture")
+    monkeypatch.setattr(sys, "executable", str(executable))
     monkeypatch.setattr(runtimes.shutil, "which", lambda name, path=None: None)
     report = runtimes.discover(project, resources=tmp_path, environ={}, frozen=False)
-    assert info(report, "python")["executable"] == str(base / "python.exe")
+    assert info(report, "python")["executable"] == str(executable)
     assert info(report, "python")["source"] == "application-python"
 
 
@@ -151,14 +154,15 @@ def test_manifest_scan_never_executes_scripts_or_reads_dependency_tree(tmp_path,
 @pytest.mark.parametrize("name", ["node", "dotnet", "java", "cargo"])
 def test_environment_tools_have_narrow_roots_and_clear_availability(tmp_path, bundle, monkeypatch, name):
     tool = tmp_path / (name + "-installation")
-    executable = tool / ("bin/java.exe" if name == "java" else "bin/cargo.exe" if name == "cargo" else name + ".exe")
+    suffix = ".exe" if os.name == "nt" else ""
+    executable = tool / (("bin/" if name in {"java", "cargo"} else "") + name + suffix)
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"tool fixture")
     if name == "dotnet":
         (tool / "sdk").mkdir()
         (tool / "shared").mkdir()
     elif name == "java":
-        (tool / "bin/javac.exe").write_bytes(b"compiler")
+        (tool / ("bin/javac" + suffix)).write_bytes(b"compiler")
         (tool / "lib").mkdir()
     elif name == "cargo":
         (tool / "credentials.toml").write_text("secret=must-never-read", encoding="utf-8")
@@ -175,9 +179,10 @@ def test_environment_tools_have_narrow_roots_and_clear_availability(tmp_path, bu
 def test_java_runtime_without_compiler_and_dotnet_without_sdk_require_setup(tmp_path, bundle):
     java, dotnet = tmp_path / "java", tmp_path / "dotnet"
     (java / "bin").mkdir(parents=True)
-    (java / "bin/java.exe").write_bytes(b"JRE only")
+    suffix = ".exe" if os.name == "nt" else ""
+    (java / ("bin/java" + suffix)).write_bytes(b"JRE only")
     dotnet.mkdir()
-    (dotnet / "dotnet.exe").write_bytes(b"runtime only")
+    (dotnet / ("dotnet" + suffix)).write_bytes(b"runtime only")
     report = runtimes.discover(tmp_path, resources=bundle, environ={"JAVA_HOME": str(java), "DOTNET_ROOT": str(dotnet)})
     assert info(report, "java")["status"] == "MISSING"
     assert info(report, "dotnet")["status"] == "MISSING"
@@ -189,8 +194,13 @@ def test_powershell_hints_escape_paths_and_do_not_interpolate_repo_script(tmp_pa
     (project / "test_number.py").write_text("import unittest", encoding="utf-8")
     command = runtimes.discover(project, resources=bundle, environ={})["commands"][0]
     assert "''" in command["powershell"]
-    assert "System.Diagnostics.Process" in command["powershell"]
-    assert "StartInfo.WorkingDirectory" in command["powershell"]
+    # Exercise the Windows wrapper on every host, while checking that discovery
+    # selects the platform-appropriate invocation.
+    windows_command = runtimes.powershell_python_process(command["argv"], command["working_directory"])
+    assert "System.Diagnostics.Process" in windows_command
+    assert "StartInfo.WorkingDirectory" in windows_command
+    assert "" in windows_command
+    assert command["powershell"] == (windows_command if os.name == "nt" else runtimes.powershell_command(command["argv"]))
     assert "Set-Location" not in command["powershell"]
     assert "pip install" not in command["powershell"]
 
@@ -246,8 +256,10 @@ def test_generated_unittest_command_really_runs_current_workspace_without_byteco
     (project / "test_checks.py").write_text(tests, encoding="utf-8")
     report = runtimes.discover(project, environ={}, frozen=False)
     command = report["commands"][0]
-    result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", command["powershell"]],
-                            cwd=command["working_directory"], capture_output=True, text=True, timeout=20)
+    invocation = (["powershell", "-NoProfile", "-NonInteractive", "-Command", command["powershell"]]
+                  if os.name == "nt" else command["argv"])
+    result = subprocess.run(invocation, cwd=command["working_directory"],
+                            capture_output=True, text=True, timeout=20)
     output = result.stdout + result.stderr
     assert result.returncode == (0 if count == 4 else 1), output
     assert f"Ran {abs(count) if count != -1 else 4} tests" in output

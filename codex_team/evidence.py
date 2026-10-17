@@ -167,7 +167,9 @@ def is_test_execution(command: dict) -> bool:
             return True
         if re.match(r"^(?:&\s*)?['\"]?(?:[^\s'\"]*[/\\])?(?:dotnet\s+test|cargo\s+test|npm\s+(?:test|run\s+test)|ctest|node\b.*--test)", script, re.I):
             return True
-        python = re.match(r"^(?:&\s*)?(?:'[^']*python(?:\.exe)?'|\"[^\"]*python(?:\.exe)?\"|[^\s'\"]*python(?:\.exe)?)\s+(.+)$", script, re.I | re.S)
+        executable = r"python(?:3(?:\.\d+)?)?(?:\.exe)?"
+        python = re.match(r"^(?:&\s*)?(?:'(?:[^']*[/\\])?" + executable + r"'|\"(?:[^\"]*[/\\])?" + executable +
+                          r"\"|(?:[^\s'\"]*[/\\])?" + executable + r")\s+(.+)$", script, re.I | re.S)
         if python:
             args = python.group(1)
             if _test_arguments(args):
