@@ -3,13 +3,13 @@
    colours deliberately keep their meaning when a user changes the accent. */
 :root {
   color-scheme:dark;
-  --bg:#090d19; --panel:#101727; --raised:#182137;
-  --sidebar:#0b1020; --input:#0c1323; --code:#080f1c; --hover:#202b43;
-  --line:#35415d; --line-soft:#242e45;
+  --bg:#070b14; --panel:#0b1321; --raised:#131f33;
+  --sidebar:#080e1a; --input:#0a1120; --code:#060d18; --hover:#1a2942;
+  --line:#314060; --line-soft:#1d2941;
   --text:#f0f3ff; --muted:#acb7cf; --faint:#96a4c1;
-  --accent:#7543e8; --accent-text:#c9b5ff; --accent-ink:#ffffff;
+  --accent:#6430e7; --accent-text:#bea6ff; --accent-ink:#ffffff;
   --green:#69dfb2; --red:#ff98ac; --yellow:#f4cd83; --blue:#94c9ff;
-  --radius:14px;
+  --radius:8px;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px;
   --shadow:0 18px 48px #00000038;
   --accent-hover:color-mix(in srgb,var(--accent) 84%,var(--text));
@@ -25,10 +25,10 @@
 }
 /* Obsidian Violet is also the no-preference foundation, avoiding a theme flash. */
 :root[data-theme="obsidian-violet"],:root[data-theme="purple-neon"] {
-  --bg:#090d19; --panel:#101727; --raised:#182137; --sidebar:#0b1020;
-  --input:#0c1323; --code:#080f1c; --hover:#202b43; --line:#35415d; --line-soft:#242e45;
+  --bg:#070b14; --panel:#0b1321; --raised:#131f33; --sidebar:#0b1020;
+  --input:#0c1323; --code:#080f1c; --hover:#202b43; --line:#314060; --line-soft:#1d2941;
   --text:#f0f3ff; --muted:#acb7cf; --faint:#96a4c1;
-  --accent:#7543e8; --accent-text:#c9b5ff; --accent-ink:#ffffff;
+  --accent:#6430e7; --accent-text:#bea6ff; --accent-ink:#ffffff;
 }
 :root[data-theme="neon-blue"] {
   --bg:#080f1a; --panel:#101c2b; --raised:#182a3d; --sidebar:#0a1422;
