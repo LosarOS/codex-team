@@ -75,3 +75,32 @@ def test_control_center_wire_contracts(local_app):
     assert not client.get('/api/runs?summary=true').json()['items']
     assert client.request('DELETE', '/api/packs/ui-pack', json={}).status_code == 200
     assert client.request('DELETE', '/api/agents/ui-reader', json={}).status_code == 200
+
+
+def test_every_authored_ui_asset_is_served_by_production_backend(local_app):
+    from html.parser import HTMLParser
+    class Assets(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.paths = []
+        def handle_starttag(self, tag, attributes):
+            values = dict(attributes)
+            if tag == 'script' and values.get('src'):
+                self.paths.append(values['src'])
+            if tag == 'link' and values.get('rel') == 'stylesheet':
+                self.paths.append(values['href'])
+    client, *_ = local_app
+    markup = Assets()
+    markup.feed(client.get('/').text)
+    assert '/i18n.js' in markup.paths and '/i18n-catalog.js' in markup.paths
+    for asset in [*markup.paths, *[f'/icon-{name}.svg' for name in ('project', 'run', 'action', 'tokens')]]:
+        result = client.get(asset)
+        assert result.status_code == 200, asset
+        assert result.content, asset
+        assert 'nosniff' == result.headers['x-content-type-options']
+        if asset.endswith('.js'):
+            assert 'javascript' in result.headers['content-type']
+        elif asset.endswith('.svg'):
+            assert 'image/svg+xml' in result.headers['content-type']
+    for private in ['/auth.json', '/state.db', '/.env', '/server.py']:
+        assert client.get(private).status_code == 404

@@ -472,4 +472,14 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.get("/style.css")
     def css():
         return FileResponse(static_root / "style.css", media_type="text/css")
+    @app.get("/{asset_name}")
+    def additional_ui_asset(asset_name: str):
+        # Explicit whitelist: localization and local icons must work in the frozen
+        # app as well as fixture servers; never expose arbitrary workspace files.
+        assets = {"i18n.js": "text/javascript", "i18n-catalog.js": "text/javascript",
+                  **{f"icon-{name}.svg": "image/svg+xml" for name in ("project", "run", "action", "tokens")}}
+        if asset_name not in assets:
+            raise HTTPException(status_code=404, detail="Ресурс интерфейса не найден.")
+        return FileResponse(static_root / asset_name, media_type=assets[asset_name])
+
     return app

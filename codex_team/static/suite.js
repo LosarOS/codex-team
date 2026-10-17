@@ -5,7 +5,8 @@
   I.register?.({
     'Исходные файлы':'Source files','Модули проекта':'Project modules','Версия контекста':'Context version',
     'Архитектура проекта':'Project architecture','Модули верхнего уровня из Git. Связи между модулями не предполагаются.':'Top-level modules from Git. Dependencies between modules are not inferred.',
-    'Информация о модуле':'Module inspector','Модуль':'Module','Уверенность':'Confidence','Источник':'Source','Показать файлы модуля':'Show module files',
+    'Каталоги проекта из Git. Линии показывают принадлежность проекту, а не зависимости кода.':'Project directories from Git. Lines show project membership, not code dependencies.',
+    'Проект':'Project','Информация о модуле':'Module inspector','Модуль':'Module','Уверенность':'Confidence','Источник':'Source','Показать файлы модуля':'Show module files',
     'Нет совпадений.':'No matches.','Выберите модуль для просмотра источников.':'Select a module to inspect its sources.','Файлы и источники':'Files and sources',
     'Ограничения анализа':'Analysis limitations','Добавить запись или техническое решение':'Add knowledge or a technical decision',
     'Статический анализ деклараций; зависимости времени выполнения и точная семантика модулей не определяются.':'Static declaration analysis; runtime dependencies and exact module semantics are not determined.'
@@ -74,7 +75,7 @@
     if(d.stale)top.append(el('p','suite-error',I.t('Текущий коммит Git изменился. Контекст устарел; обновите анализ.')));
 
     const architecture=panel(I.t('Архитектура проекта'));architecture.classList.add('intelligence-architecture');
-    architecture.append(el('p','suite-muted',I.t('Модули верхнего уровня из Git. Связи между модулями не предполагаются.')));
+    architecture.append(el('p','suite-muted',I.t('Каталоги проекта из Git. Линии показывают принадлежность проекту, а не зависимости кода.')));
     const moduleGrid=el('div','intelligence-module-grid'), inspector=el('aside','intelligence-inspector');
     inspector.setAttribute('aria-live','polite');const moduleButtons=[];
     const fileSearch=input();fileSearch.placeholder=I.t('Фильтр путей');
@@ -99,7 +100,11 @@
       moduleButtons.push(card);moduleGrid.append(card);
     }
     if(!moduleItems.length)empty(moduleGrid,I.t('Сначала обновите анализ проекта.'));
-    const map=el('div','intelligence-map');map.append(moduleGrid,inspector);architecture.append(map);
+    const map=el('div','intelligence-map'),canvas=el('div','intelligence-canvas');
+    const projectNode=el('div','intelligence-project-node');
+    const selectedProject=projectList.find(item=>item.id===project.value);
+    projectNode.append(el('span','intelligence-project-emblem',''),el('strong','',selectedProject?.name||I.t('Проект')));
+    canvas.append(projectNode,moduleGrid);map.append(canvas,inspector);architecture.append(map);
     if(moduleItems.length)inspectModule(moduleItems[0],0);else empty(inspector,I.t('Выберите модуль для просмотра источников.'));
     const tech=el('div','intelligence-technologies');
     for(const item of technologies){const name=typeof item==='string'?item:item.name;const chip=el('span','suite-badge',name||I.t('Нет данных'));if(item.source)chip.title=item.source;tech.append(chip);}
