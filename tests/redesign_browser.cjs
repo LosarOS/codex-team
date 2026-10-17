@@ -62,7 +62,7 @@ function fixture(url,method,body){const p=url.pathname;
  }
  unknown.push(p);return {detail:'Unmapped explicit fixture: '+p};
 }
-const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture(url,req.method,raw?JSON.parse(raw):{})));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
+const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture(url,req.method,raw?JSON.parse(raw):{})));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
