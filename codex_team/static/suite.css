@@ -73,3 +73,76 @@
 @media(prefers-reduced-motion:reduce) {
   .suite * {scroll-behavior:auto!important;transition:none!important}
 }
+
+/* The development tools use the same surfaces and control hierarchy as core pages. */
+.suite-heading {padding-bottom:20px;border-bottom:1px solid var(--line-soft);gap:12px 24px}
+.suite-heading h2 {font-size:30px;font-weight:650;letter-spacing:-.035em}
+.suite-heading>p {margin-bottom:2px}
+.suite-heading>.suite-field {margin-left:auto;min-width:260px;max-width:420px;flex:0 1 360px}
+.suite-status {padding:10px 14px;background:var(--input);border:1px solid var(--line-soft);border-radius:9px;min-height:42px;margin:0 0 20px}
+.suite-status:empty {display:none}
+.suite-status.suite-error {background:var(--danger-soft);border-color:color-mix(in srgb,var(--red) 35%,var(--line-soft))}
+.suite-body {gap:20px}
+.suite-panel {background:linear-gradient(145deg,var(--surface-highlight),var(--panel) 65%);box-shadow:var(--surface-shadow);padding:22px}
+.suite-panel h3 {font-size:18px;margin-bottom:18px}
+.suite-panel h4 {font-size:14px}
+.suite button {background:var(--raised);border-color:var(--line-soft);transition:background .16s ease,border-color .16s ease,box-shadow .16s ease}
+.suite button:hover:not(:disabled) {border-color:color-mix(in srgb,var(--accent-text) 40%,var(--line));background:var(--hover)}
+.suite button.primary {background:var(--accent);border-color:color-mix(in srgb,var(--accent-text) 20%,var(--accent));box-shadow:var(--accent-glow)}
+.suite button.primary:hover:not(:disabled) {background:var(--accent-hover);filter:none}
+.suite button:disabled {cursor:not-allowed;box-shadow:none}
+.suite-output {border-color:var(--line-soft);border-radius:10px;padding:16px;tab-size:4}
+.suite-row {padding:16px 0}
+.suite-badge {border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.02em;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.suite-badge[data-status=PASS] {background:var(--success-soft);border-color:color-mix(in srgb,var(--green) 30%,var(--line-soft))}
+.suite-badge[data-status=FAIL],.suite-badge[data-status=BLOCKED] {background:var(--danger-soft);border-color:color-mix(in srgb,var(--red) 30%,var(--line-soft))}
+.suite-badge[data-status=PARTIAL] {background:var(--warning-soft);border-color:color-mix(in srgb,var(--yellow) 30%,var(--line-soft))}
+.suite-badge[data-status=RUNNING] {background:var(--info-soft);border-color:color-mix(in srgb,var(--blue) 30%,var(--line-soft))}
+.suite-metrics {gap:14px}
+.suite-metric {background:linear-gradient(140deg,var(--accent-soft),var(--input));border-color:var(--line-soft);border-radius:11px;padding:18px;border-top:2px solid color-mix(in srgb,var(--accent) 60%,var(--line-soft))}
+.suite-metric strong {font-size:25px;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.suite-checkpoint {position:relative;border-color:var(--accent);padding:4px 0 4px 20px;margin-left:6px}
+.suite-checkpoint::before {content:"";position:absolute;left:-5px;top:23px;width:8px;height:8px;border-radius:50%;background:var(--accent-text);box-shadow:0 0 0 4px var(--accent-soft)}
+.suite-preview {background:var(--warning-soft);border-color:color-mix(in srgb,var(--yellow) 40%,var(--line-soft));border-radius:10px;padding:16px}
+.suite-file-list button {font-family:Consolas,"Cascadia Code",monospace;font-size:12px;width:100%;text-align:left;margin-bottom:6px}
+.suite-role {font-variant-numeric:tabular-nums}
+.suite meter {height:12px;border:0;border-radius:6px;overflow:hidden;background:var(--raised)}
+.suite meter::-webkit-meter-bar {background:var(--raised);border:0;border-radius:6px}
+.suite meter::-webkit-meter-optimum-value {background:var(--accent);border-radius:6px}
+.suite meter::-moz-meter-bar {background:var(--accent);border-radius:6px}
+.suite-ai-operation {border-color:color-mix(in srgb,var(--accent) 40%,var(--line-soft));background:linear-gradient(130deg,var(--accent-soft),var(--input))}
+.suite-wizard-steps {gap:10px}
+.suite-wizard-steps li {background:var(--input);border-color:var(--line-soft);color:var(--muted)}
+.suite summary {color:var(--accent-text);line-height:1.6}
+@media(max-width:1000px) {.suite-heading>.suite-field {margin-left:0;flex-basis:100%;max-width:100%}}
+@media(max-width:650px) {
+  .suite-heading h2 {font-size:27px}
+  .suite-heading {padding-bottom:16px;margin-bottom:20px}
+  .suite-heading>.suite-field {min-width:0;width:100%}
+  .suite-panel {padding:18px}
+  .suite-columns {gap:16px}
+  .suite-metrics {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .suite-metric {padding:14px}
+  .suite-metric strong {font-size:21px}
+  .suite-role {grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+/* Identifiers are technical context, not oversized numeric metrics. */
+.suite[data-feature="intelligence"] .suite-metric:first-child strong {
+  font:12px/1.8 Consolas,"Cascadia Code",monospace;letter-spacing:0;word-break:break-all;
+}
+.suite[data-feature="intelligence"] .suite-metric:last-child strong {font-size:16px;line-height:1.65;letter-spacing:0}
+@media(min-width:1200px) {
+  .suite[data-feature="intelligence"] .suite-body {grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}
+  .suite[data-feature="intelligence"] .suite-body>.suite-panel:first-child {grid-column:1/-1}
+  .suite[data-feature="intelligence"] .suite-body>.suite-panel:nth-child(2) .suite-row {background:var(--input);border:1px solid var(--line-soft);border-radius:10px;margin-bottom:10px;padding:14px 16px}
+  .suite[data-feature="budget"] .suite-body {grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}
+  .suite[data-feature="budget"] .suite-body>.suite-panel:first-child,
+  .suite[data-feature="budget"] .suite-body>.suite-panel:nth-child(n+4) {grid-column:1/-1}
+}
+/* Keep project context beside the title rather than adding an empty header row. */
+@media(min-width:1001px) {
+  .suite-heading {display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,340px);column-gap:24px;row-gap:8px;align-items:start}
+  .suite-heading .suite-title {grid-column:1;grid-row:1}
+  .suite-heading>.suite-description {grid-column:1;grid-row:2;margin:0}
+  .suite-heading>.suite-field {grid-column:2;grid-row:1/3;margin:0;min-width:0;max-width:none;width:100%;align-self:center}
+}
