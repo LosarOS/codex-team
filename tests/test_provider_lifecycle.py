@@ -44,7 +44,7 @@ class Client:
 
 @pytest.fixture
 def mock_sdk(monkeypatch):
-    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig())
+    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig(config_overrides=('default_permissions="lifecycle-test-profile"',)))
     monkeypatch.setattr(module, "CodexClient", Client)
     return CodexProvider(Path.cwd())
 
@@ -158,7 +158,7 @@ def test_api_login_never_starts_global_chatgpt_login(monkeypatch):
         def account_login_start(self, params):
             calls.append(params)
             return {}
-    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig())
+    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig(config_overrides=('default_permissions="lifecycle-test-profile"',)))
     monkeypatch.setattr(module, "CodexClient", ApiClient)
     provider = CodexProvider(Path.cwd(), backend="openai_api", secret_store=MemorySecretStore())
     provider.secret_store.save("sk-mock-review-only")
@@ -176,7 +176,7 @@ def test_explicit_api_fork_preserves_provider(monkeypatch):
         def thread_fork(self, thread_id, params):
             params_seen.append(params)
             return SimpleNamespace(thread=SimpleNamespace(id="fork"))
-    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig())
+    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig(config_overrides=('default_permissions="lifecycle-test-profile"',)))
     monkeypatch.setattr(module, "CodexClient", ApiClient)
     secrets = MemorySecretStore()
     secrets.save("sk-mock-review-only")
@@ -184,6 +184,7 @@ def test_explicit_api_fork_preserves_provider(monkeypatch):
     try:
         assert provider.fork("thread", {"instructions": "review"}, str(Path.cwd())) == "fork"
         assert params_seen[0]["modelProvider"] == API_PROVIDER
+        assert params_seen[0]["config"]["default_permissions"] == "lifecycle-test-profile"
     finally:
         provider.close()
 
@@ -220,3 +221,15 @@ def test_failed_api_connectivity_does_not_fallback_or_reveal_key(monkeypatch):
     assert result["status"] == "ERROR"
     assert "sk-mock-review-only" not in repr(result)
     assert calls == [("https://api.openai.com/v1/models", 15)]
+
+
+def test_missing_permission_profile_blocks_thread_before_rpc(mock_sdk, monkeypatch):
+    """Malformed adapter config must never fall back to persisted permissions."""
+    monkeypatch.setattr(module, "config_for", lambda *a: CodexConfig())
+    with pytest.raises(ProviderError) as error:
+        mock_sdk.execute({"instructions": "review", "permission": "read-only"},
+                         str(Path.cwd()), "mock", {}, "persisted-thread",
+                         lambda *a: None, lambda *a: None, threading.Event())
+    assert error.value.code == "CONFIGURATION_REQUIRED"
+    assert "StopIteration" not in str(error.value)
+    assert not mock_sdk.clients

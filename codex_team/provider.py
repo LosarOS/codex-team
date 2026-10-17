@@ -329,8 +329,13 @@ class CodexProvider:
             # A persisted thread may refer to the previous connection's UUID.
             # Official resume code restores it unless the request explicitly
             # overrides default_permissions (global CLI overrides do not count).
-            profile = next(json.loads(value.split("=", 1)[1]) for value in config.config_overrides
-                           if value.startswith("default_permissions="))
+            profile = next((json.loads(value.split("=", 1)[1]) for value in config.config_overrides
+                            if value.startswith("default_permissions=")), None)
+            if not isinstance(profile, str) or not profile:
+                # Never resume with an inherited/default permission profile when
+                # this connection did not establish its own explicit boundary.
+                raise ProviderError("CONFIGURATION_REQUIRED",
+                                    "Не настроен профиль доступа Codex. Повторите подключение.")
             params["config"] = {"default_permissions": profile}
         return params
 
