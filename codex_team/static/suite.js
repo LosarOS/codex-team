@@ -116,7 +116,7 @@
     const refresh=async()=>{const r=await req(ppath('knowledge')+'?q='+encodeURIComponent(search.value)+'&limit=50&offset=0');if(!live(mine))return;results.replaceChildren();
       for(const entry of list(r)){const ed=data(entry),row=el('article','intelligence-knowledge-card');row.dataset.category=ed.category||entry.category||'';
         row.append(badge(ed.category||entry.category),el('h4','',ed.title||entry.title||I.t('Запись')),el('p','intelligence-knowledge-content',ed.content||entry.content||''));
-        if(ed.sources||entry.sources)output(row,ed.sources||entry.sources);
+        if(ed.sources||entry.sources){const sourceDetails=el('details','intelligence-card-sources');sourceDetails.append(el('summary','',I.t('Источники')));output(sourceDetails,ed.sources||entry.sources);row.append(sourceDetails);}
         const actions=el('div','suite-toolbar');actions.append(button(I.t('Редактировать'),async()=>{title.value=ed.title||entry.title||'';content.value=ed.content||entry.content||'';category.value=ed.category||entry.category||'verified_fact';sourcePaths.value=(ed.sources||entry.sources||[]).join('\n');save.dataset.id=entry.id;save.dataset.version=entry.version;editor.open=true;title.focus();}),
           button(I.t('Удалить'),async()=>{if(await confirm(I.t('Удалить запись?'),I.t('Будет удалена только эта локальная запись базы знаний.'))){await req('/knowledge/'+encodeURIComponent(entry.id)+'?expected_version='+entry.version,'DELETE',{expected_version:entry.version});await refresh();}}));row.append(actions);results.append(row);
       }if(!results.children.length)empty(results,I.t('Знания пока не сохранены.'));

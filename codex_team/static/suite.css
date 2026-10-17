@@ -243,3 +243,13 @@
 .intelligence-knowledge-card {border-radius:8px;border-top-color:color-mix(in srgb,var(--accent) 35%,var(--line-soft))}
 @media(max-width:1100px) {.intelligence-map{grid-template-columns:1fr}.intelligence-canvas{min-height:0}.intelligence-module-grid{grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}}
 @media(max-width:650px) {.intelligence-overview .suite-metric{padding-left:14px!important}.intelligence-overview .suite-metric::before,.intelligence-overview .suite-metric::after{display:none}.intelligence-canvas{padding:16px}.suite-heading h2{font-size:25px}}
+.intelligence-card-sources {font-size:11px;color:var(--muted);margin:8px 0}
+.intelligence-card-sources summary {cursor:pointer}
+.intelligence-knowledge-content {max-height:110px;overflow:auto;line-height:1.65}
+.intelligence-module-grid {max-height:420px;overflow:auto;padding:17px 2px 2px!important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}
+@media(min-width:1200px) {
+ .suite[data-feature=intelligence] .suite-body>.intelligence-knowledge {grid-column:1/-1;order:3}
+ .suite[data-feature=intelligence] .suite-body>.intelligence-sources {grid-column:1/-1;order:4}
+ .suite[data-feature=intelligence] .intelligence-knowledge-grid {grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+ .suite[data-feature=intelligence] .intelligence-sources .suite-file-list {grid-template-columns:repeat(3,minmax(0,1fr))}
+}
