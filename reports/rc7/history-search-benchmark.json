@@ -1,0 +1,11 @@
+{
+  "environment": "Linux Python 3.12, temporary SQLite; synthetic metadata",
+  "rows": 10000,
+  "matches": 400,
+  "search_ms": [
+    40.37,
+    48.26,
+    31.85
+  ],
+  "model_calls": 0
+}

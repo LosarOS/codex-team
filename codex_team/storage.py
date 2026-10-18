@@ -21,12 +21,39 @@ def sanitize(value):
 def now():
     return datetime.now(timezone.utc).isoformat()
 
+
+def _usage_summary(entries, calls):
+    """Sum observed per-call counters; completeness refers to total-token coverage."""
+    totals = dict.fromkeys(('input', 'output', 'cached', 'total'))
+    complete = isinstance(entries, list) and type(calls) is int and calls >= 0 and len(entries) == calls
+    for entry in entries if isinstance(entries, list) else []:
+        last = entry.get('last') if isinstance(entry, dict) else None
+        last = last if isinstance(last, dict) else {}
+        values = {}
+        for key, aliases in (('input', ('inputTokens', 'input_tokens')),
+                             ('output', ('outputTokens', 'output_tokens')),
+                             ('cached', ('cachedInputTokens', 'cached_input_tokens')),
+                             ('total', ('totalTokens', 'total_tokens'))):
+            values[key] = next((last[name] for name in aliases if type(last.get(name)) is int and last[name] >= 0), None)
+        if values['total'] is None and values['input'] is not None and values['output'] is not None:
+            values['total'] = values['input'] + values['output']
+        complete = complete and values['total'] is not None
+        for key, value in values.items():
+            if value is not None:
+                totals[key] = (totals[key] or 0) + value
+    return {'usage_total': totals, 'usage_available': any(value is not None for value in totals.values()),
+            'usage_complete': complete}
+
+
 class Store:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
         self.lock = threading.RLock()
         self.db = sqlite3.connect(path, check_same_thread=False, timeout=30)
+        # SQLite LIKE/lower only fold ASCII. This pure function is used only
+        # for explicit searches; ordinary polling does not call it.
+        self.db.create_function("codex_casefold", 1, lambda value: value.casefold() if isinstance(value, str) else "", deterministic=True)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
         CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,data TEXT NOT NULL);
@@ -63,9 +90,8 @@ class Store:
         if not archived:
             clauses.append("COALESCE(json_extract(data,'$.archived'),0)=0")
         if q:
-            clauses.append("(json_extract(data,'$.task') LIKE ? ESCAPE '\\' OR json_extract(data,'$.workspace') LIKE ? ESCAPE '\\')")
-            value = '%' + q.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') + '%'
-            values += [value,value]
+            clauses.append("(instr(codex_casefold(json_extract(data,'$.task')),?)>0 OR instr(codex_casefold(json_extract(data,'$.workspace')),?)>0)")
+            values += [q.casefold(), q.casefold()]
         for value, path in ((state,'state'),(project,'original_workspace'),(mode,'mode')):
             if value:
                 clauses.append(f"json_extract(data,'$.{path}')=?")
@@ -80,12 +106,7 @@ class Store:
             rows = self.db.execute("SELECT json_remove(data,'$.results','$.result_history','$.diff','$.diff_stat','$.executions','$.agents','$.instructions','$.checkpoint_git') FROM runs" + where + ' ORDER BY rowid DESC LIMIT ? OFFSET ?', [*values,limit,offset]).fetchall()
         items = [json.loads(row[0]) for row in rows]
         for run in items:
-            totals = {'input':0,'output':0,'cached':0,'total':0}
-            for event in run.pop('usage',[]):
-                last = event.get('last',{})
-                for key, source in (('input','inputTokens'),('output','outputTokens'),('cached','cachedInputTokens'),('total','totalTokens')):
-                    totals[key] += last.get(source,0) or 0
-            run['usage_total'] = totals
+            run.update(_usage_summary(run.pop('usage', []), run.get('calls')))
             run['task'] = run.get('task','')[:400]
             run['changed_files_count'] = len(run.get('changed_files',[]))
         return {'items':items,'total':total}

@@ -6,6 +6,12 @@ const output=process.env.QA_OUTPUT||'/workspace/redesign-evidence';fs.mkdirSync(
 const settings={theme:'dark',execution_backend:'codex_chatgpt',onboarding_dismissed:true};
 const writes=[],unknown=[],errors=[],checks=[],languageIssues=[];
 const run={id:'fixture-run',task:'ТЕСТОВЫЕ ДАННЫЕ: исправление авторизации, длинный русский текст '.repeat(5),workspace:'C:\\Пользователи\\Разработчик\\ПроектОченьДлинныйПуть\\'.repeat(3),state:'RUNNING',current_role:'developer',calls:2,iteration:1,stage:1,mode:'standard',created_at:'2026-10-15T10:00:00Z',elapsed_seconds:120,pipeline:['coordinator','developer','qa'],worktree:null,results:{coordinator:{verdict:'PLAN',summary:'План готов'}},result_history:[{role:'coordinator',iteration:1,result:{verdict:'PLAN',summary:'План готов'}}],usage:[],usage_total:{input:20,output:10,total:30}};
+const secondRun={...run,id:'fixture-run-2',task:'ТЕСТОВЫЕ ДАННЫЕ: документировать локальную проверку',state:'DONE',current_role:'qa',calls:1,stage:3,elapsed_seconds:0,changed_files:[],usage:[{last:{total_tokens:0}}],usage_total:{input:null,output:null,cached:null,total:0},usage_available:true,usage_complete:true,results:{qa:{verdict:'PASS',summary:'ТЕСТОВЫЕ ДАННЫЕ: сохранённый результат роли; отдельный QA Arena не запускался.'}},result_history:[]};
+let fixtureRuns=[run,secondRun];
+const comparisonReads=[],productivityChecks=[];
+const templateData={task:'ТЕСТОВЫЕ ДАННЫЕ: повторить проверку документации <script>literal</script>',workspace:run.workspace,mode:'standard',pack:'default',specialists:[],max_iterations:1,max_agent_calls:5,max_run_duration:1800};
+let templates=[{id:'fixture-template-1',name:'ТЕСТОВЫЕ ДАННЫЕ: проверка документации',description:'Локальный HTTP fixture. Разрешения не сохраняются.',revision:1,created_at:'2026-10-18T10:00:00Z',updated_at:'2026-10-18T10:00:00Z',data:templateData}];
+function comparisonRun(source){return {id:source.id,state:source.state,task:source.task,workspace:source.workspace,original_workspace:null,project_id:null,mode:source.mode,pack:null,access_level:null,created_at:source.created_at,started_at:null,completed_at:null,error:null,calls:source.calls,measured_tokens:source.id===secondRun.id?0:null,usage_complete:source.id===secondRun.id,duration_seconds:source.elapsed_seconds,changed_files_count:Array.isArray(source.changed_files)?source.changed_files.length:null,max_iterations:null,max_agent_calls:null,max_run_duration:null,max_total_tokens:null,max_parallel_agents:null,isolated:null,auto_commit:null,specialists:null,stages:Object.entries(source.results).map(([role,result])=>({role,summary:result.summary,verdict:result.verdict,error:null,attempts:source.id===run.id?1:null}))};}
 const defaultPacks=fs.readdirSync(path.join(__dirname,'../packs')).filter(f=>f.endsWith('.json')).map(f=>({...JSON.parse(fs.readFileSync(path.join(__dirname,'../packs',f),'utf8')),builtin:true,agents:['coordinator','developer','qa']}));
 const defaultAgents=fs.readdirSync(path.join(__dirname,'../agents')).filter(f=>f.endsWith('.md')).map(f=>({name:f.slice(0,-3),role:f.slice(0,-3),instructions:'Fixture technical instructions',enabled:true,builtin:true,permission:f==='developer.md'?'workspace-write':'read-only'}));
 const project={id:'fixture-project',name:'ТЕСТОВЫЕ ДАННЫЕ — проект',path:'C:\\Projects\\fixture'};
@@ -26,6 +32,29 @@ if(process.env.QA_SHOWCASE==='1'){
 
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
+ if(p==='/api/task-templates'){
+  if(method==='POST'&&body.description.length>1000)return {__status:422,detail:'ТЕСТ: описание не более 1000 символов'};
+  if(method==='POST'){const saved={id:'fixture-template-created',name:body.name,description:body.description,revision:1,created_at:'2026-10-18T10:01:00Z',updated_at:'2026-10-18T10:01:00Z',data:body.data};templates.unshift(saved);return saved;}
+  const query=(url.searchParams.get('query')||'').toLocaleLowerCase(),offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||50);
+  const matches=templates.filter(item=>(item.name+' '+item.description).toLocaleLowerCase().includes(query));
+  return {items:matches.slice(offset,offset+limit).map(({data,...metadata})=>metadata),total:matches.length};
+ }
+ if(p.startsWith('/api/task-templates/')){
+  const id=decodeURIComponent(p.slice('/api/task-templates/'.length)),selected=templates.find(item=>item.id===id);
+  if(!selected)return {__status:404,detail:'ТЕСТ: шаблон не найден'};
+  if(method==='GET')return selected;
+  const expected=method==='DELETE'?Number(url.searchParams.get('expected_revision')):body.expected_revision;
+  if(expected!==selected.revision)return {__status:409,detail:{code:'template_conflict',revision:selected.revision,message:'ТЕСТ: шаблон изменён в другом окне'}};
+  if(method==='DELETE'){templates=templates.filter(item=>item.id!==id);return {deleted:true,id};}
+  Object.assign(selected,{name:body.name,description:body.description,data:body.data,revision:selected.revision+1,updated_at:'2026-10-18T10:02:00Z'});return selected;
+ }
+ if(p==='/api/run-comparison'){
+  const left=url.searchParams.get('left'),right=url.searchParams.get('right');comparisonReads.push({left,right});
+  if(left===right)return {__status:422,detail:'ТЕСТ: выберите разные запуски'};
+  const first=fixtureRuns.find(item=>item.id===left),second=fixtureRuns.find(item=>item.id===right);
+  if(!first||!second)return {__status:404,detail:'ТЕСТ: запуск не найден'};
+  return {left:comparisonRun(first),right:comparisonRun(second),comparable_project:first.workspace===second.workspace,warnings:['active_runs_partial','incomplete_usage']};
+ }
  if(p==='/api/task-draft'){
   if(method==='GET')return composeDraft;
   const expected=method==='DELETE'?Number(url.searchParams.get('expected_revision')):body.expected_revision;
@@ -39,7 +68,7 @@ function fixture(url,method,body){const p=url.pathname;
  if(p==='/health')return {status:'ok',version:'fixture-only',checks:{backend:true}};
  if(p==='/api/providers')return {active:'codex_chatgpt',codex:{status:'CONNECTED'},openai_api:{configured:false}};
  if(p==='/api/projects')return [project];
- if(p==='/api/runs')return {items:[run],total:1};if(p==='/api/runs/fixture-run')return run;if(p.endsWith('/events'))return {items:[{id:1,type:'agent_started',role:'developer',created_at:'2026-10-15T10:00:00Z',payload:{iteration:1,call:2}},{id:2,type:'item/completed',role:'developer',created_at:'2026-10-15T10:00:01Z',payload:{item:{type:'commandExecution',command:'git status',status:'completed',exitCode:0}}}],next_cursor:2,has_more:false};if(p.endsWith('/diff'))return {diff:'+ Тестовое изменение\n',diff_stat:'1 file changed',has_more:false,total_lines:1};
+ if(p==='/api/runs')return {items:fixtureRuns,total:fixtureRuns.length};if(p==='/api/runs/fixture-run')return run;if(p==='/api/runs/fixture-run-2')return secondRun;if(p.endsWith('/events'))return {items:[{id:1,type:'agent_started',role:'developer',created_at:'2026-10-15T10:00:00Z',payload:{iteration:1,call:2}},{id:2,type:'item/completed',role:'developer',created_at:'2026-10-15T10:00:01Z',payload:{item:{type:'commandExecution',command:'git status',status:'completed',exitCode:0}}}],next_cursor:2,has_more:false};if(p.endsWith('/diff'))return {diff:'+ Тестовое изменение\n',diff_stat:'1 file changed',has_more:false,total_lines:1};
  if(p==='/api/actions')return [{id:'fixture-action',run_id:run.id,role:'developer',kind:'permission',reason:'ТЕСТ: разрешение команды',command:'git status',cwd:run.workspace,risk:'low',allowed_decisions:['deny'],questions:[]}];if(p==='/api/agents')return defaultAgents;if(p==='/api/packs')return defaultPacks;
  if(p==='/api/models')return {data:[]};if(p==='/api/usage')return {available:false};
  if(p.startsWith('/api/suite')){
@@ -99,6 +128,30 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   };
   const themes=(process.env.QA_THEMES||'obsidian-violet,neon-blue,emerald-tech,crimson-night,light,system,dark,purple-neon,dark-fantasy').split(',');
   const languages=(process.env.QA_LANGUAGES||'ru,en').split(',');
+  const auditDialog=async(selector,name,language,theme)=>{
+   const dims=await page.locator(selector).evaluate(dialog=>({width:innerWidth,scroll:document.documentElement.scrollWidth,dialog_width:dialog.clientWidth,dialog_scroll:dialog.scrollWidth,lang:document.documentElement.lang,theme:document.documentElement.dataset.theme}));
+   checks.push({phase,language,theme,name,...dims});
+   assert(dims.dialog_scroll<=dims.dialog_width+1,`${name} must fit horizontally`);
+   assert(await page.locator(selector).evaluate(dialog=>dialog.contains(document.activeElement)),`${name} must contain focus`);
+   const closeVisible=await page.locator(selector).evaluate(dialog=>{
+    dialog.scrollTop=dialog.scrollHeight;
+    const bounds=dialog.getBoundingClientRect(),close=dialog.querySelector('#task-templates-close,.run-comparison-close').getBoundingClientRect();
+    const visible=close.top>=bounds.top&&close.bottom<=bounds.bottom;
+    dialog.scrollTop=0;return visible;
+   });
+   assert(closeVisible,`${name} close control must remain visible after scrolling`);
+   if(language==='en'){
+    const labels=await page.locator(selector).evaluate(dialog=>[...dialog.querySelectorAll('button,label,h1,h2,h3,h4,dt')].filter(node=>node.getClientRects().length).map(node=>node.textContent.trim()).filter(value=>/[А-Яа-яЁё]/.test(value)&&!/(?:ТЕСТ|Тестов|тестов)/.test(value)));
+    for(const text of labels)untranslated.push({name,language,theme,text});
+   }
+   if(theme==='obsidian-violet')await page.screenshot({path:path.join(output,`${phase}-${language}-${theme}-${name}.png`)});
+  };
+  const captureCurated=async(name,dialog,scroll=0)=>{
+   const viewport=page.viewportSize();await page.setViewportSize({width:1600,height:1000});
+   if(dialog)await page.locator(dialog).evaluate((node,top)=>{node.scrollTop=top;},scroll);
+   await page.screenshot({path:path.join(output,`${phase}-${name}-fixture.png`)});
+   await page.setViewportSize(viewport);
+  };
   for(const language of languages){
    await visit('settings');
    if(await page.locator('#settings-language').count()){if(await page.locator('#settings-language').inputValue()!==language)await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption(language)]);}
@@ -124,6 +177,14 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
        await page.screenshot({path:path.join(output,`${phase}-${language}-${theme}-${name}.png`),fullPage:true});
       }
      }
+    // rc7 dialogs receive the same requested RU/EN, theme and viewport coverage as pages.
+    await visit('workbench');
+    await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-1"]').click();await page.locator('#task-template-save').waitFor();await page.waitForFunction(()=>!document.querySelector('#task-template-name').disabled);
+    await auditDialog('#task-templates-dialog','task-templates',language,theme);await page.locator('#task-templates-close').click();
+    await visit('history');await page.locator('#run-comparison-open').click();
+    await page.locator('#run-comparison-left').selectOption('fixture-run');await page.locator('#run-comparison-right').selectOption('fixture-run-2');
+    await page.waitForFunction(()=>document.querySelectorAll('.run-comparison-card').length===2);
+    await auditDialog('#run-comparison','run-comparison',language,theme);await page.locator('.run-comparison-close').click();
     }
    }
   }
@@ -163,6 +224,71 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   await page.reload();await visit('settings');await page.locator('#settings-theme').selectOption('emerald-tech');await page.locator('#save-appearance-button').click();await page.waitForTimeout(200);await page.reload();await visit('settings');
   assert.equal(await page.locator('#settings-language').inputValue(),'en');assert.equal(await page.locator('#settings-theme').inputValue(),'emerald-tech');
   }
+  // rc7 product workflows use the production application and explicit HTTP contracts.
+  await visit('settings');const previousLanguage=await page.locator('#settings-language').inputValue();
+  if(previousLanguage!=='ru')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption('ru')]);
+  await visit('settings');await page.locator('#settings-theme').selectOption('obsidian-violet');await visit('workbench');
+  const templateTask='ТЕСТОВЫЕ ДАННЫЕ: проверить документацию <script>literal</script>';
+  await page.locator('#task').fill(templateTask);await page.locator('#workspace').fill(project.path);await page.locator('#run-pack').selectOption(defaultPacks[0].name);await page.locator('#run-access-level').selectOption('full-access');
+  await page.locator('#task-templates-open').click();await page.locator('#task-templates-new').click();
+  await page.locator('#task-template-name').fill('ТЕСТОВЫЕ ДАННЫЕ: мой шаблон');assert.equal(await page.locator('#task-template-description').getAttribute('maxlength'),'1000');
+  const createsBeforeBoundary=writes.filter(write=>write.path==='/api/task-templates'&&write.method==='POST').length;
+  await page.locator('#task-template-description').evaluate(node=>{node.value='д'.repeat(1001);node.dispatchEvent(new Event('input',{bubbles:true}));});await page.locator('#task-template-save').click();await page.locator('#task-templates-error').waitFor();
+  assert.equal(writes.filter(write=>write.path==='/api/task-templates'&&write.method==='POST').length,createsBeforeBoundary,'Overlong metadata must be rejected before a request');assert.equal((await page.locator('#task-template-description').inputValue()).length,1001);
+  await page.locator('#task-template-description').fill('ТЕСТ '+ 'д'.repeat(995));await page.locator('#task-template-save').click();
+  await page.waitForFunction(()=>/сохранён|saved/.test(document.querySelector('.task-templates-status').textContent));
+  const createdTemplate=()=>templates.find(item=>item.id==='fixture-template-created');
+  assert.equal(createdTemplate().data.task,templateTask);assert.equal(createdTemplate().description.length,1000);assert(!('access_level' in createdTemplate().data),'Access consent must never enter a template');
+  const templatePreview=await page.locator('.task-templates-preview').textContent();assert(templatePreview.includes(templateTask),'User task text must stay literal');assert(templatePreview.includes('Режим: Стандартный'),'Known template metadata must use localized labels');
+  const capturedData=JSON.stringify(createdTemplate().data);
+  await page.locator('#task-templates-close').click();await page.locator('#task').fill('ТЕСТ: текущая задача остаётся до подтверждения');await page.locator('#run-access-level').selectOption('read-only');
+  await page.locator('#task-templates-open').click();await page.locator('#task-template-name').fill('ТЕСТОВЫЕ ДАННЫЕ: проверка документации — сохранено');await page.locator('#task-template-description').fill('ТЕСТ: имя изменено, сохранённая задача не заменяется текущей');await page.locator('#task-template-save').click();
+  await page.waitForFunction(()=>/сохранён|saved/.test(document.querySelector('.task-templates-status').textContent));assert.equal(createdTemplate().revision,2);assert.equal(JSON.stringify(createdTemplate().data),capturedData);
+  await captureCurated('task-templates','#task-templates-dialog');
+  await page.locator('#task-template-apply').click();await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-cancel').click();assert.equal(await page.locator('#task').inputValue(),'ТЕСТ: текущая задача остаётся до подтверждения');
+  await page.locator('#task-template-apply').click();await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-accept').click();await page.locator('#task-templates-dialog').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#task').inputValue(),templateTask);assert.equal(await page.locator('#run-access-level').inputValue(),'read-only');assert(!writes.some(write=>write.path==='/api/runs'&&write.method==='POST'),'Applying a template cannot start a run');
+  productivityChecks.push('template 1000/1001 boundary, localized metadata and literal task, create/revision update, confirmed apply, retained permissions, no run start');
+  await page.locator('#task-templates-open').click();const preservedName='ТЕСТ: несохранённое имя сохраняется при ошибках';await page.locator('#task-template-name').fill(preservedName);
+  const preservedDescription=await page.locator('#task-template-description').inputValue();
+  for(const failure of [401,403,409,404,500,'offline']){
+   await page.route('**/api/task-templates/fixture-template-created',route=>failure==='offline'?route.abort('failed'):route.fulfill({status:failure,contentType:'application/json',body:JSON.stringify({detail:'ТЕСТ: ошибка шаблона'})}));
+   await page.locator('#task-template-save').click();await page.locator('#task-templates-error').waitFor();assert.equal(await page.locator('#task-template-name').inputValue(),preservedName);assert.equal(await page.locator('#task-template-description').inputValue(),preservedDescription);assert.equal(await page.locator('#task').inputValue(),templateTask);assert(await page.evaluate(()=>window.CodexTeamSuite.state.online),'Template errors must not mark the server offline');
+   await page.unroute('**/api/task-templates/fixture-template-created');
+  }
+  await page.locator('#task-template-save').click();await page.waitForFunction(()=>/сохранён|saved/.test(document.querySelector('.task-templates-status').textContent));
+  let releaseTemplates,templatesEntered,templatesFinished;const templateEntered=new Promise(resolve=>templatesEntered=resolve),templateFinished=new Promise(resolve=>templatesFinished=resolve);
+  await page.route('**/api/task-templates?*',async route=>{templatesEntered();await new Promise(resolve=>releaseTemplates=resolve);await route.fulfill({contentType:'application/json',body:JSON.stringify({items:[],total:0})});templatesFinished();});
+  await page.locator('#task-templates-query').fill('');await page.locator('#task-templates-query').press('Enter');await templateEntered;await page.locator('#task-templates-close').click();releaseTemplates();await templateFinished;await page.unroute('**/api/task-templates?*');
+  await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-created"]').waitFor();assert.equal(await page.locator('#task').inputValue(),templateTask);
+  await page.locator('#task-template-delete').click();await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-cancel').click();assert(createdTemplate());
+  await page.locator('#task-template-delete').click();await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-accept').click();await page.waitForFunction(()=>/удалён|deleted/.test(document.querySelector('.task-templates-status').textContent));assert(!createdTemplate());assert.equal(await page.locator('#task').inputValue(),templateTask);await page.locator('#task-templates-close').click();
+  productivityChecks.push('template conflict, missing, server failure, offline and late list preserve user input; confirmed delete');
+  await visit('history');await captureCurated('history');await page.locator('#run-comparison-open').click();await page.locator('#run-comparison-left').selectOption('fixture-run');await page.locator('#run-comparison-right').selectOption('fixture-run-2');
+  await page.waitForFunction(()=>document.querySelectorAll('.run-comparison-card').length===2);
+  const metrics=await page.locator('.run-comparison-metrics').evaluateAll(nodes=>nodes.map(node=>[...node.querySelectorAll('dd')].map(item=>item.textContent)));
+  assert.equal(metrics[0][2],'Нет данных');assert.equal(metrics[1][2],'0');assert.equal(metrics[1][1],'0 с');assert.equal(metrics[1][3],'0');assert.equal(await page.locator('.run-comparison-warning').count(),2);
+  assert.equal(await page.locator('.run-comparison-role h5').first().innerText(),'Координатор');
+  await captureCurated('run-comparison','#run-comparison',430);
+  const comparisonButton=pattern=>page.locator('.run-comparison-actions button').filter({hasText:pattern});
+  await comparisonButton(/Поменять местами|Swap runs/).click();await page.waitForFunction(()=>document.querySelector('.run-comparison-id')?.textContent==='fixture-run-2');assert.equal(comparisonReads.at(-1).left,'fixture-run-2');
+  const beforeRefresh=comparisonReads.length;await comparisonButton(/Обновить сравнение|Refresh comparison/).click();await page.waitForFunction(()=>document.querySelectorAll('.run-comparison-card').length===2);assert.equal(comparisonReads.length,beforeRefresh+1);
+  for(const failure of [403,404,500,'offline']){
+   await page.route('**/api/run-comparison?*',route=>failure==='offline'?route.abort('failed'):route.fulfill({status:failure,contentType:'application/json',body:JSON.stringify({detail:'ТЕСТ: ошибка сравнения'})}));
+   await comparisonButton(/Обновить сравнение|Refresh comparison/).click();await page.locator('.run-comparison-status.is-error').waitFor();assert(await page.evaluate(()=>window.CodexTeamSuite.state.online),'Comparison errors must not mark unrelated services offline');assert.equal(await page.locator('#run-comparison-left').inputValue(),'fixture-run-2');assert.equal(await page.locator('#task').inputValue(),templateTask);await page.unroute('**/api/run-comparison?*');
+  }
+  let releaseComparison,comparisonEntered,comparisonFinished;const enteredComparison=new Promise(resolve=>comparisonEntered=resolve),finishedComparison=new Promise(resolve=>comparisonFinished=resolve);
+  await page.route('**/api/run-comparison?*',async route=>{comparisonEntered();await new Promise(resolve=>releaseComparison=resolve);await route.fulfill({contentType:'application/json',body:JSON.stringify({left:comparisonRun(secondRun),right:comparisonRun(run),comparable_project:true,warnings:['incomplete_usage']})});comparisonFinished();});
+  await comparisonButton(/Обновить сравнение|Refresh comparison/).click();await enteredComparison;await page.locator('.run-comparison-close').click();releaseComparison();await finishedComparison;await page.unroute('**/api/run-comparison?*');assert.equal(await page.locator('#task').inputValue(),templateTask);
+  await page.locator('#run-comparison-open').click();await page.waitForFunction(()=>document.querySelectorAll('.run-comparison-card').length===2);await page.locator('.run-comparison-card').first().getByRole('button',{name:/Открыть запуск|Open run/}).click();await page.waitForFunction(()=>window.CodexTeamSuite.state.selectedRun?.id==='fixture-run-2');assert.equal(await page.locator('#detail-task-text').innerText(),secondRun.task);
+  productivityChecks.push('comparison unknown versus zero, factual warnings, swap, explicit refresh, errors/offline/late safety and correct open-run navigation');
+  const savedTotals=run.usage_total,savedComplete=run.usage_complete;
+  run.usage_total={input:null,output:null,cached:null,total:null};run.usage_complete=false;fixtureRuns=[run];await visit('workbench');await page.locator('#refresh-button').click();await page.waitForFunction(()=>document.querySelector('#dashboard-usage').textContent==='—');assert(/SDK/.test(await page.locator('#dashboard-usage-scope').innerText()));
+  fixtureRuns=[run,secondRun];await page.locator('#refresh-button').click();await page.waitForFunction(()=>document.querySelector('#dashboard-usage').textContent==='0');assert(/Часть|Part/.test(await page.locator('#dashboard-usage-scope').innerText()));
+  run.usage_total=savedTotals;if(savedComplete===undefined)delete run.usage_complete;else run.usage_complete=savedComplete;await page.locator('#refresh-button').click();await page.waitForFunction(()=>document.querySelector('#dashboard-usage').textContent==='30');productivityChecks.push('dashboard unknown is em dash; observed zero with unknown run is explicitly partial');
+  // Restore the locale expected by the existing rc6 interaction checks.
+  composeDraft={revision:composeDraft.revision+1,draft:null};await page.reload();await visit('settings');
+  if(previousLanguage!=='ru')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption(previousLanguage)]);
   // Error, loading, offline and first-run states use explicit HTTP fixtures.
   await visit('architect');let releaseScan,scanEntered;
   const entered=new Promise(resolve=>scanEntered=resolve);
@@ -209,8 +335,8 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   await fresh.locator('.navigation [data-page="workbench"]').click();await fresh.locator('#auth-banner').waitFor();assert(await fresh.locator('#start-button').isDisabled());
   await fresh.screenshot({path:path.join(output,`${phase}-unauthorized-fixture.png`),fullPage:true});await fresh.close();
   const overflows=checks.filter(c=>c.scroll>c.width+1);
-  fs.writeFileSync(path.join(output,`${phase}-redesign-results.json`),JSON.stringify({fixtureOnly:true,windowsDpi:false,checks,contrast,untranslated,errors,unknown,overflows,writes:writes.length},null,2));
+  fs.writeFileSync(path.join(output,`${phase}-redesign-results.json`),JSON.stringify({fixtureOnly:true,windowsDpi:false,checks,contrast,untranslated,errors,unknown,overflows,productivityChecks,writes:writes.length},null,2));
   console.log(JSON.stringify({checks:checks.length,contrast,untranslated,errors,unknown,overflows,fixtureOnly:true,windowsDpi:false}));
-  assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(overflows,[]);
- }finally{fs.writeFileSync(path.join(output,`${phase}-redesign-results.json`),JSON.stringify({fixtureOnly:true,windowsDpi:false,checks,contrast,untranslated,errors,unknown,overflows:checks.filter(c=>c.scroll>c.width+1),writes:writes.length},null,2));await browser.close();server.close();}
+  assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(overflows,[]);
+ }finally{fs.writeFileSync(path.join(output,`${phase}-redesign-results.json`),JSON.stringify({fixtureOnly:true,windowsDpi:false,checks,contrast,untranslated,errors,unknown,productivityChecks,overflows:checks.filter(c=>c.scroll>c.width+1),writes:writes.length},null,2));await browser.close();server.close();}
 })().catch(error=>{console.error(error);server.close();process.exitCode=1;});

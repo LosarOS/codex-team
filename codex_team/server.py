@@ -91,6 +91,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     suite=install_suite(app,root,db,engine,qa_runner)
     from .task_drafts import create_draft_router
     app.include_router(create_draft_router(db))
+    from .productivity import create_productivity_router
+    app.include_router(create_productivity_router(db))
     @app.get("/health")
     def health():
         import shutil
@@ -487,7 +489,9 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
+        assets = {"task-templates.js": "text/javascript", "task-templates.css": "text/css",
+                  "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
+                  "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
                   "command-palette.js": "text/javascript", "command-palette.css": "text/css",
                   "i18n.js": "text/javascript", "i18n-catalog.js": "text/javascript",
                   **{f"icon-{name}.svg": "image/svg+xml" for name in ("project", "run", "action", "tokens")}}

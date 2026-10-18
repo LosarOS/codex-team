@@ -1,0 +1,475 @@
+{
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1024,
+      "scroll": 1024,
+      "dialog_width": 982,
+      "dialog_scroll": 982,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1024,
+      "scroll": 1024,
+      "dialog_width": 986,
+      "dialog_scroll": 986,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1280,
+      "scroll": 1280,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1280,
+      "scroll": 1280,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1920,
+      "scroll": 1920,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1920,
+      "scroll": 1920,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 2560,
+      "scroll": 2560,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 2560,
+      "scroll": 2560,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1024,
+      "scroll": 1024,
+      "dialog_width": 982,
+      "dialog_scroll": 982,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1024,
+      "scroll": 1024,
+      "dialog_width": 986,
+      "dialog_scroll": 986,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1280,
+      "scroll": 1280,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1280,
+      "scroll": 1280,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 1920,
+      "scroll": 1920,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 1920,
+      "scroll": 1920,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "task-templates",
+      "width": 2560,
+      "scroll": 2560,
+      "dialog_width": 1018,
+      "dialog_scroll": 1018,
+      "lang": "en"
+    },
+    {
+      "phase": "rc7-final-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-comparison",
+      "width": 2560,
+      "scroll": 2560,
+      "dialog_width": 1078,
+      "dialog_scroll": 1078,
+      "lang": "en"
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    }
+  ],
+  "untranslated": [],
+  "errors": [],
+  "unknown": [],
+  "productivityChecks": [
+    "template 1000/1001 boundary, localized metadata and literal task, create/revision update, confirmed apply, retained permissions, no run start",
+    "template conflict, missing, server failure, offline and late list preserve user input; confirmed delete",
+    "comparison unknown versus zero, factual warnings, swap, explicit refresh, errors/offline/late safety and correct open-run navigation",
+    "dashboard unknown is em dash; observed zero with unknown run is explicitly partial"
+  ],
+  "overflows": [],
+  "writes": 18
+}
