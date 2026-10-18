@@ -26,3 +26,20 @@ def test_explicit_updater_preserves_data_and_checks_authenticity():
     launcher = Path('packaging/Update.cmd').read_text()
     assert '-NoProfile -ExecutionPolicy Bypass -File "%~dp0Update.ps1"' in launcher
     assert 'pause' in launcher
+
+
+def test_ci_api_auth_is_transient_and_never_sent_to_asset_downloads():
+    script = Path('packaging/Update.ps1').read_text(encoding='utf-8-sig')
+    assert '$apiHeaders = $headers.Clone()' in script
+    assert "$env:GITHUB_ACTIONS -eq 'true' -and $env:CODEX_TEAM_UPDATE_GITHUB_TOKEN" in script
+    assert "$apiHeaders['Authorization'] = 'Bearer '" in script
+    api = next(line for line in script.splitlines() if 'Invoke-RestMethod -Uri' in line)
+    assert 'https://api.github.com/repos/LosarOS/codex-team/releases?' in api
+    assert '-Headers $apiHeaders -MaximumRedirection 0' in api
+    download = next(line for line in script.splitlines() if 'Invoke-WebRequest' in line)
+    assert '-Headers $headers' in download and '$apiHeaders' not in download
+    assert 'HTTP 403/429' in script
+    workflow = Path('.github/workflows/windows-release.yml').read_text()
+    smoke = workflow.split('- name: Silent per-user installation', 1)[1].split('- name:', 1)[0]
+    assert 'CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}' in smoke
+    assert workflow.count('CODEX_TEAM_UPDATE_GITHUB_TOKEN') == 1

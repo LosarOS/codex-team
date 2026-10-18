@@ -78,6 +78,8 @@ jobs:
             ./build-desktop.ps1 -PythonPath (Get-Command python).Source
           }
       - name: Silent per-user installation and installed backend smoke
+        env:
+          CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
       - name: Stage verified downloadable files
