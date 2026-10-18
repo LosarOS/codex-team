@@ -60,7 +60,7 @@ try {
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -86,6 +86,10 @@ try {
     $draftBody = @{ expected_revision = 0; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
     $savedDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($draftBody)) -TimeoutSec 10
     if ($savedDraft.revision -ne 1 -or $savedDraft.draft.data.task -ne $draftText) { throw 'Installed draft did not save.' }
+
+    $templateBody = @{ name = 'Шаблон проверки'; description = 'Локальная проверка без модели'; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
+    $savedTemplate = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($templateBody)) -TimeoutSec 10
+    if (-not $savedTemplate.id -or $savedTemplate.revision -ne 1) { throw 'Installed task template did not save.' }
     $report.installed_backend_verified = $true
     Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
     if (-not $backend.WaitForExit(20000)) { throw 'Installed backend did not shut down cleanly.' }
@@ -105,6 +109,15 @@ try {
     $emptyDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -TimeoutSec 10
     if ($emptyDraft.revision -ne 2 -or $null -ne $emptyDraft.draft) { throw 'Installed draft clear/revision check failed.' }
     $report.draft_restart_verified = $true
+    $restoredTemplate = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates/' + $savedTemplate.id) -TimeoutSec 10
+    if ($restoredTemplate.revision -ne 1 -or $restoredTemplate.data.task -ne $draftText) { throw 'Task template was lost after installed backend restart.' }
+    $templatePage = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -TimeoutSec 10
+    if ($templatePage.total -ne 1 -or $templatePage.items[0].PSObject.Properties.Name -contains 'data') { throw 'Installed template metadata list is invalid.' }
+    $null = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates/' + $savedTemplate.id + '?expected_revision=1') -Method Delete -ContentType 'application/json' -Body '{}' -TimeoutSec 10
+    $templatePage = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -TimeoutSec 10
+    if ($templatePage.total -ne 0) { throw 'Installed task template was not deleted.' }
+    $report.template_restart_verified = $true
+
     $afterRestart = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
     if ($afterRestart.theme -ne 'neon-blue' -or $afterRestart.language -ne 'en') { throw 'Appearance was lost after restart.' }
     $report.appearance_restart_verified = $true
