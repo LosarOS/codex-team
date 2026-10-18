@@ -277,8 +277,7 @@ def test_comparison_only_reads_requested_store_records_and_bounded_role_results(
 
 def test_productivity_inherits_server_same_origin_json_and_permission_boundaries(local_app):
     client, app, _, store, _ = local_app
-    if not any(getattr(route, "path", None) == "/api/task-templates" for route in app.routes):
-        app.include_router(create_productivity_router(store))
+    assert client.get("/api/task-templates").json() == {"items": [], "total": 0}
     body = {"name": "Local", "data": {"task": "Task"}}
     assert client.post("/api/task-templates", json=body, headers={"origin": "https://evil.invalid"}).status_code == 403
     assert client.post("/api/task-templates", json=body, headers={"sec-fetch-site": "cross-site"}).status_code == 403

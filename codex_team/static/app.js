@@ -4,6 +4,10 @@
   const I = (typeof window !== "undefined" ? window.CodexI18n : null) || {language:"ru",setLanguage:()=>{},t:v=>v,tr:(s,...v)=>s.reduce((a,x,i)=>a+x+(v[i]??""),"")};
   I.register?.({
     "Не удалось подключиться к приложению":"Could not connect to the application",
+    "Расход не передан SDK":"Usage was not provided by the SDK",
+    "Часть расхода неизвестна":"Some usage is unknown",
+    "Измеренные токены":"Observed tokens",
+    "Не выбраны":"Not selected",
     "Набор недоступен: {name}":"Unavailable pack: {name}",
     "Не все данные обновлены":"Some data could not be refreshed",
     "Повторить подключение":"Retry connection",
@@ -33,7 +37,7 @@
     stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
     desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
   };
-  let taskDraft = null, refreshLoop = null;
+  let taskDraft = null, refreshLoop = null, taskTemplates = null, runComparison = null;
   state.initialRefreshDone = false;
   state.refreshQueued = false;
   const roles = {
@@ -466,6 +470,7 @@
   }
   function renderHistory() {
     const table=makeTable([I.t("Задача / проект"),I.t("Состояние"),I.t("Агент"),I.t("Вызовы"),I.t("Создан")],state.historyRows.map(run=>{const title=node("div"),open=node("button","",run.task);open.type="button";open.addEventListener("click",()=>selectRun(run.id));title.append(open,node("small","mono",run.workspace));if(run.archived)title.append(node("small","muted",I.t("Архивный запуск")));if(run.worktree_deleted)title.append(node("small","muted",I.t("Рабочая копия удалена")));return [title,badge(run.state),roleName(run.current_role),run.calls??"—",prettyDate(run.created_at)];}),state.historyTotal?I.t("По этим фильтрам запуски не найдены."):I.t("Запусков пока нет. Создайте первую задачу на странице «Обзор»."));
+    runComparison?.refresh();
     $("history-list").replaceChildren(table);$("history-prev").disabled=state.historyPage===0;$("history-next").disabled=(state.historyPage+1)*20>=state.historyTotal;$("history-page-info").textContent=I.tr`Страница ${state.historyPage+1} · ${formatNumber.format(state.historyTotal)} запусков`;
   }
   function makeTable(headers, rows, noData = I.t("Нет данных")) {
@@ -989,6 +994,7 @@
     const active=state.runs.filter(r=>activeStates.has(normalizedState(r.state)));$("dashboard-active").textContent=formatNumber.format(active.length);
     renderWorkspacePanels();
     $("dashboard-actions").textContent=state.actions.length;const total=loadedUsageTotals().total;$("dashboard-usage").textContent=total===null?"—":formatNumber.format(total);
+    const scope=$("dashboard-usage-scope");if(scope)scope.textContent=I.t(total===null?"Расход не передан SDK":state.runs.some(run=>run.usage_complete!==true)?"Часть расхода неизвестна":"Измеренные токены");
     $("onboarding-codex").textContent=state.health?.checks?.codex===false?I.t("Codex: требуется настройка"):I.t("Проверить Codex");$("onboarding-auth").textContent=authConnected()?I.t("ChatGPT подключён ✓"):I.t("Подключить ChatGPT");
   }
   function renderWorkspacePanels() {
@@ -1420,6 +1426,18 @@
     renderPreview();renderProjectPreflight();renderDashboard();
   }
   taskDraft = window.CodexTaskDraft?.mount({form:$("run-form"),read:readComposeDraft,apply:applyComposeDraft,api,confirm:confirmOperation}) || null;
+  taskTemplates = window.CodexTaskTemplates?.mount({anchor:$("composer-tools"),read:readComposeDraft,api,confirm:confirmOperation,
+    formatValue:(key,value)=>{
+      if(key==="mode")return modes[value]?.title||value;
+      if(key==="pack"){const pack=state.packs.find(item=>item.name===value);return pack?(packDisplay(pack,"title")||pack.label||pack.name):value;}
+      if(key==="specialists")return Array.isArray(value)&&value.length?value.map(roleName).join(", "):I.t("Не выбраны");
+      return Array.isArray(value)?value.join(", "):value;
+    },apply:data=>{
+    applyComposeDraft(data);taskDraft?.changed();setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});
+  }}) || null;
+  runComparison = window.CodexRunComparison?.mount({anchor:$("history-tools"),api,
+    getRuns:()=>[...new Map([...state.historyRows,...state.runs].map(run=>[run.id,run])).values()],
+    getSelectedRun:()=>state.selectedRun,formatRole:roleName,openRun:id=>selectRun(id)}) || null;
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   refreshLoop = window.CodexRefreshLoop?.create({run:poll,visible:()=>!document.hidden}) || null;

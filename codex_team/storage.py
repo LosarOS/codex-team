@@ -51,6 +51,9 @@ class Store:
         self.path = path
         self.lock = threading.RLock()
         self.db = sqlite3.connect(path, check_same_thread=False, timeout=30)
+        # SQLite LIKE/lower only fold ASCII. This pure function is used only
+        # for explicit searches; ordinary polling does not call it.
+        self.db.create_function("codex_casefold", 1, lambda value: value.casefold() if isinstance(value, str) else "", deterministic=True)
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
         CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,data TEXT NOT NULL);
@@ -87,9 +90,8 @@ class Store:
         if not archived:
             clauses.append("COALESCE(json_extract(data,'$.archived'),0)=0")
         if q:
-            clauses.append("(json_extract(data,'$.task') LIKE ? ESCAPE '\\' OR json_extract(data,'$.workspace') LIKE ? ESCAPE '\\')")
-            value = '%' + q.replace('\\','\\\\').replace('%','\\%').replace('_','\\_') + '%'
-            values += [value,value]
+            clauses.append("(instr(codex_casefold(json_extract(data,'$.task')),?)>0 OR instr(codex_casefold(json_extract(data,'$.workspace')),?)>0)")
+            values += [q.casefold(), q.casefold()]
         for value, path in ((state,'state'),(project,'original_workspace'),(mode,'mode')):
             if value:
                 clauses.append(f"json_extract(data,'$.{path}')=?")
