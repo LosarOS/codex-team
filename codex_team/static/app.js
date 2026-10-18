@@ -3,6 +3,12 @@
 (() => {
   const I = (typeof window !== "undefined" ? window.CodexI18n : null) || {language:"ru",setLanguage:()=>{},t:v=>v,tr:(s,...v)=>s.reduce((a,x,i)=>a+x+(v[i]??""),"")};
   I.register?.({
+    "Не удалось подключиться к приложению":"Could not connect to the application",
+    "Набор недоступен: {name}":"Unavailable pack: {name}",
+    "Не все данные обновлены":"Some data could not be refreshed",
+    "Повторить подключение":"Retry connection",
+    "Обновить данные":"Refresh data",
+    "Запуски обновлены: {time}":"Runs last updated: {time}",
     "Ваша команда для разработки, анализа и сопровождения проектов":"Your team for development, analysis and project maintenance",
     "Активные запуски":"Active runs", "Создать задачу":"Create task", "Текущие запуски":"Current runs", "Последние проекты":"Recent projects",
     "Все проекты →":"All projects →", "Все действия →":"All actions →",
@@ -27,7 +33,9 @@
     stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
     desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
   };
-  let taskDraft = null;
+  let taskDraft = null, refreshLoop = null;
+  state.initialRefreshDone = false;
+  state.refreshQueued = false;
   const roles = {
     coordinator: [I.t("Координатор"), I.t("План и организация работы")],
     analyst: [I.t("Аналитик"), I.t("Архитектура и критерии приёмки")],
@@ -279,10 +287,29 @@
   function setOnline(online, error) {
     state.online = online;
     const service = $("service-banner");
+    const wasOnline = state.onlineBefore;
+    state.onlineBefore = online;
     service.hidden = online;
-    if (!online) service.textContent = error || I.t("Локальный сервер недоступен. Проверьте, что приложение запущено.");
+    if (!online) showServiceIssue(error || I.t("Локальный сервер недоступен. Проверьте, что приложение запущено."));
+    else if (!wasOnline && state.initialRefreshDone) taskDraft?.retry();
     renderConnection();
     if(state.selectedRun)renderRun();
+  }
+  function showServiceIssue(message, partial = false) {
+    const service = $("service-banner"), key = `${partial}:${message}:${state.lastRunList}`;
+    service.hidden = false; service.classList.toggle("service-partial", partial);
+    if (service.dataset.issueKey === key) return;
+    const focused = service.contains?.(document.activeElement);
+    service.dataset.issueKey = key;
+    const copy = node("div", "service-issue-copy");
+    copy.append(node("strong", "", I.t(partial ? "Не все данные обновлены" : "Не удалось подключиться к приложению")), node("p", "", message));
+    if (state.lastRunList) copy.append(node("small", "muted", I.t("Запуски обновлены: {time}", {time:prettyDate(new Date(state.lastRunList).toISOString(),true)})));
+    const retry = actionButton(I.t(partial ? "Обновить данные" : "Повторить подключение"), async () => {
+      retry.disabled = true;
+      try { await refresh(); } finally { retry.disabled = false; refreshLoop?.wake(); }
+    }, "secondary");
+    service.replaceChildren(copy, retry);
+    if (focused) retry.focus({preventScroll:true});
   }
   function renderConnection() {
     const connected = runReady();
@@ -363,6 +390,14 @@
   }
   const builtInPackText = {"elma365": {"title": "ELMA365", "description": "Бизнес-процессы и интеграции ELMA365"}, "web-development": {"title": "Веб-разработка", "description": "Разработка и проверка интерфейса, серверной части и безопасности"}, "software-development": {"title": "Разработка ПО", "description": "Разработка программного обеспечения с проверкой безопасности и производительности"}, "game-development": {"title": "Разработка игр", "description": "Проверка игровой логики, сценария и выполнения игры"}, "audit": {"title": "Аудит", "description": "Проверка безопасности и производительности"}};
   function packDisplay(pack, field) { const value=pack[field]; return pack.builtin === true && value === builtInPackText[pack.name]?.[field] ? I.t(value) : value; }
+  function preserveDraftPack(name) {
+    const select=$("run-pack");
+    if(name&&!Array.from(select.children).some(option=>option.value===name)){
+      const missing=node("option","",I.t("Набор недоступен: {name}",{name}));
+      missing.value=name;missing.disabled=true;select.append(missing);
+    }
+    if(name)select.value=name;
+  }
   function renderRegistry() {
     renderRoleModelDefaults();const registrySignature=JSON.stringify([state.agents,state.packs,$("agents-search").value]);if(registrySignature===state.registrySignature)return;state.registrySignature=registrySignature;
     const packs = state.packs.length ? state.packs : [{name: "software-development"}];
@@ -371,7 +406,7 @@
       const option = node("option", "", packDisplay(pack,"title") || pack.label || ({"software-development": I.t("Разработка ПО"), "web-development": I.t("Веб-разработка"), "game-development": I.t("Разработка игр"), "elma365": "ELMA365", audit: I.t("Аудит")}[pack.name]) || pack.name);
       option.value = pack.name; return option;
     }));
-    if (packs.some((pack) => pack.name === selectedPack)) $("run-pack").value = selectedPack;
+    preserveDraftPack(selectedPack);
     const chosenSpecialists = new Set(qa("#specialist-options input:checked").map((input) => input.value));
     const specialists = state.agents.filter((agent) => !standardRoles.has(agent.name) && agent.enabled !== false && agent.permission === "read-only");
     $("specialists-group").hidden = !specialists.length || !["deep", "audit"].includes($("run-mode").value);
@@ -811,7 +846,7 @@
     state.eventsRequest=request;return request;
   }
   async function refresh() {
-    if(state.refreshing)return;state.refreshing=true;$("refresh-button").disabled=true;
+    if(state.refreshing)return;if(state.polling){state.refreshQueued=true;return;}state.refreshing=true;$("refresh-button").disabled=true;
     try{const responses=await Promise.allSettled([api("/api/status"),api("/api/runs?summary=true&limit=20&offset=0"),api("/api/agents"),api("/api/packs"),api("/health"),api("/api/providers")]);updateHealth(responses[4]);
       if(responses[0].status==="fulfilled"){const first=!state.status;state.status=responses[0].value;state.lastStatus=Date.now();setOnline(true);renderStatus();if(first)applyDefaults(state.status.settings);}else setOnline(false,responses[0].reason.message);
       if(responses[1].status==="fulfilled"){acceptRuns(responses[1].value);state.lastRunList=Date.now();}
@@ -819,21 +854,27 @@
       if(responses[3].status==="fulfilled")state.packs=Array.isArray(responses[3].value)?responses[3].value:responses[3].value.packs||[];
       if(responses[2].status==="fulfilled"||responses[3].status==="fulfilled"){renderRegistry();state.lastRegistry=Date.now();}
       if(responses[5].status==="fulfilled"){state.providers=responses[5].value;renderProviders();renderConnection();}
-      if(state.online){await loadActions();if(["projects","history","workbench"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
+      if(state.online){await loadActions();if(!state.projects.length||["projects","history","workbench"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
       if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
-    }catch(error){toast(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
+      const partial = [1,2,3,5].map(index=>responses[index]).find(response=>response.status==="rejected");
+      if (state.online && partial) showServiceIssue(partial.reason.message, true);
+    }catch(error){if(error.kind==="offline"||error.kind==="timeout")setOnline(false,error.message);else showServiceIssue(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
   }
   async function poll() {
-    if(state.polling||state.refreshing||state.selecting||state.controlPending||state.pendingActions.size||document.hidden)return;state.polling=true;
-    try{if(Date.now()-state.lastStatus>15000||!state.online){state.status=await api("/api/status");state.lastStatus=Date.now();setOnline(true);renderStatus();}
+    if(state.polling||state.refreshing||state.selecting||state.controlPending||state.pendingActions.size||document.hidden)return;state.polling=true;let checkingStatus=false;
+    try{if(Date.now()-state.lastStatus>15000||!state.online){checkingStatus=true;state.status=await api("/api/status");checkingStatus=false;state.lastStatus=Date.now();setOnline(true);renderStatus();}
       const active=state.runs.some(r=>activeStates.has(normalizedState(r.state)));
       if(Date.now()-state.lastRunList>(active?1800:10000)){acceptRuns(await api("/api/runs?summary=true&limit=20&offset=0"));state.lastRunList=Date.now();}
       await loadActions();
       const run=state.selectedRun,id=run?.id,version=state.selectionVersion,revision=state.runRevision,summary=state.runs.find(r=>r.id===id);
       if(id&&state.page==="runs"&&Date.now()-state.lastRunDetail>1800&&((summary&&(summary.state!==run.state||summary.calls!==run.calls||summary.current_role!==run.current_role||summary.iteration!==run.iteration))||(activeStates.has(normalizedState(run.state))&&Date.now()-state.lastRunDetail>30000))){const updated=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=updated;state.lastRunDetail=Date.now();renderRun();}}
       if(id&&state.page==="runs"&&["overview","activity"].includes(state.detailTab)&&(activeStates.has(normalizedState(state.selectedRun.state))||Date.now()-state.lastEventsFetch>10000||state.eventsHasMore||!state.eventsLoaded||state.eventsState!==normalizedState(state.selectedRun.state)))await fetchEvents(id,version);
-      if(Date.now()-state.lastRegistry>30000){const rs=await Promise.allSettled([api("/api/agents"),api("/api/packs")]);if(rs[0].status==="fulfilled")state.agents=Array.isArray(rs[0].value)?rs[0].value:rs[0].value.agents||[];if(rs[1].status==="fulfilled")state.packs=Array.isArray(rs[1].value)?rs[1].value:rs[1].value.packs||[];state.lastRegistry=Date.now();renderRegistry();}
-    }catch(error){setOnline(false,error.message);}finally{state.polling=false;}
+      if(Date.now()-state.lastRegistry>30000){const rs=await Promise.allSettled([api("/api/agents"),api("/api/packs")]);if(rs[0].status==="fulfilled")state.agents=Array.isArray(rs[0].value)?rs[0].value:rs[0].value.agents||[];if(rs[1].status==="fulfilled")state.packs=Array.isArray(rs[1].value)?rs[1].value:rs[1].value.packs||[];state.lastRegistry=Date.now();renderRegistry();const failed=rs.find(item=>item.status==="rejected");if(failed)throw failed.reason;}
+      if(state.actionsError){showServiceIssue(state.actionsError,true);return false;}
+      if(state.online)$("service-banner").hidden=true;
+      return true;
+    }catch(error){if(checkingStatus||error.kind==="offline"||error.kind==="timeout")setOnline(false,error.message);else showServiceIssue(error.message,true);return false;}
+    finally{state.polling=false;if(state.refreshQueued){state.refreshQueued=false;Promise.resolve().then(refresh);}}
   }
   const accessLabels={"read-only":I.t("Только чтение"),standard:I.t("Рабочая папка"),"full-access":I.t("Полный доступ")};
   async function confirmRunAccess(level){return level!=="full-access"||await confirmOperation(I.t("Разрешить полный доступ агентам?"),I.t("Агент-разработчик этого запуска сможет читать и изменять файлы за пределами проекта, выполнять команды и обращаться к сети без дополнительных запросов разрешения. Это может затронуть личные файлы и настройки компьютера. Выбирайте этот режим только для доверенной задачи."),I.t("Действует только для выбранного запуска."),I.t("Разрешить полный доступ"));}
@@ -1347,7 +1388,10 @@
   $("runs-search")?.addEventListener("input",renderRunList);
   $("runs-state-filter")?.addEventListener("change",renderRunList);
   window.addEventListener("hashchange", () => setPage(location.hash.slice(1)));
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+  document.addEventListener("visibilitychange", () => { if(refreshLoop)refreshLoop.visibilityChanged();else if(!document.hidden)poll(); });
+  window.addEventListener("online",()=>refreshLoop?.wake());
+  window.addEventListener("pagehide",()=>refreshLoop?.stop());
+  window.addEventListener("pageshow",event=>{if(event.persisted){refreshLoop?.start();refreshLoop?.wake();}});
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
   window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess};
   window.CodexWorkspace = Object.freeze({
@@ -1370,6 +1414,7 @@
     for(const [key,id,divisor] of [["task","task",1],["workspace","workspace",1],["mode","run-mode",1],["pack","run-pack",1],["max_iterations","max-iterations",1],["max_agent_calls","max-calls",1],["max_run_duration","max-duration",60]]) {
       if(data[key]!==undefined) $(id).value=typeof data[key]==="number"?data[key]/divisor:data[key];
     }
+    preserveDraftPack(data.pack);
     const chosen=new Set(data.specialists||[]);qa("#specialist-options input").forEach(input=>{input.checked=chosen.has(input.value);});
     qa("[data-preset]").forEach(button=>{button.classList.remove("active");button.setAttribute("aria-pressed","false");});
     renderPreview();renderProjectPreflight();renderDashboard();
@@ -1377,6 +1422,7 @@
   taskDraft = window.CodexTaskDraft?.mount({form:$("run-form"),read:readComposeDraft,apply:applyComposeDraft,api,confirm:confirmOperation}) || null;
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
-  onDesktopReady(); refresh().finally(()=>taskDraft?.load());
-  setInterval(poll, 2000);
+  refreshLoop = window.CodexRefreshLoop?.create({run:poll,visible:()=>!document.hidden}) || null;
+  onDesktopReady(); refresh().finally(()=>{state.initialRefreshDone=true;taskDraft?.load();refreshLoop?.start();});
+  if(!refreshLoop)setInterval(poll,2000);
 })();

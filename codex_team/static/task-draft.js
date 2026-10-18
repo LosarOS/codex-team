@@ -132,7 +132,7 @@
       "Есть сохранённый черновик. Восстановите его или сохраните текущую задачу вместо него.": "A saved draft is available. Restore it or replace it with the current task.",
       "Черновик изменён в другом окне. Ваш ввод сохранён в форме. Выберите, какую версию оставить.": "The draft changed in another window. Your input remains in the form. Choose which version to keep.",
       "Нет связи: ввод остаётся в форме. Повторите сохранение после подключения.": "Offline: your input remains in the form. Retry saving when connected.",
-      "Черновик восстановлен. Проверьте проект и уровень доступа перед запуском.": "Draft restored. Check the project and access level before starting.",
+      "Черновик восстановлен. Проверьте проект, набор и уровень доступа перед запуском.": "Draft restored. Check the project, agent pack and access level before starting.",
       "Сохранённого черновика нет": "No saved draft", "Восстановить черновик": "Restore draft",
       "Сохранить текущую задачу": "Save current task", "Удалить сохранённый черновик": "Delete saved draft",
       "Повторить сохранение": "Retry saving", "Заменить текущий ввод черновиком?": "Replace your current input with the draft?",
@@ -166,7 +166,7 @@
     });
     action("retry", "Повторить сохранение", () => controller.retry());
     action("refresh", "Обновить черновик", () => controller.load());
-    const labels = {invalid:"Черновик не сохранён: проверьте числовые лимиты.",error:"Не удалось сохранить черновик. Проверьте поля и повторите.",loading:"Проверяем сохранённый черновик…",saving:"Черновик сохраняется…",unsaved:"Изменения ещё не сохранены",saved:"Черновик сохранён на этом компьютере",available:"Есть сохранённый черновик. Восстановите его или сохраните текущую задачу вместо него.",conflict:"Черновик изменён в другом окне. Ваш ввод сохранён в форме. Выберите, какую версию оставить.",offline:"Нет связи: ввод остаётся в форме. Повторите сохранение после подключения.",restored:"Черновик восстановлен. Проверьте проект и уровень доступа перед запуском.",empty:"Сохранённого черновика нет"};
+    const labels = {invalid:"Черновик не сохранён: проверьте числовые лимиты.",error:"Не удалось сохранить черновик. Проверьте поля и повторите.",loading:"Проверяем сохранённый черновик…",saving:"Черновик сохраняется…",unsaved:"Изменения ещё не сохранены",saved:"Черновик сохранён на этом компьютере",available:"Есть сохранённый черновик. Восстановите его или сохраните текущую задачу вместо него.",conflict:"Черновик изменён в другом окне. Ваш ввод сохранён в форме. Выберите, какую версию оставить.",offline:"Нет связи: ввод остаётся в форме. Повторите сохранение после подключения.",restored:"Черновик восстановлен. Проверьте проект, набор и уровень доступа перед запуском.",empty:"Сохранённого черновика нет"};
     controller = createController({api, read, apply, onState(value) {
       latest = value; panel.dataset.state = value.status; const text = I.t(labels[value.status]); if (status.textContent !== text) status.textContent = text;
       buttons.restore.hidden = !value.remote; buttons.keep.hidden = !value.remote && !["conflict"].includes(value.status);

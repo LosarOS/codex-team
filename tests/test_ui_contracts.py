@@ -155,3 +155,14 @@ def test_builtin_pack_copy_localizes_without_changing_custom_content():
         capture_output=True, text=True, encoding="utf-8", timeout=10, check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("script", ["refresh_loop.cjs", "task_drafts.cjs", "command_palette.cjs"])
+def test_productivity_and_recovery_contracts(script):
+    node = os.environ.get("CODEX_TEAM_TEST_NODE") or shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is needed for browser module contracts")
+    result = subprocess.run([node, str(Path(__file__).with_name(script)), str(STATIC)],
+                            capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS" in result.stdout

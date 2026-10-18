@@ -120,7 +120,7 @@
     visible.forEach((entry,index)=>{
       const option=el('div','command-palette-option');option.id='command-result-'+index;option.setAttribute('role','option');option.setAttribute('aria-selected','false');option.dataset.kind=entry.kind;option.title=[entry.label,entry.detail].filter(Boolean).join(' — ');
       const symbol=el('span','command-result-symbol');symbol.append(resultIcon(entry.kind));option.append(symbol);
-      const content=el('div','command-result-copy');content.append(el('strong','',entry.label),el('small','',entry.detail));option.append(content,el('span','command-result-kind',t(groupNames[entry.kind])));
+      const content=el('div','command-result-copy');content.append(el('strong','',entry.label));if(entry.detail&&entry.detail!==t(groupNames[entry.kind]))content.append(el('small','',entry.detail));option.append(content,el('span','command-result-kind',t(groupNames[entry.kind])));
       option.addEventListener('pointerdown',event=>event.preventDefault());option.addEventListener('click',()=>activate(index));list.append(option);
     });
     empty.hidden=visible.length>0;list.hidden=!visible.length;
