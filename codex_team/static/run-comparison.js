@@ -78,7 +78,7 @@
     'Быстрый': 'Quick', 'Глубокий': 'Deep', 'Аудит': 'Audit', 'Планирование': 'Planning', 'Готовый план': 'Implementation',
     'История ролей сокращена. Показаны последние сохранённые результаты.': 'Role history is truncated. The latest stored results are shown.',
   };
-  function mount({anchor, api, getRuns = () => [], getSelectedRun = () => null, openRun = () => {}}) {
+  function mount({anchor, api, getRuns = () => [], getSelectedRun = () => null, openRun = () => {}, formatRole = role => role}) {
     const doc = root.document;
     if (!doc || !anchor) return null;
     const I = root.CodexI18n || {t: source => source, register() {}};
@@ -161,7 +161,7 @@
       if (!stages.length) card.append(el('p', 'run-comparison-muted', t('Результаты ролей не сохранены.')));
       for (const stage of stages) {
         if (!stage || typeof stage !== 'object') continue;
-        const section = el('section', 'run-comparison-role'); section.append(el('h5', '', value(stage.role)));
+        const section = el('section', 'run-comparison-role'); section.append(el('h5', '', value(formatRole(stage.role))));
         const details = el('dl', 'run-comparison-config');
         definition(details, 'Вердикт', value(stage.verdict)); definition(details, 'Попытки', number(stage.attempts));
         definition(details, 'Сводка', value(stage.summary)); definition(details, 'Ошибка', value(stage.error)); section.append(details); card.append(section);
