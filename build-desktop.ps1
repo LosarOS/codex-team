@@ -34,6 +34,9 @@ if (-not $SkipTests) {
     # override below the repository would otherwise create genuinely nested repos.
     $desktopSourceTestTemp = Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-' + [guid]::NewGuid().ToString('N'))
     try {
+        # Fail fast on the platform-specific cache regression before the long suite.
+        & $python -m pytest -q tests/test_intelligence.py --basetemp (Join-Path $desktopSourceTestTemp 'cache-preflight')
+        if ($LASTEXITCODE -ne 0) { throw 'Cache regression preflight failed; desktop artifacts were not built' }
         & $python -m pytest -q --basetemp $desktopSourceTestTemp
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed; desktop artifacts were not built' }
     } finally {
