@@ -53,6 +53,8 @@ function setup(handler) {
       {status:409,technical:{code:'revision_conflict'},expected:'conflict'},
       {status:401,technical:null,expected:'access'},
       {status:403,technical:null,expected:'access'},
+      {status:422,technical:[{loc:['body','description'],type:'string_too_long'}],expected:'metadata'},
+      {status:422,technical:[{loc:['body','name'],type:'string_too_long'}],expected:'metadata'},
     ]) {
       const s=setup((url,method)=>{if(method==='GET')return {items:[sample()],total:1};const error=new Error('backend details');Object.assign(error,{status,technical});throw error;});
       await s.controller.open(); const before=JSON.stringify(s.current); await s.controller.create({name:'Keep my title',description:'Keep my description'});

@@ -1,7 +1,7 @@
 /* Task template library uses the shared appearance tokens in every theme. */
-.task-templates-dialog {box-sizing:border-box;width:min(1020px,calc(100vw - 40px));max-width:none;max-height:calc(100dvh - 40px);padding:28px;border:1px solid var(--line-soft);border-radius:var(--radius-panel,18px);background:var(--panel);color:var(--text);box-shadow:var(--surface-shadow);overflow:auto}
+.task-templates-dialog {box-sizing:border-box;width:min(1020px,calc(100vw - 40px));max-width:none;max-height:calc(100dvh - 40px);padding:28px;border:1px solid var(--line-soft);border-radius:var(--radius-panel,18px);background:var(--panel);color:var(--text);box-shadow:var(--surface-shadow);overflow:auto;scroll-padding-top:var(--task-templates-header-height,110px)}
 .task-templates-dialog::backdrop {background:color-mix(in srgb,var(--bg) 76%,transparent);backdrop-filter:blur(5px)}
-.task-templates-header {display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.task-templates-header {position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line-soft);padding-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
 .task-templates-header h2 {margin:4px 0 12px;font-size:25px;letter-spacing:-.04em}
 .task-templates-header .eyebrow {margin:0}
 .task-templates-safety {margin:0 0 20px;max-width:86ch;color:var(--muted);font-size:13px;line-height:1.65}

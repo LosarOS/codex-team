@@ -15,6 +15,7 @@
       const code = error.technical?.code || error.technical?.detail?.code;
       if (error.status === 409 && code === "template_limit") return "limit";
       if (error.status === 401 || error.status === 403) return "access";
+      if ((error.status === 400 || error.status === 422) && Array.isArray(error.technical) && error.technical.some(item => item.loc?.some(part => part === "name" || part === "description"))) return "metadata";
       return error.status === 409 ? "conflict" : error.status === 404 ? "missing" : error.status === 400 || error.status === 422 ? "invalid" : error.status ? "error" : "offline";
     };
     async function list({query = state.query, offset = state.offset} = {}) {
@@ -76,7 +77,7 @@
       destroy() { destroyed = true; active = false; session++; listVersion++; detailVersion++; },
     };
   }
-  function mount({anchor, read, apply, api, confirm}) {
+  function mount({anchor, read, apply, api, confirm, formatValue}) {
     const I = root.CodexI18n || {t: value => value};
     I.register?.({
       "Шаблоны задач": "Task templates", "Закрыть шаблоны": "Close templates", "Сохранённые задачи для повторного использования": "Saved tasks to reuse",
@@ -93,7 +94,8 @@
       "Не удалось выполнить действие. Ввод сохранён; повторите попытку.": "Could not complete the action. Your input is preserved; please retry.",
       "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.": "This template changed in another window. Refresh the library before saving; your input remains in the fields.",
       "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.": "This template was deleted in another window. Your input remains in the fields.",
-      "Проверьте название, текст задачи и числовые лимиты.": "Check the name, task text and numeric limits.",
+      "Проверьте название, описание, текст задачи и лимиты.": "Check the name, description, task text and limits.",
+      "Название — до 120 символов, описание — до 1000 символов. Проверьте поля и повторите.": "The name can have up to 120 characters and the description up to 1000. Check the fields and retry.",
       "В библиотеке уже 200 шаблонов. Удалите ненужный шаблон перед созданием нового. Введённые название и описание остаются в форме.": "The library already has 200 templates. Delete an unused template before creating another. Your name and description remain in the form.",
       "Нет доступа к библиотеке шаблонов. Проверьте подключение к локальному приложению. Ввод остаётся в форме.": "Access to the template library is unavailable. Check your connection to the local application. Your input remains in the form.",
       "Сначала введите задачу в основной форме.": "First enter a task in the main form.", "Введите название шаблона.": "Enter a template name.",
@@ -127,16 +129,23 @@
     const editorTitle = el("h3", "", "Выберите шаблон или сохраните текущую задачу.");
     const metadata = el("form", "task-templates-metadata");
     const nameLabel = el("label", "", "Название шаблона"), name = el("input"); name.id = "task-template-name"; name.maxLength = 120; name.required = true; nameLabel.htmlFor = name.id;
-    const descriptionLabel = el("label", "", "Описание шаблона"), description = el("textarea"); description.id = "task-template-description"; description.maxLength = 2000; description.rows = 3; description.placeholder = t("Необязательно"); descriptionLabel.htmlFor = description.id;
+    const descriptionLabel = el("label", "", "Описание шаблона"), description = el("textarea"); description.id = "task-template-description"; description.maxLength = 1000; description.rows = 3; description.placeholder = t("Необязательно"); descriptionLabel.htmlFor = description.id;
     const previewHint = el("p", "task-templates-hint"), preview = el("pre", "task-templates-preview"); preview.setAttribute("aria-label", t("Содержимое шаблона"));
     const actions = el("div", "task-templates-actions"), save = button("Сохранить шаблон", "primary"), update = button("Обновить из текущей задачи"), use = button("Применить к форме"), remove = button("Удалить шаблон", "text-button"); save.id = "task-template-save"; save.type = "submit"; use.id = "task-template-apply"; update.id = "task-template-update"; remove.id = "task-template-delete";
     actions.append(save, update, use, remove); metadata.append(nameLabel, name, descriptionLabel, description, previewHint, preview, actions); editor.append(editorTitle, metadata); content.append(library, editor); dialog.append(header, safety, tools, status, error, content); document.body.append(dialog);
+    const measureHeader = () => dialog.style.setProperty("--task-templates-header-height", `${Math.ceil(header.getBoundingClientRect().height + 12)}px`);
+    const headerResize = root.ResizeObserver ? new root.ResizeObserver(measureHeader) : null;
+    headerResize?.observe(header);
     let state, controller, shown = false, destroyed = false, pending = false, creating = false, populated = null, savedName = "", savedDescription = "", listIdentity = null, returnFocus = null, localError = "", nextFocus = null;
     const dirty = () => (creating || !!state?.selected) && (name.value !== savedName || description.value !== savedDescription);
     const ask = (title, body, accept) => confirm ? confirm(t(title), t(body), "", t(accept)) : Promise.resolve(root.confirm(`${t(title)}\n\n${t(body)}`));
     const discard = () => !dirty() || ask("Отменить изменения шаблона?", "Название и описание ещё не сохранены.", "Отменить изменения");
-    const errors = {limit: "В библиотеке уже 200 шаблонов. Удалите ненужный шаблон перед созданием нового. Введённые название и описание остаются в форме.", access: "Нет доступа к библиотеке шаблонов. Проверьте подключение к локальному приложению. Ввод остаётся в форме.", offline: "Нет связи. Ввод и сохранённые шаблоны не изменены. Повторите после подключения.", error: "Не удалось выполнить действие. Ввод сохранён; повторите попытку.", conflict: "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.", missing: "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.", invalid: "Проверьте название, текст задачи и числовые лимиты."};
-    const previewData = data => fields.filter(key => data[key] !== undefined).map(key => `${t({task:"Задача",workspace:"Проект",mode:"Режим",pack:"Набор агентов",specialists:"Специалисты",max_iterations:"Итерации",max_agent_calls:"Вызовы агентов",max_run_duration:"Длительность, с"}[key])}: ${Array.isArray(data[key]) ? data[key].join(", ") : data[key]}`).join("\n\n");
+    const errors = {limit: "В библиотеке уже 200 шаблонов. Удалите ненужный шаблон перед созданием нового. Введённые название и описание остаются в форме.", access: "Нет доступа к библиотеке шаблонов. Проверьте подключение к локальному приложению. Ввод остаётся в форме.", offline: "Нет связи. Ввод и сохранённые шаблоны не изменены. Повторите после подключения.", error: "Не удалось выполнить действие. Ввод сохранён; повторите попытку.", conflict: "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.", missing: "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.", metadata: "Название — до 120 символов, описание — до 1000 символов. Проверьте поля и повторите.", invalid: "Проверьте название, описание, текст задачи и лимиты."};
+    const previewValue = (key, value) => {
+      const formatted = formatValue?.(key, value);
+      return formatted === undefined ? Array.isArray(value) ? value.join(", ") : String(value) : String(formatted);
+    };
+    const previewData = data => fields.filter(key => data[key] !== undefined).map(key => `${t({task:"Задача",workspace:"Проект",mode:"Режим",pack:"Набор агентов",specialists:"Специалисты",max_iterations:"Итерации",max_agent_calls:"Вызовы агентов",max_run_duration:"Длительность, с"}[key])}: ${previewValue(key, data[key])}`).join("\n\n");
     function render(value = state) {
       state = value;
       const blocked = pending || value.busy || value.detailLoading;
@@ -199,7 +208,7 @@
     async function requestClose() { return act(async () => { if (await discard()) hide(); }); }
     function open() {
       if (destroyed || shown) return;
-      shown = true; returnFocus = document.activeElement; dialog.showModal(); controller.open(); search.focus();
+      shown = true; returnFocus = document.activeElement; dialog.showModal(); measureHeader(); controller.open(); search.focus();
     }
     trigger.addEventListener("click", open); close.addEventListener("click", requestClose);
     dialog.addEventListener("cancel", event => { event.preventDefault(); requestClose(); });
@@ -222,6 +231,9 @@
     function values() { return {name:name.value.trim(), description:description.value.trim()}; }
     function validate(needsTask) {
       if (!name.value.trim()) { localError = "Введите название шаблона."; nextFocus = name; return false; }
+      if (name.value.length > 120 || description.value.length > 1000) {
+        localError = errors.metadata; nextFocus = name.value.length > 120 ? name : description; return false;
+      }
       if (needsTask && !read()?.task?.trim()) { localError = "Сначала введите задачу в основной форме."; return false; }
       return true;
     }
@@ -235,7 +247,7 @@
     }));
     remove.addEventListener("click", () => act(async () => { if (await ask("Удалить этот шаблон?", "Шаблон будет удалён из библиотеки на этом компьютере. Текущая задача и запуски сохранятся.", "Удалить шаблон")) { if (await controller.remove()) { creating = false; render(); } } }));
     return {open, close:requestClose, controller, button:trigger, dialog,
-      destroy() { destroyed = true; shown = false; controller.destroy(); if (dialog.open) dialog.close(); dialog.remove(); trigger.remove(); returnFocus?.focus(); },
+      destroy() { destroyed = true; shown = false; controller.destroy(); headerResize?.disconnect(); if (dialog.open) dialog.close(); dialog.remove(); trigger.remove(); returnFocus?.focus(); },
     };
   }
   root.CodexTaskTemplates = {clean, createController, mount};
