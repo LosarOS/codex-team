@@ -55,7 +55,7 @@ def test_knowledge_categories_context_and_restart(intelligence):
     assert restart.search('p')['total']==2
 
 
-def test_cached_analysis_does_not_reopen_unchanged_source_files(intelligence, monkeypatch):
+def test_cached_analysis_reuses_snapshot_with_platform_safe_fingerprint(intelligence, monkeypatch):
     from pathlib import Path
     service, repo = intelligence
     first = service.analyze('p')
@@ -67,7 +67,15 @@ def test_cached_analysis_does_not_reopen_unchanged_source_files(intelligence, mo
         return original(path, *args, **kwargs)
     monkeypatch.setattr(Path, 'open', track)
     assert service.analyze('p')['id'] == first['id']
-    assert opened == []
+    import codex_team.intelligence as module
+    if module._WINDOWS:
+        # Windows hashes the bounded catalog, but still skips source parsing and
+        # creation of a new architecture record for an unchanged fingerprint.
+        assert set(opened) == {repo/'.gitignore', repo/'blob.dat',
+                               repo/'pyproject.toml', repo/'src'/'auth.py'}
+        assert len(opened) == 4
+    else:
+        assert opened == []
     assert service.analyze('p', refresh=True)['id'] != first['id']
     assert repo/'src'/'auth.py' in opened
 
@@ -113,7 +121,7 @@ def test_index_rename_delete_ignore_and_head_invalidate(intelligence):
     assert committed['data']['head'] != first['data']['head']
 
 
-def test_restart_reuses_persisted_cache_without_content_read(intelligence, monkeypatch):
+def test_restart_reuses_persisted_cache_without_source_parsing(intelligence, monkeypatch):
     service, _ = intelligence
     first = service.analyze('p')
     restarted = IntelligenceService(service.root, service.store)
@@ -167,3 +175,26 @@ def test_change_metadata_detects_write_with_restored_mtime(tmp_path):
     second = _change_time(path, path.stat())
     # A filesystem without reliable change metadata must use the hashing fallback.
     assert first is None or second is None or first != second
+
+
+
+def test_windows_hashing_detects_edit_with_identical_change_metadata_and_clean_git(intelligence, monkeypatch):
+    import os
+    import codex_team.intelligence as module
+    service, repo = intelligence
+    monkeypatch.setattr(module, '_WINDOWS', True)
+    monkeypatch.setattr(module, '_change_time', lambda path, stat: 134367571712315903)
+    original_git = service.workspace._git
+    def cached_status(root, *args, **kwargs):
+        if 'status' in args:
+            return {'stdout': '', 'returncode': 0}
+        return original_git(root, *args, **kwargs)
+    monkeypatch.setattr(service.workspace, '_git', cached_status)
+    first = service.analyze('p')
+    path = repo/'src'/'auth.py'
+    before = path.stat()
+    path.write_text(path.read_text().replace('pass', 'True'))
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    second = service.analyze('p')
+    assert second['id'] != first['id']
+    assert service.analyze('p')['id'] == second['id']
