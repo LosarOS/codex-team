@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import time
@@ -18,6 +19,51 @@ def clean(text):
     text = re.sub(r"(?i)(api[_-]?key|password|secret|token)\s*[:=]\s*[^\s,;]+", r"\1=[REDACTED]", text)
     return re.sub(r"(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----)", "[REDACTED]", text)
 
+def _change_time(path, stat):
+    """Return write-change metadata, not Windows' creation-time st_ctime.
+
+    Git's stat cache can report clean after a same-size edit with restored mtime.
+    NTFS ChangeTime still changes; query attributes only, without reading content.
+    Unsupported filesystems/API failures return None so the caller hashes safely.
+    """
+    if os.name != "nt":
+        return stat.st_ctime_ns
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class FileBasicInfo(ctypes.Structure):
+            _fields_ = [(name, ctypes.c_longlong) for name in
+                        ("CreationTime", "LastAccessTime", "LastWriteTime", "ChangeTime")] + [
+                            ("FileAttributes", wintypes.DWORD)]
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        create = kernel.CreateFileW
+        create.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                           ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        create.restype = wintypes.HANDLE
+        query = kernel.GetFileInformationByHandleEx
+        query.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        query.restype = wintypes.BOOL
+        close = kernel.CloseHandle
+        close.argtypes = [wintypes.HANDLE]
+        close.restype = wintypes.BOOL
+        # Read attributes, share read/write/delete, open existing without following
+        # a reparse point introduced after the caller's symlink check.
+        handle = create(str(path), 0x80, 0x7, None, 3, 0x00200000, None)
+        if handle == ctypes.c_void_p(-1).value:
+            return None
+        try:
+            info = FileBasicInfo()
+            if query(handle, 0, ctypes.byref(info), ctypes.sizeof(info)) and info.ChangeTime > 0:
+                return info.ChangeTime
+        finally:
+            close(handle)
+    except (OSError, AttributeError):
+        pass
+    return None
+
+
 class IntelligenceService:
     MAX_FILES = 4000
     MAX_FILE_BYTES = 65536
@@ -33,8 +79,10 @@ class IntelligenceService:
     def _catalog(self, root):
         """Fingerprint Git/index and metadata without opening unchanged source files.
 
-        ctime supplements mtime (including edits preserving size/mtime). Dirty files
-        are additionally hashed: consecutive changes can retain the same Git status.
+        Change metadata supplements mtime (including edits preserving size/mtime).
+        Dirty files are additionally hashed: consecutive changes can retain the same
+        Git status. If change metadata is unavailable, bounded content hashing wins
+        over returning stale analysis.
         Git ignore enumeration is recomputed so local/global exclude changes apply.
         """
         index = self.workspace._git(root, "ls-files", "-z", "--stage", "--cached", "--exclude-standard")["stdout"]
@@ -56,10 +104,16 @@ class IntelligenceService:
                 stat = path.stat()
                 if not path.is_file() or stat.st_size > self.MAX_FILE_BYTES:
                     continue
+                change_time = _change_time(path, stat)
                 digest = None
-                if name in dirty:
-                    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-                metadata.append((name, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, stat.st_mode, stat.st_ino, digest))
+                if name in dirty or change_time is None:
+                    # Recheck the read bound even if the file grows after stat().
+                    with path.open("rb") as stream:
+                        content = stream.read(self.MAX_FILE_BYTES + 1)
+                    if len(content) > self.MAX_FILE_BYTES:
+                        continue
+                    digest = hashlib.sha256(content).hexdigest()
+                metadata.append((name, stat.st_mtime_ns, change_time, stat.st_size, stat.st_mode, stat.st_ino, digest))
                 candidates.append(name)
             except (ValueError, OSError):
                 continue

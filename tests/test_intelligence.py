@@ -132,3 +132,38 @@ def test_analysis_never_executes_repository_fsmonitor(intelligence):
     subprocess.run(['git', '-C', str(repo), 'config', 'core.fsmonitor', str(script)], check=True)
     service.analyze('p')
     assert not marker.exists()
+
+
+def test_unavailable_change_metadata_hashes_bounded_files_despite_git_clean_cache(intelligence, monkeypatch):
+    import os
+    import codex_team.intelligence as module
+    service, repo = intelligence
+    monkeypatch.setattr(module, '_change_time', lambda path, stat: None)
+    original_git = service.workspace._git
+    def cached_status(root, *args, **kwargs):
+        if 'status' in args:
+            return {'stdout': '', 'returncode': 0}
+        return original_git(root, *args, **kwargs)
+    monkeypatch.setattr(service.workspace, '_git', cached_status)
+    first = service.analyze('p')
+    path = repo/'src'/'auth.py'
+    before = path.stat()
+    path.write_text(path.read_text().replace('pass', 'True'))
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    second = service.analyze('p')
+    assert second['id'] != first['id']
+    assert service.analyze('p')['id'] == second['id']
+
+
+def test_change_metadata_detects_write_with_restored_mtime(tmp_path):
+    import os
+    from codex_team.intelligence import _change_time
+    path = tmp_path/'change.txt'
+    path.write_text('AAAA')
+    before = path.stat()
+    first = _change_time(path, before)
+    path.write_text('BBBB')
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    second = _change_time(path, path.stat())
+    # A filesystem without reliable change metadata must use the hashing fallback.
+    assert first is None or second is None or first != second
