@@ -77,3 +77,13 @@ def test_installed_package_checks_localized_settings_and_i18n_asset():
     assert "'/api/settings'" in SMOKE
     verification = (ROOT / 'packaging/verify_bundle.py').read_text()
     assert 'codex_team/static/i18n.js' in verification
+
+
+def test_source_git_tests_use_original_external_temporary_directory():
+    script = (ROOT / 'build-desktop.ps1').read_text(encoding='utf-8-sig')
+    assert script.index('$desktopBuildOriginalTemp = [IO.Path]::GetTempPath()') < script.index('$env:TEMP =')
+    assert "Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-'" in script
+    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp' in script
+    # Never loosen production Git discovery or the nested-repository safety rule.
+    assert 'GIT_CEILING_DIRECTORIES' not in script
+    assert '[guid]::NewGuid()' in script

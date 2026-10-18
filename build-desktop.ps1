@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 $env:PYTHONUTF8 = '1'
+$desktopBuildOriginalTemp = [IO.Path]::GetTempPath()
 $env:PYINSTALLER_CONFIG_DIR = Join-Path $PSScriptRoot '.build-tools/pyinstaller-cache'
 New-Item -ItemType Directory -Force -Path '.local-tmp','.build-tools/prerequisites','.build-tools/inno-download' | Out-Null
 $env:TEMP = Join-Path $PSScriptRoot '.local-tmp'
@@ -29,8 +30,18 @@ if (-not $SkipDependencies) {
 & $python -m pip install --no-deps --no-build-isolation -e .
 if ($LASTEXITCODE -ne 0) { throw 'Application build metadata refresh failed' }
 if (-not $SkipTests) {
-    & $python -m pytest -q
-    if ($LASTEXITCODE -ne 0) { throw 'Tests failed; desktop artifacts were not built' }
+    # Git safety tests must run outside this source checkout. The build's TEMP
+    # override below the repository would otherwise create genuinely nested repos.
+    $desktopSourceTestTemp = Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-' + [guid]::NewGuid().ToString('N'))
+    try {
+        & $python -m pytest -q --basetemp $desktopSourceTestTemp
+        if ($LASTEXITCODE -ne 0) { throw 'Tests failed; desktop artifacts were not built' }
+    } finally {
+        # Only this invocation's unique pytest directory; rmtree does not follow links.
+        if (Test-Path -LiteralPath $desktopSourceTestTemp) {
+            & $python -c "import shutil,sys; shutil.rmtree(sys.argv[1], ignore_errors=True)" $desktopSourceTestTemp
+        }
+    }
 }
 
 function Assert-Publisher([string]$Path, [string]$Publisher) {
