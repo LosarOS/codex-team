@@ -1,7 +1,13 @@
-# Roadmap
+# Направления развития
 
-RC включает Windows desktop, сохранение history/checkpoints, official multi-thread Codex workflow, runtime discovery/bundled Python, Action Center, tray/notifications/recovery и optional explicit API provider.
+Реализованы Windows desktop, официальный Codex SDK, независимые агентные сессии, история, контрольные точки, Центр действий, Git worktrees, пять инструментов разработки, RU/EN, темы и запускаемый пользователем обновлятор с проверкой SHA256. В rc6 добавлены палитра команд и устойчивые локальные черновики.
 
-Следующие возможные этапы требуют отдельной реализации/acceptance: product Authenticode signing, broader clean-machine Windows matrix, реальный API inference с пользовательским согласованием billing, более широкая поддержка нестандартных test runners, безопасные dependency installation workflows и manual release hosting.
+Дальнейшие задачи, которые не считаются выполненными:
 
-Automatic updater, parallel writers/reconciliation, auto merge/push, shared task scheduling и универсальный secret scanner сейчас не реализованы. Возможный updater должен проверять publisher/source и сохранять active checkpoints; feature list не обещает сроков.
+- Authenticode-подпись продукта и расширенная проверка на чистых Windows 10/11.
+- Ручная матрица WebView2/DPI/portable/installed и реальные пользовательские сценарии Codex.
+- Больше адаптеров достоверного анализа архитектуры и нестандартных test runners.
+- Параллельная запись агентов с безопасным согласованием изменений; общий планировщик задач.
+- Подтверждаемые пользователем сценарии установки зависимостей проекта.
+
+Вызовы платного API и модельные проверки требуют отдельного явного действия. Автоматический push/merge кода пользовательских проектов не выполняется. Универсальный сканер секретов и автоматическая архитектурная карта зависимостей для любого языка не заявлены.

@@ -60,7 +60,7 @@ try {
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -81,10 +81,35 @@ try {
     $created = Invoke-RestMethod -Uri ($baseUrl + '/api/projects/create') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($newProject)) -TimeoutSec 60
     if (-not $created.id -or -not $created.head -or -not $created.ready) { throw 'Installed app could not create a ready Git project without external Git or GitHub.' }
     $report.project_creation_verified = $true
+    # Local unsubmitted text must survive a frozen backend restart without any model call.
+    $draftText = 'Черновик проверки: локальный текст'
+    $draftBody = @{ expected_revision = 0; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
+    $savedDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($draftBody)) -TimeoutSec 10
+    if ($savedDraft.revision -ne 1 -or $savedDraft.draft.data.task -ne $draftText) { throw 'Installed draft did not save.' }
     $report.installed_backend_verified = $true
     Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
     if (-not $backend.WaitForExit(20000)) { throw 'Installed backend did not shut down cleanly.' }
     if ($backend.ExitCode -ne 0) { throw "Installed backend exited with $($backend.ExitCode)." }
+    $backend = Start-Process -FilePath $exe -ArgumentList $backendArgs -WorkingDirectory $profile -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $diagnostics 'restart.stdout.log') -RedirectStandardError (Join-Path $diagnostics 'restart.stderr.log')
+    $healthy = $null
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
+    do {
+        $backend.Refresh()
+        if ($backend.HasExited) { throw 'Restarted installed backend exited before health check.' }
+        try { $healthy = Invoke-RestMethod -Uri ($baseUrl + '/health') -TimeoutSec 2 } catch { Start-Sleep -Milliseconds 200 }
+    } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
+    if (-not $healthy -or $healthy.status -ne 'ok') { throw 'Restarted installed backend did not become healthy.' }
+    $restoredDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -TimeoutSec 10
+    if ($restoredDraft.revision -ne 1 -or $restoredDraft.draft.data.task -ne $draftText) { throw 'Draft was lost after installed backend restart.' }
+    $null = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft?expected_revision=1') -Method Delete -ContentType 'application/json' -Body '{}' -TimeoutSec 10
+    $emptyDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -TimeoutSec 10
+    if ($emptyDraft.revision -ne 2 -or $null -ne $emptyDraft.draft) { throw 'Installed draft clear/revision check failed.' }
+    $report.draft_restart_verified = $true
+    $afterRestart = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
+    if ($afterRestart.theme -ne 'neon-blue' -or $afterRestart.language -ne 'en') { throw 'Appearance was lost after restart.' }
+    $report.appearance_restart_verified = $true
+    Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
+    if (-not $backend.WaitForExit(20000) -or $backend.ExitCode -ne 0) { throw 'Restarted installed backend did not shut down cleanly.' }
     & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File (Join-Path $installation 'Update.ps1') -CheckOnly
     if ($LASTEXITCODE -ne 0) { throw 'Installed updater check failed under Windows PowerShell 5.1.' }
     $report.updater_check_verified = $true

@@ -1,0 +1,1717 @@
+{
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1024,
+      "scroll": 1024,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1280,
+      "scroll": 1280,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1440,
+      "scroll": 1440,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 1920,
+      "scroll": 1920,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "workbench",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "projects",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs-list",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "agents",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "packs",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "actions",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "usage",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "settings",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "intelligence",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "architect",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "budget",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "git",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    },
+    {
+      "phase": "rc6-responsive",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "qa",
+      "width": 2560,
+      "scroll": 2560,
+      "lang": "en"
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    }
+  ],
+  "untranslated": [],
+  "errors": [],
+  "unknown": [],
+  "overflows": [],
+  "writes": 9
+}
