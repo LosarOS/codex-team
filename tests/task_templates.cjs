@@ -47,6 +47,20 @@ function setup(handler) {
     fail=false; await s.controller.select('one'); await s.controller.update({name:'My metadata',description:''}); assert.equal(s.last().selected.revision,7);
   }
   {
+    for (const {status, technical, expected} of [
+      {status:409,technical:{code:'template_limit'},expected:'limit'},
+      {status:409,technical:{detail:{code:'template_limit'}},expected:'limit'},
+      {status:409,technical:{code:'revision_conflict'},expected:'conflict'},
+      {status:401,technical:null,expected:'access'},
+      {status:403,technical:null,expected:'access'},
+    ]) {
+      const s=setup((url,method)=>{if(method==='GET')return {items:[sample()],total:1};const error=new Error('backend details');Object.assign(error,{status,technical});throw error;});
+      await s.controller.open(); const before=JSON.stringify(s.current); await s.controller.create({name:'Keep my title',description:'Keep my description'});
+      assert.equal(s.last().error,expected); assert.equal(s.last().busy,false); assert.equal(JSON.stringify(s.current),before,'capacity and access errors preserve the composer'); assert.equal(s.last().items[0].name,sample().name,'failed creates preserve existing templates');
+      assert.equal(s.calls.at(-1).body.name,'Keep my title'); assert.equal(s.calls.at(-1).body.description,'Keep my description');
+    }
+  }
+  {
     const put=deferred(); const s=setup((url,method)=>method==='GET'?url.includes('?')?{items:[sample()],total:1}:sample():put.promise);
     await s.controller.open(); await s.controller.select('one'); const saving=s.controller.update({name:'Once',description:''}); assert.equal(s.last().busy,true);
     assert.equal(await s.controller.update({name:'Twice',description:''}),false); assert.equal(await s.controller.remove(),false); assert.equal(await s.controller.select('another'),false);

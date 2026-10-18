@@ -11,7 +11,12 @@
     let state = {items: [], total: 0, query: "", offset: 0, limit, selected: null, busy: false, listLoading: false, detailLoading: false, error: "", notice: ""};
     let listVersion = 0, detailVersion = 0, session = 0, active = false, destroyed = false;
     const emit = patch => { state = {...state, ...patch}; if (active && !destroyed) onState({...state}); };
-    const failure = error => error.status === 409 ? "conflict" : error.status === 404 ? "missing" : error.status === 400 || error.status === 422 ? "invalid" : error.status ? "error" : "offline";
+    const failure = error => {
+      const code = error.technical?.code || error.technical?.detail?.code;
+      if (error.status === 409 && code === "template_limit") return "limit";
+      if (error.status === 401 || error.status === 403) return "access";
+      return error.status === 409 ? "conflict" : error.status === 404 ? "missing" : error.status === 400 || error.status === 422 ? "invalid" : error.status ? "error" : "offline";
+    };
     async function list({query = state.query, offset = state.offset} = {}) {
       if (destroyed) return false;
       const version = ++listVersion, currentSession = session;
@@ -89,6 +94,8 @@
       "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.": "This template changed in another window. Refresh the library before saving; your input remains in the fields.",
       "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.": "This template was deleted in another window. Your input remains in the fields.",
       "Проверьте название, текст задачи и числовые лимиты.": "Check the name, task text and numeric limits.",
+      "В библиотеке уже 200 шаблонов. Удалите ненужный шаблон перед созданием нового. Введённые название и описание остаются в форме.": "The library already has 200 templates. Delete an unused template before creating another. Your name and description remain in the form.",
+      "Нет доступа к библиотеке шаблонов. Проверьте подключение к локальному приложению. Ввод остаётся в форме.": "Access to the template library is unavailable. Check your connection to the local application. Your input remains in the form.",
       "Сначала введите задачу в основной форме.": "First enter a task in the main form.", "Введите название шаблона.": "Enter a template name.",
       "Содержимое шаблона": "Template content", "Будет сохранена текущая задача из основной формы.": "The current task from the main form will be saved.",
       "Задача": "Task", "Проект": "Project", "Режим": "Mode", "Набор агентов": "Agent pack", "Специалисты": "Specialists", "Итерации": "Iterations", "Вызовы агентов": "Agent calls", "Длительность, с": "Duration, seconds",
@@ -124,11 +131,11 @@
     const previewHint = el("p", "task-templates-hint"), preview = el("pre", "task-templates-preview"); preview.setAttribute("aria-label", t("Содержимое шаблона"));
     const actions = el("div", "task-templates-actions"), save = button("Сохранить шаблон", "primary"), update = button("Обновить из текущей задачи"), use = button("Применить к форме"), remove = button("Удалить шаблон", "text-button"); save.id = "task-template-save"; save.type = "submit"; use.id = "task-template-apply"; update.id = "task-template-update"; remove.id = "task-template-delete";
     actions.append(save, update, use, remove); metadata.append(nameLabel, name, descriptionLabel, description, previewHint, preview, actions); editor.append(editorTitle, metadata); content.append(library, editor); dialog.append(header, safety, tools, status, error, content); document.body.append(dialog);
-    let state, controller, shown = false, destroyed = false, pending = false, creating = false, populated = null, savedName = "", savedDescription = "", listIdentity = null, returnFocus = null, localError = "";
+    let state, controller, shown = false, destroyed = false, pending = false, creating = false, populated = null, savedName = "", savedDescription = "", listIdentity = null, returnFocus = null, localError = "", nextFocus = null;
     const dirty = () => (creating || !!state?.selected) && (name.value !== savedName || description.value !== savedDescription);
     const ask = (title, body, accept) => confirm ? confirm(t(title), t(body), "", t(accept)) : Promise.resolve(root.confirm(`${t(title)}\n\n${t(body)}`));
     const discard = () => !dirty() || ask("Отменить изменения шаблона?", "Название и описание ещё не сохранены.", "Отменить изменения");
-    const errors = {offline: "Нет связи. Ввод и сохранённые шаблоны не изменены. Повторите после подключения.", error: "Не удалось выполнить действие. Ввод сохранён; повторите попытку.", conflict: "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.", missing: "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.", invalid: "Проверьте название, текст задачи и числовые лимиты."};
+    const errors = {limit: "В библиотеке уже 200 шаблонов. Удалите ненужный шаблон перед созданием нового. Введённые название и описание остаются в форме.", access: "Нет доступа к библиотеке шаблонов. Проверьте подключение к локальному приложению. Ввод остаётся в форме.", offline: "Нет связи. Ввод и сохранённые шаблоны не изменены. Повторите после подключения.", error: "Не удалось выполнить действие. Ввод сохранён; повторите попытку.", conflict: "Шаблон изменён в другом окне. Обновите библиотеку перед сохранением; ваш ввод остаётся в полях.", missing: "Шаблон удалён в другом окне. Ваш ввод остаётся в полях.", invalid: "Проверьте название, текст задачи и числовые лимиты."};
     const previewData = data => fields.filter(key => data[key] !== undefined).map(key => `${t({task:"Задача",workspace:"Проект",mode:"Режим",pack:"Набор агентов",specialists:"Специалисты",max_iterations:"Итерации",max_agent_calls:"Вызовы агентов",max_run_duration:"Длительность, с"}[key])}: ${Array.isArray(data[key]) ? data[key].join(", ") : data[key]}`).join("\n\n");
     function render(value = state) {
       state = value;
@@ -154,7 +161,7 @@
         for (const item of value.items) {
           const row = el("li"), itemButton = button("", "task-template-choice"), itemTitle = el("strong"), itemDescription = el("span");
           itemButton.dataset.templateId = item.id; itemTitle.textContent = item.name; itemDescription.textContent = item.description || ""; itemButton.append(itemTitle, itemDescription);
-          itemButton.addEventListener("click", () => act(async () => { if (item.id === state.selected?.id || !await discard()) return; await controller.select(item.id); if (state.selected?.id === item.id) name.focus(); }));
+          itemButton.addEventListener("click", () => act(async () => { if (item.id === state.selected?.id || !await discard()) return; await controller.select(item.id); if (state.selected?.id === item.id) nextFocus = name; }));
           row.append(itemButton); list.append(row);
         }
       }
@@ -167,9 +174,25 @@
     }
     async function act(handler) {
       if (pending || state?.busy || state?.detailLoading || destroyed || !shown) return;
-      pending = true; localError = ""; render();
+      const previousFocus = document.activeElement;
+      pending = true; localError = ""; nextFocus = null; render();
       try { await handler(); } catch (_) { if (shown && !destroyed) { localError = errors.error; render(); } }
-      finally { pending = false; if (!destroyed) render(); }
+      finally {
+        pending = false;
+        if (!destroyed) {
+          render();
+          if (shown) {
+            const available = node => node?.isConnected && !node.disabled && node.getClientRects().length;
+            // Busy controls cannot receive focus. Restore it only after enabling them.
+            let target = available(nextFocus) ? nextFocus : null;
+            if (!target && (!dialog.contains(document.activeElement) || document.activeElement === dialog)) {
+              target = available(previousFocus) ? previousFocus : available(name) ? name : search;
+            }
+            target?.focus();
+          }
+        }
+        nextFocus = null;
+      }
     }
     controller = createController({api, read, onState: render}); state = controller.state; render();
     function hide() { shown = false; creating = false; populated = undefined; controller.close(); dialog.close(); returnFocus?.focus(); }
@@ -194,11 +217,11 @@
     refresh.addEventListener("click", () => act(async () => { if (!await discard()) return; const id = state.selected?.id; await controller.list(); if (id) await controller.select(id); }));
     create.addEventListener("click", () => act(async () => {
       if (!await discard()) return;
-      controller.newTemplate(); creating = true; name.value = ""; description.value = ""; savedName = ""; savedDescription = ""; render(); name.focus();
+      controller.newTemplate(); creating = true; name.value = ""; description.value = ""; savedName = ""; savedDescription = ""; render(); nextFocus = name;
     }));
     function values() { return {name:name.value.trim(), description:description.value.trim()}; }
     function validate(needsTask) {
-      if (!name.value.trim()) { localError = "Введите название шаблона."; name.focus(); return false; }
+      if (!name.value.trim()) { localError = "Введите название шаблона."; nextFocus = name; return false; }
       if (needsTask && !read()?.task?.trim()) { localError = "Сначала введите задачу в основной форме."; return false; }
       return true;
     }
