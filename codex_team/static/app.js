@@ -27,6 +27,7 @@
     stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
     desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
   };
+  let taskDraft = null;
   const roles = {
     coordinator: [I.t("Координатор"), I.t("План и организация работы")],
     analyst: [I.t("Аналитик"), I.t("Архитектура и критерии приёмки")],
@@ -172,6 +173,7 @@
     if(page==="settings")loadProviders();
     if(page==="suite"){const event=new Event("codex-suite-open");event.detail={feature:state.suiteFeature};window.dispatchEvent?.(event);}
     if(page==="runs"){renderRunList();if(state.selectedRun)setDetailTab(state.detailTab);}
+    window.dispatchEvent?.(new Event("codex-workspace-change"));
   }
   function setDetailTab(tab) {
     state.detailTab=tab;
@@ -356,7 +358,7 @@
       ["max_run_duration", "settings-duration", "max-duration", 60],
     ];
     fields.forEach(([key, settingsId, runId, divisor]) => {
-      if (typeof settings[key] === "number") { $(settingsId).value = settings[key] / divisor; $(runId).value = settings[key] / divisor; }
+      if (typeof settings[key] === "number") { $(settingsId).value = settings[key] / divisor; if (!taskDraft || taskDraft.version === 0) $(runId).value = settings[key] / divisor; }
     });
   }
   const builtInPackText = {"elma365": {"title": "ELMA365", "description": "Бизнес-процессы и интеграции ELMA365"}, "web-development": {"title": "Веб-разработка", "description": "Разработка и проверка интерфейса, серверной части и безопасности"}, "software-development": {"title": "Разработка ПО", "description": "Разработка программного обеспечения с проверкой безопасности и производительности"}, "game-development": {"title": "Разработка игр", "description": "Проверка игровой логики, сценария и выполнения игры"}, "audit": {"title": "Аудит", "description": "Проверка безопасности и производительности"}};
@@ -424,6 +426,7 @@
       button.append(main, tail); button.addEventListener("click", () => selectRun(run.id)); return button;
     }));
     renderConnection(); renderRunList(); renderDashboard();
+    window.dispatchEvent?.(new Event("codex-workspace-change"));
     if(state.page==="usage")renderGlobalUsage();
   }
   function renderHistory() {
@@ -1125,7 +1128,7 @@
     state.projectsRequest=loadProjectsData().finally(()=>{state.projectsRequest=null;});
     return state.projectsRequest;
   }
-  async function loadProjectsData() { try{const response=await api("/api/projects");state.projects=Array.isArray(response)?response:response.items||response.projects||[];state.projectsError=null;const selected=$("history-project").value,all=node("option","",I.t("Все проекты"));all.value="";$("history-project").replaceChildren(all,...state.projects.map(p=>{const o=node("option","",p.name||p.path);o.value=p.path;return o;}));$("history-project").value=selected;renderProjects();renderProjectPreflight();}catch(error){state.projectsError=error.status===404?I.t("Управление проектами недоступно в этой версии сервера."):error.message;renderProjects();} }
+  async function loadProjectsData() { try{const response=await api("/api/projects");state.projects=Array.isArray(response)?response:response.items||response.projects||[];state.projectsError=null;const selected=$("history-project").value,all=node("option","",I.t("Все проекты"));all.value="";$("history-project").replaceChildren(all,...state.projects.map(p=>{const o=node("option","",p.name||p.path);o.value=p.path;return o;}));$("history-project").value=selected;renderProjects();renderProjectPreflight();window.dispatchEvent?.(new Event("codex-workspace-change"));}catch(error){state.projectsError=error.status===404?I.t("Управление проектами недоступно в этой версии сервера."):error.message;renderProjects();} }
   function renderProjects() {
     renderDashboard();
     const c=$("projects-list");if(state.projectsError){empty(c,I.t("Проекты временно недоступны"),state.projectsError);return;}if(!state.projects.length){empty(c,I.t("Добавьте свой первый проект"),I.t("Выберите локальный Git-репозиторий. Его файлы останутся на месте."));return;}
@@ -1149,7 +1152,7 @@
     try{const response=await api(`/api/projects/${encodeURIComponent(project.id)}/diff`);if(version!==state.projectDiffVersion)return;const lines=(response.diff||"").split("\n"),chunk=node("pre","code-block diff-block",lines.slice(0,1000).join("\n"));$("project-diff-body").replaceChildren(node("p","muted",I.t("Просмотр не изменяет файлы. Для изолированного запуска сохраните или отмените изменения в своём Git-инструменте.")),node("pre","code-block",response.diff_stat||""),chunk);if(!response.diff)chunk.textContent=I.t("Текстовых изменений нет.");if(lines.length>1000){let limit=1000;const more=actionButton(I.t("Показать ещё 1000 строк"),()=>{limit+=1000;chunk.textContent=lines.slice(0,limit).join("\n");more.hidden=limit>=lines.length;});$("project-diff-body").append(more);}}
     catch(error){if(version===state.projectDiffVersion)empty($("project-diff-body"),I.t("Не удалось прочитать изменения"),error.message);}
   }
-  function useProject(project) { $("workspace").value=project.path;storageSet("codex-team-workspace",project.path);renderProjectPreflight();renderDashboard();setPage("workbench");$("task").focus(); }
+  function useProject(project) { $("workspace").value=project.path;taskDraft?.changed();storageSet("codex-team-workspace",project.path);renderProjectPreflight();renderDashboard();setPage("workbench");$("task").focus(); }
   function renderProjectPreflight() { const project=state.projects.find(p=>p.path?.toLowerCase()===$("workspace").value.trim().toLowerCase()),c=$("project-preflight");c.replaceChildren();c.hidden=!project?.dirty&&!project?.runtime_status?.missing?.length;if(c.hidden)return;if(project.dirty){c.append(node("strong","",I.t("В проекте есть несохранённые Git-изменения")),node("p","",I.t("Изолированная рабочая копия требует чистого репозитория. Сохраните или отмените изменения в своём Git-инструменте, затем обновите проект.")));const d=node("details","raw-details");d.append(node("summary","",I.t("Изменённые файлы")),node("pre","code-block",text(project.changed_files||[])));c.append(d);}if(project.runtime_status?.missing?.length)c.append(node("p","",I.tr`Проекту нужна среда: ${project.runtime_status.missing.join(", ")}. Откройте состояние проекта и рекомендации настройки.`));const row=node("div","button-row");row.append(actionButton(I.t("Состояние проекта"),()=>setPage("projects")),actionButton(I.t("Обновить"),loadProjects));if(project.dirty)row.append(actionButton(I.t("Посмотреть изменения"),()=>openProjectDiff(project)));c.append(row); }
   async function addProject(path) { const project=await api("/api/projects","POST",{path});await loadProjects();return project; }
   function openProjectEditor(project) {state.editingProject=project.id;$("project-editor-title").textContent=I.tr`Команды: ${project.name||project.path}`;for(const [kind,id]of [["test","project-test-command"],["build","project-build-command"],["run","project-run-command"]])$(id).value=JSON.stringify(project.commands?.[kind]||project.config?.commands?.[kind]||[]);$("project-editor").hidden=false;$("project-test-command").focus();}
@@ -1199,7 +1202,7 @@
     $("role-defaults-form").addEventListener("submit",async event=>{event.preventDefault();const defaults={...(state.status?.settings?.role_model_defaults||{})};for(const [name,{model,effort}]of state.roleDefaultInputs||[]){const modelId=model.value.trim(),reasoning=effort.value||null,error=validateModel(modelId,reasoning);if(error){showFormError("role-defaults-error",`${roleName(name)}: ${error}`);model.focus();return;}if(modelId||reasoning)defaults[name]={model:modelId||null,reasoning_effort:reasoning};else delete defaults[name];}$("save-role-defaults-button").disabled=true;try{const saved=await savePartialSettings({role_model_defaults:defaults},"role-defaults-error");if(saved){state.roleDefaultsDirty=false;renderRoleModelDefaults();}}finally{$("save-role-defaults-button").disabled=false;}});
     $("agent-model").addEventListener("change",()=>updateEffortOptions($("agent-model").value.trim(),"agent-reasoning"));$("settings-model").addEventListener("change",()=>updateEffortOptions($("settings-model").value.trim(),"settings-reasoning"));
     $("workspace").addEventListener("input",()=>{renderDashboard();renderProjectPreflight();});
-    qa("[data-preset]").forEach(b=>b.addEventListener("click",()=>{const preset={fast:{mode:"quick",iterations:1,calls:6,duration:15},balanced:{mode:"standard",iterations:3,calls:15,duration:30},thorough:{mode:"deep",iterations:5,calls:30,duration:60}}[b.dataset.preset];$("run-mode").value=preset.mode;$("max-iterations").value=preset.iterations;$("max-calls").value=preset.calls;$("max-duration").value=preset.duration;qa("[data-preset]").forEach(item=>{const active=item===b;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});renderPreview();}));
+    qa("[data-preset]").forEach(b=>b.addEventListener("click",()=>{const preset={fast:{mode:"quick",iterations:1,calls:6,duration:15},balanced:{mode:"standard",iterations:3,calls:15,duration:30},thorough:{mode:"deep",iterations:5,calls:30,duration:60}}[b.dataset.preset];$("run-mode").value=preset.mode;$("max-iterations").value=preset.iterations;$("max-calls").value=preset.calls;$("max-duration").value=preset.duration;qa("[data-preset]").forEach(item=>{const active=item===b;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});renderPreview();taskDraft?.changed();}));
     $("run-pack").addEventListener("change",()=>{const pack=state.packs.find(p=>p.name===$("run-pack").value);if(pack?.default_mode){$("run-mode").value=pack.default_mode;renderPreview();}});
     $("open-diff-button").addEventListener("click",()=>{setDetailTab("diff");$("detail-diff").scrollIntoView({block:"nearest"});});$("more-diff-button").addEventListener("click",()=>{state.diffLimit+=1000;if(state.diffHasMore&&state.diffLimit>state.diffLines.length)loadDiff(true);else renderDiff();});$("more-events-button").addEventListener("click",()=>{if(state.selectedRun)return fetchEvents(state.selectedRun.id,state.selectionVersion);});
     $("mission-steer-button").addEventListener("click",()=>{$("steer-form").scrollIntoView({block:"nearest"});$("steer-instruction").focus();});
@@ -1292,11 +1295,13 @@
       specialists: ["deep", "audit"].includes($("run-mode").value) ? qa("#specialist-options input:checked").map((input) => input.value) : [],
     };
     const packError=validateComposerPack();if(packError){showFormError("run-form-error",packError);return;}
+    const draftCheckpoint = taskDraft?.checkpoint();
     state.creatingRun=true;const button = $("start-button"); button.disabled = true; button.textContent = I.t("Подготовка запуска…"); showFormError("run-form-error", "");
     try {
       if(!await confirmRunAccess(request.access_level))return;
       if(request.access_level==="full-access")request.confirmed_full_access=true;
       const run = await api("/api/runs", "POST", request);
+      if(draftCheckpoint) taskDraft.consume(draftCheckpoint);
       try { localStorage.setItem("codex-team-workspace", workspace); } catch (_) { /* storage may be disabled */ }
       state.runs = [run, ...state.runs.filter((item) => item.id !== run.id)]; renderRuns(true);
       toast(I.t("Задача передана координатору.")); await selectRun(run.id);
@@ -1345,8 +1350,33 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
   window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess};
+  window.CodexWorkspace = Object.freeze({
+    entries: () => ({
+      projects: state.projects.map(({id,name,path}) => ({id,name,path})),
+      runs: state.runs.map(({id,task,workspace,state:runState}) => ({id,task,path:workspace,state:runState})),
+      online: state.online,
+    }),
+    navigate: page => setPage(String(page).replace(/^suite:/,""),true),
+    openRun: id => selectRun(id),
+    selectProject: id => { const project = state.projects.find(value => value.id === id); if(project) useProject(project); },
+    newTask: () => {setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});},
+  });
+  function readComposeDraft() {
+    return {task:$("task").value,workspace:$("workspace").value,mode:$("run-mode").value,pack:$("run-pack").value,
+      specialists:qa("#specialist-options input:checked").map(input=>input.value),
+      max_iterations:Number($("max-iterations").value),max_agent_calls:Number($("max-calls").value),max_run_duration:Math.round(Number($("max-duration").value)*60)};
+  }
+  function applyComposeDraft(data) {
+    for(const [key,id,divisor] of [["task","task",1],["workspace","workspace",1],["mode","run-mode",1],["pack","run-pack",1],["max_iterations","max-iterations",1],["max_agent_calls","max-calls",1],["max_run_duration","max-duration",60]]) {
+      if(data[key]!==undefined) $(id).value=typeof data[key]==="number"?data[key]/divisor:data[key];
+    }
+    const chosen=new Set(data.specialists||[]);qa("#specialist-options input").forEach(input=>{input.checked=chosen.has(input.value);});
+    qa("[data-preset]").forEach(button=>{button.classList.remove("active");button.setAttribute("aria-pressed","false");});
+    renderPreview();renderProjectPreflight();renderDashboard();
+  }
+  taskDraft = window.CodexTaskDraft?.mount({form:$("run-form"),read:readComposeDraft,apply:applyComposeDraft,api,confirm:confirmOperation}) || null;
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
-  onDesktopReady(); refresh();
+  onDesktopReady(); refresh().finally(()=>taskDraft?.load());
   setInterval(poll, 2000);
 })();
