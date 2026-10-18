@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import time
@@ -18,6 +19,15 @@ def clean(text):
     text = re.sub(r"(?i)(api[_-]?key|password|secret|token)\s*[:=]\s*[^\s,;]+", r"\1=[REDACTED]", text)
     return re.sub(r"(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----)", "[REDACTED]", text)
 
+# On Windows, neither st_ctime nor FILE_BASIC_INFO.ChangeTime reliably advances
+# for immediate writes followed by restored mtime. Never trust metadata alone.
+_WINDOWS = os.name == "nt"
+
+
+def _change_time(path, stat):
+    return None if _WINDOWS else stat.st_ctime_ns
+
+
 class IntelligenceService:
     MAX_FILES = 4000
     MAX_FILE_BYTES = 65536
@@ -31,10 +41,12 @@ class IntelligenceService:
         return self.workspace.validate(Path(self.store.project(project_id)["path"]))
 
     def _catalog(self, root):
-        """Fingerprint Git/index and metadata without opening unchanged source files.
+        """Fingerprint Git/index, metadata, and bounded content when required.
 
-        ctime supplements mtime (including edits preserving size/mtime). Dirty files
-        are additionally hashed: consecutive changes can retain the same Git status.
+        POSIX change metadata avoids reading clean file contents. Windows hashes
+        every eligible file: its timestamps and Git's stat cache can both miss
+        immediate same-size writes with restored mtime. Dirty files are always
+        hashed, as are files whose change metadata is unavailable.
         Git ignore enumeration is recomputed so local/global exclude changes apply.
         """
         index = self.workspace._git(root, "ls-files", "-z", "--stage", "--cached", "--exclude-standard")["stdout"]
@@ -56,10 +68,16 @@ class IntelligenceService:
                 stat = path.stat()
                 if not path.is_file() or stat.st_size > self.MAX_FILE_BYTES:
                     continue
+                change_time = _change_time(path, stat)
                 digest = None
-                if name in dirty:
-                    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-                metadata.append((name, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, stat.st_mode, stat.st_ino, digest))
+                if _WINDOWS or name in dirty or change_time is None:
+                    # Recheck the read bound even if the file grows after stat().
+                    with path.open("rb") as stream:
+                        content = stream.read(self.MAX_FILE_BYTES + 1)
+                    if len(content) > self.MAX_FILE_BYTES:
+                        continue
+                    digest = hashlib.sha256(content).hexdigest()
+                metadata.append((name, stat.st_mtime_ns, change_time, stat.st_size, stat.st_mode, stat.st_ino, digest))
                 candidates.append(name)
             except (ValueError, OSError):
                 continue

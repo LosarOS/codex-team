@@ -60,3 +60,31 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
     assert '"$tagged_commit" != "$SOURCE_COMMIT"' in WORKFLOW
     assert 'refusing to mislabel binaries' in WORKFLOW
     assert 'git push --force' not in WORKFLOW
+
+
+def test_release_uses_russian_notes_from_the_same_verified_source():
+    assert 'docs/releases/v1.0.0-rc5.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    notes = (ROOT / 'docs/releases/v1.0.0-rc5.md').read_text(encoding='utf-8')
+    for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
+        assert label in notes
+
+
+def test_installed_package_checks_localized_settings_and_i18n_asset():
+    assert "'/i18n.js'" in SMOKE
+    assert '$report.appearance_settings_verified = $true' in SMOKE
+    assert "'/api/settings'" in SMOKE
+    verification = (ROOT / 'packaging/verify_bundle.py').read_text()
+    assert 'codex_team/static/i18n.js' in verification
+
+
+def test_source_git_tests_use_original_external_temporary_directory():
+    script = (ROOT / 'build-desktop.ps1').read_text(encoding='utf-8-sig')
+    assert script.index('$desktopBuildOriginalTemp = [IO.Path]::GetTempPath()') < script.index('$env:TEMP =')
+    assert "Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-'" in script
+    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp' in script
+    assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py --basetemp')
+    # Never loosen production Git discovery or the nested-repository safety rule.
+    assert 'GIT_CEILING_DIRECTORIES' not in script
+    assert '[guid]::NewGuid()' in script

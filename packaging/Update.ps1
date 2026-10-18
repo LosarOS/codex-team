@@ -49,7 +49,21 @@ try {
     $portable = Test-Path -LiteralPath (Join-Path $root 'portable.json') -PathType Leaf
     $assetName = if ($portable) { 'CodexTeam-Portable-x64.zip' } else { 'CodexTeam-Setup-x64.exe' }
     Write-Host 'Проверяем опубликованные обновления Codex Team…'
-    $releases = @(Invoke-RestMethod -Uri 'https://api.github.com/repos/LosarOS/codex-team/releases?per_page=100' -Headers $headers -TimeoutSec 30)
+    # CI runners share anonymous API limits. Its short-lived read token is used
+    # only for this fixed API endpoint, never asset downloads or persisted files.
+    $apiHeaders = $headers.Clone()
+    if ($env:GITHUB_ACTIONS -eq 'true' -and $env:CODEX_TEAM_UPDATE_GITHUB_TOKEN) {
+        $apiHeaders['Authorization'] = 'Bearer ' + $env:CODEX_TEAM_UPDATE_GITHUB_TOKEN
+    }
+    try {
+        $releases = @(Invoke-RestMethod -Uri 'https://api.github.com/repos/LosarOS/codex-team/releases?per_page=100' -Headers $apiHeaders -MaximumRedirection 0 -TimeoutSec 30)
+    } catch {
+        $response = $_.Exception.Response
+        if ($response -and ([int]$response.StatusCode -in @(403,429))) {
+            throw 'GitHub отклонил проверку обновлений (HTTP 403/429). Возможно, временно исчерпан лимит запросов. Повторите позже или скачайте архив на https://github.com/LosarOS/codex-team/releases'
+        }
+        throw
+    }
     $candidates = @()
     foreach ($release in $releases) {
         if ($release.draft) { continue }

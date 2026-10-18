@@ -9,7 +9,7 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc4
+        default: v1.0.0-rc5
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
@@ -78,6 +78,8 @@ jobs:
             ./build-desktop.ps1 -PythonPath (Get-Command python).Source
           }
       - name: Silent per-user installation and installed backend smoke
+        env:
+          CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
       - name: Stage verified downloadable files
@@ -88,6 +90,7 @@ jobs:
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
+          Copy-Item -LiteralPath docs/releases/v1.0.0-rc5.md -Destination release-assets/RELEASE-NOTES-RU.md
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
           @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -140,13 +143,5 @@ jobs:
               exit 1
             fi
           fi
-          cat > release-notes.md <<'NOTES'
-          Готовая Windows x64 сборка Codex Team.
-
-          **Установка:** скачайте `CodexTeam-Setup-x64.zip`, распакуйте и запустите `CodexTeam-Setup-x64.exe`. Установка выполняется для текущего пользователя. Можно скачать установщик `.exe` напрямую.
-
-          **Без установки:** распакуйте `CodexTeam-Portable-x64.zip` целиком и запустите `CodexTeam.exe` внутри папки.
-
-          Проверены замороженный пакет, тихая установка, запуск установленного локального backend и удаление тестовой установки. Статус полного набора исходных тестов указан в BUILD-NOTES.txt. Отчёты и SHA256 приложены. GUI WebView2, настоящий Windows DPI и live Codex не заявляются проверенными. Подпись приложения отсутствует; Windows SmartScreen может показать предупреждение.
-          NOTES
-          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease
+          test -s release-assets/RELEASE-NOTES-RU.md
+          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-assets/RELEASE-NOTES-RU.md --prerelease
