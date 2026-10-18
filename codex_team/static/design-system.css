@@ -552,3 +552,16 @@ input,textarea,select {border-radius:7px}
   .summary-card .button {font-size:10px}
   .workspace-dashboard>.panel {padding:14px}
 }
+
+/* Durable editor and connection recovery use the same workspace surfaces. */
+.task-draft-panel{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px;padding:12px 14px;margin:0 0 20px;border:1px solid var(--line-soft);border-left:2px solid var(--accent-text);border-radius:8px;background:var(--input)}
+.task-draft-status{flex:1;min-width:180px;margin:0;color:var(--muted);font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.task-draft-actions{display:flex;gap:6px;flex-wrap:wrap}.task-draft-actions:empty{display:none}.task-draft-actions .button{min-height:32px;font-size:12px;padding:6px 9px}
+.task-draft-panel[data-state="saved"],.task-draft-panel[data-state="restored"]{border-left-color:var(--green)}
+.task-draft-panel[data-state="available"]{background:var(--accent-soft)}
+.task-draft-panel[data-state="conflict"],.task-draft-panel[data-state="offline"]{border-left-color:var(--yellow)}
+.task-draft-panel[data-state="error"],.task-draft-panel[data-state="invalid"]{border-left-color:var(--red)}
+#service-banner{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#service-banner[hidden]{display:none}.service-issue-copy{flex:1;min-width:200px}.service-issue-copy p{margin:4px 0;font-size:13px}.service-issue-copy small{font-size:12px}
+#service-banner.service-partial{background:var(--warning-soft);border-color:var(--yellow);color:var(--text)}
+@media(max-width:650px){.task-draft-panel{align-items:flex-start}.task-draft-actions{width:100%}#service-banner>.button{width:100%}}

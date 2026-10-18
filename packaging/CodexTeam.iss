@@ -2,7 +2,7 @@
   #define BuildRoot ".."
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.0-rc5"
+  #define AppVersion "1.0.0-rc6"
 #endif
 
 [Setup]

@@ -136,6 +136,10 @@ class Engine:
 
     def _stage_event(self, run_id, role, cwd, control, kind, payload):
         self.store.event(run_id, kind, payload, role)
+        if kind == "thread/tokenUsage/updated" and isinstance(payload, dict):
+            usage = payload.get("tokenUsage")
+            if isinstance(usage, dict):
+                control["stage_usage"] = usage
         item = payload.get("item", {}) if isinstance(payload, dict) else {}
         if kind != "item/completed" or item.get("type") != "fileChange" or item.get("status") != "completed":
             return
@@ -294,7 +298,7 @@ class Engine:
                 else:
                     agent = {**agent, "access_level": "read-only" if level == "read-only" else "standard"}
                 before = run["checkpoint_git"]
-                control.update(stage_before=before, stage_writer=agent["permission"] == "workspace-write", owned_paths=set(), owned_hashes={})
+                control.update(stage_before=before, stage_writer=agent["permission"] == "workspace-write", owned_paths=set(), owned_hashes={}, stage_usage=None)
                 run["current_role"] = role
                 run["calls"] += 1
                 self._save(run)
@@ -306,26 +310,25 @@ class Engine:
                 run["instructions"] = self.store.run(run_id).get("instructions", [])
                 prompt = self.context.build(run, role, diff)
                 def on_thread(tid):
+                    # SDK totals are cumulative within one native thread only.
+                    # Access changes deliberately replace handles; historical usage
+                    # stays intact, but the new thread starts its own baseline.
+                    if run["threads"].get(role) != tid:
+                        run.setdefault("thread_usage_totals", {}).pop(role, None)
                     run["threads"][role] = tid
                     self._save(run)
                 provider.approval_handler = lambda method, params, current_role=role, current_agent=agent: self._approval(run_id, current_role, current_agent, control, method, params)
-                response = provider.execute(agent, str(cwd), prompt, AgentResult.model_json_schema(), run["threads"].get(role),
-                                            lambda kind, payload: self._stage_event(run_id, role, cwd, control, kind, payload),
-                                            on_thread, control["cancel"])
-                # Preserve usage even when output parsing/verdict validation fails.
-                if response.get("usage"):
-                    raw = response["usage"]
-                    totals = raw.get("total")
-                    if totals:
-                        previous = run.setdefault("thread_usage_totals", {}).get(role, {})
-                        delta = {k: max(0, v - previous.get(k, 0)) for k, v in totals.items() if isinstance(v, int)}
-                        run["thread_usage_totals"][role] = totals
-                        run["usage"].append({"agent": role, "iteration": run["iteration"], "last": delta,
-                                             "total": totals, "sdk_last": raw.get("last")})
-                    else:
-                        run["usage"].append({"agent": role, "iteration": run["iteration"], **raw})
-                if response.get("usage"):
-                    run["usage"][-1].setdefault("completed_at", now())
+                try:
+                    response = provider.execute(agent, str(cwd), prompt, AgentResult.model_json_schema(), run["threads"].get(role),
+                                                lambda kind, payload: self._stage_event(run_id, role, cwd, control, kind, payload),
+                                                on_thread, control["cancel"])
+                except Exception:
+                    # A failed/interrupted SDK turn can already have consumed
+                    # tokens. Preserve the latest observed totals before propagating
+                    # its original error; never infer missing usage.
+                    self._record_usage(run, role, control.get("stage_usage"))
+                    raise
+                self._record_usage(run, role, response.get("usage") or control.get("stage_usage"))
                 self._budget_events(run)
                 self._save(run)
                 # A returned stage owns its permitted edits. Capture them before
@@ -450,6 +453,21 @@ class Engine:
                     self.lease = None
                 if run["state"] not in {"DONE", "STOPPED", "PAUSED"} and run.get("error"):
                     self.actions.product_request(run_id, run.get("current_role"), run["state"], run["error"])
+
+    def _record_usage(self, run, role, raw):
+        """Record one turn's observed usage, including unsuccessful turns."""
+        if not raw:
+            return
+        totals = raw.get("total")
+        if totals:
+            previous = run.setdefault("thread_usage_totals", {}).get(role, {})
+            delta = {k: max(0, v - previous.get(k, 0)) for k, v in totals.items() if isinstance(v, int)}
+            run["thread_usage_totals"][role] = totals
+            entry = {"last": delta, "total": totals, "sdk_last": raw.get("last")}
+        else:
+            entry = dict(raw)
+        entry.update(agent=role, iteration=run["iteration"], completed_at=now())
+        run["usage"].append(entry)
 
     def _budget_events(self, run):
         status = evaluate(run)

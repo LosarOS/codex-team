@@ -89,12 +89,23 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     app.state.providers, app.state.projects = providers, projects
     from .suite_api import install_suite
     suite=install_suite(app,root,db,engine,qa_runner)
+    from .task_drafts import create_draft_router
+    app.include_router(create_draft_router(db))
     @app.get("/health")
     def health():
         import shutil
-        return {"status": "ok", "app": "Codex Team", "version": (desktop_context or {}).get("version", __version__),
+        import sqlite3
+        database_ok = True
+        try:
+            with db.lock:
+                db.db.execute("SELECT count(*) FROM sqlite_master").fetchone()
+        except sqlite3.Error:
+            database_ok = False
+        git_ok = bool(shutil.which("git"))
+        result = {"status": "ok" if database_ok and git_ok else "degraded", "app": "Codex Team", "version": (desktop_context or {}).get("version", __version__),
                 "instance": (desktop_context or {}).get("instance"), "active_runs": list(engine.active),
-                "checks": {"backend": True, "database": True, "git": bool(shutil.which("git")), "codex": True}}
+                "checks": {"backend": True, "database": database_ok, "git": git_ok, "codex": True}}
+        return JSONResponse(result, status_code=200 if database_ok and git_ok else 503)
 
     @app.post("/desktop/shutdown")
     def desktop_shutdown(request: Request):
@@ -476,7 +487,9 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"i18n.js": "text/javascript", "i18n-catalog.js": "text/javascript",
+        assets = {"refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
+                  "command-palette.js": "text/javascript", "command-palette.css": "text/css",
+                  "i18n.js": "text/javascript", "i18n-catalog.js": "text/javascript",
                   **{f"icon-{name}.svg": "image/svg+xml" for name in ("project", "run", "action", "tokens")}}
         if asset_name not in assets:
             raise HTTPException(status_code=404, detail="Ресурс интерфейса не найден.")

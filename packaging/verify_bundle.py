@@ -152,6 +152,8 @@ def main():
     required = [bundle / "CodexTeam.exe", bundle / "НАЧАЛО.txt", bundle / "THIRD-PARTY-NOTICES.txt",
                 bundle / "Обновить.cmd", bundle / "Update.ps1",
                 internal / "runtime/git/cmd/git.exe", internal / "runtime/git/LICENSE.txt",
+                internal / "codex_team/static/refresh-loop.js", internal / "codex_team/static/task-draft.js",
+                internal / "codex_team/static/command-palette.js", internal / "codex_team/static/command-palette.css",
                 internal / "codex_team/static/api-client.js", internal / "codex_team/static/i18n.js", internal / "codex_team/static/i18n-catalog.js",
                 *[internal / f"codex_team/static/icon-{name}.svg" for name in ("project", "run", "action", "tokens")], internal / "codex_team/static/design-system.css",
                 internal / "codex_team/static/suite.js", internal / "codex_team/static/mission-control.js", internal / "agents/qa.md", internal / "packs/software-development.json",

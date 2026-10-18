@@ -13,7 +13,7 @@ const wrap=(id,data)=>({id,project_id:project.id,version:1,created_at:'2026-10-1
 const intel=wrap('arch1',{head:'a'.repeat(40),files:['src/auth.py','pyproject.toml'],technologies:[{name:'Python',source:'pyproject.toml'}],modules:[{path:'src',files:1}],dependencies:[],summary:'Локальный анализ fixture',limitations:'Тестовые данные'});
 const cp=wrap('cp1',{label:'ТЕСТОВАЯ контрольная точка',sha:'a'.repeat(40),stage:'developer',run_id:'fixture-run'});
 const qa=wrap('qa1',{status:'PASS',head:'a'.repeat(40),checks:[{id:'test',category:'test',status:'PASS',exit_code:0,log:'1 passed'}]});
-let knowledge=[];let spec;
+let knowledge=[];let spec;let composeDraft={revision:0,draft:null};
 if(process.env.QA_SHOWCASE==='1'){
  project.name='ТЕСТОВЫЕ ДАННЫЕ — Python / TypeScript workspace';
  const moduleFiles={src:'src/auth.py',tests:'tests/test_auth.py',docs:'docs/architecture.md',scripts:'scripts/check.py',config:'config/settings.toml',packages:'packages/client.ts'};
@@ -26,6 +26,14 @@ if(process.env.QA_SHOWCASE==='1'){
 
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
+ if(p==='/api/task-draft'){
+  if(method==='GET')return composeDraft;
+  const expected=method==='DELETE'?Number(url.searchParams.get('expected_revision')):body.expected_revision;
+  if(expected!==composeDraft.revision)return {__status:409,detail:{code:'draft_conflict',message:'Черновик изменён в другом окне.'}};
+  if(method==='PUT')composeDraft={revision:expected+1,draft:{revision:expected+1,updated_at:new Date().toISOString(),data:body.data}};
+  if(method==='DELETE'&&composeDraft.draft)composeDraft={revision:expected+1,draft:null};
+  return composeDraft;
+ }
  if(p==='/api/settings'){Object.assign(settings,body);return settings;}
  if(p==='/api/status')return {auth:{status:'CONNECTED',account:{type:'chatgpt'}},settings,capabilities:{steering:true}};
  if(p==='/health')return {status:'ok',version:'fixture-only',checks:{backend:true}};
@@ -62,7 +70,7 @@ function fixture(url,method,body){const p=url.pathname;
  }
  unknown.push(p);return {detail:'Unmapped explicit fixture: '+p};
 }
-const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(fixture(url,req.method,raw?JSON.parse(raw):{})));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
+const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");const url=new URL(req.url,'http://localhost');if(url.pathname.startsWith('/api/')||url.pathname==='/health'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{res.setHeader('Content-Type','application/json');const result=fixture(url,req.method,raw?JSON.parse(raw):{});if(result?.__status){res.statusCode=result.__status;delete result.__status;}res.end(JSON.stringify(result));});return;}const file=path.join(staticRoot,url.pathname==='/'?'index.html':url.pathname.slice(1));if(!file.startsWith(staticRoot)||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html');res.end(fs.readFileSync(file));});
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
@@ -119,6 +127,33 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
     }
    }
   }
+  // rc6 production modules under the actual application, with controlled local HTTP data.
+  await visit('workbench');await page.locator('#task-draft-status').waitFor();
+  await page.locator('#task').fill('ТЕСТОВЫЙ ЧЕРНОВИК: сохранить после перезапуска <script>literal</script>');
+  await page.locator('#workspace').fill(project.path);await page.locator('#run-access-level').selectOption('full-access');
+  await page.waitForFunction(()=>/saved on this computer|сохранён на этом компьютере/.test(document.querySelector('#task-draft-status').textContent));
+  assert(!('access_level' in composeDraft.draft.data),'Consent cannot enter a draft');
+  await page.screenshot({path:path.join(output,`${phase}-draft-saved-fixture.png`),fullPage:true});
+  composeDraft.draft.data.pack='missing-fixture-pack';
+  await page.reload();await page.locator('#task-draft-restore').waitFor();
+  assert.equal(await page.locator('#task').inputValue(),'');await page.locator('#task-draft-restore').click();
+  assert.equal(await page.locator('#task').inputValue(),'ТЕСТОВЫЙ ЧЕРНОВИК: сохранить после перезапуска <script>literal</script>');
+  assert.equal(await page.locator('#run-access-level').inputValue(),'standard');
+  assert.equal(await page.locator('#run-pack').inputValue(),'missing-fixture-pack');
+  defaultAgents[0].description='TEST changed registry';await page.locator('#refresh-button').click();
+  await page.waitForTimeout(200);assert.equal(await page.locator('#run-pack').inputValue(),'missing-fixture-pack');
+  await page.locator('#run-pack').selectOption(defaultPacks[0].name);
+  await page.locator('#task').focus();await page.keyboard.press('Control+k');
+  await page.locator('#command-palette[open]').waitFor();await page.screenshot({path:path.join(output,`${phase}-command-palette-fixture.png`)});
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'task');
+  await page.keyboard.press('Control+k');await page.locator('.command-palette-input').fill('quality');await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>window.CodexTeamSuite.state.suiteFeature==='qa');
+  await visit('workbench');composeDraft.revision++;composeDraft.draft.revision=composeDraft.revision;composeDraft.draft.data.task='ТЕСТ: другое окно';
+  await page.locator('#task').fill('ТЕСТ: мой локальный ввод');await page.waitForFunction(()=>document.querySelector('.task-draft-panel').dataset.state==='conflict');
+  assert.equal(await page.locator('#task').inputValue(),'ТЕСТ: мой локальный ввод');
+  await page.screenshot({path:path.join(output,`${phase}-draft-conflict-fixture.png`),fullPage:true});
+  // Discard only this fixture's persistent buffer; never create a model run.
+  composeDraft={revision:composeDraft.revision+1,draft:null};await page.reload();
   // User content must survive localization and navigation byte-for-byte.
   if(languages.includes('en')){
   await visit('architect');const idea=page.locator('#suite-root textarea').first();
@@ -154,6 +189,13 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   assert(!(await page.locator('body').innerText()).includes('fixture-secret-must-never-render'));
   assert((await page.locator('.suite-status').innerText()).length>10);
   await page.screenshot({path:path.join(output,`${phase}-validation-error-fixture.png`),fullPage:true});await page.unroute('**/api/suite/projects/*/intelligence');
+  await visit('workbench');await page.locator('#task').fill('ТЕСТ: ввод при частичной ошибке');
+  await page.route('**/api/runs?*',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({detail:'Fixture summary failure'})}));
+  await page.locator('#refresh-button').click();await page.locator('#service-banner.service-partial').waitFor();
+  assert(await page.evaluate(()=>window.CodexTeamSuite.state.online),'A failed summary is not an offline server');
+  assert.equal(await page.locator('#task').inputValue(),'ТЕСТ: ввод при частичной ошибке');
+  await page.screenshot({path:path.join(output,`${phase}-partial-data-fixture.png`),fullPage:true});
+  await page.unroute('**/api/runs?*');await page.locator('#service-banner button').click();await page.locator('#service-banner').waitFor({state:'hidden'});
   await page.route('**/api/status',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Fixture backend unavailable'})}));
   await page.locator('#refresh-button').click();await page.locator('#service-banner').waitFor();
   await page.screenshot({path:path.join(output,`${phase}-offline-fixture.png`),fullPage:true});await page.unroute('**/api/status');await page.locator('#refresh-button').click();await page.locator('#service-banner').waitFor({state:'hidden'});
