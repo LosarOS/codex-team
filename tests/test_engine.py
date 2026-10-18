@@ -557,3 +557,103 @@ def test_qa_cannot_omit_failed_native_test_when_another_command_passed(rig):
     assert finished["stage"] == 3
     assert not any(c["agent"] == "reviewer" for c in provider.calls)
     assert finished["executions"]["qa"][0]["output"] == "3 failed"
+
+
+@pytest.mark.parametrize("reset", ["access", "legacy-profile"])
+def test_new_native_thread_restarts_cumulative_usage_without_losing_history(rig, reset):
+    make, _, _, store = rig
+
+    class CumulativeProvider(BlockingProvider):
+        def execute(self, *args, **kwargs):
+            response = super().execute(*args, **kwargs)
+            response["usage"] = {"total": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15}}
+            return response
+
+    provider = CumulativeProvider([result("PLAN")])
+    engine, run = make(provider)
+    engine.launch(run["id"])
+    assert provider.entered.wait(10)
+    worker = engine.active[run["id"]]["worker"]
+    engine.control(run["id"], "pause")
+    provider.release.set()
+    worker.join(10)
+    paused = store.run(run["id"])
+    assert paused["state"] == "PAUSED"
+    old_thread = paused["threads"]["coordinator"]
+    # Resume the same role after a user changes the native permission profile.
+    paused["stage"] = 0
+    store.save_run(paused)
+    if reset == "access":
+        engine.set_access(run["id"], "read-only")
+    else:
+        paused["access_profile_version"] = 0
+        store.save_run(paused)
+    provider.results = standard_results()
+    finished = engine.launch(run["id"], background=False)
+    assert finished["state"] == "DONE", finished.get("error")
+    assert finished["threads"]["coordinator"] != old_thread
+    assert len(finished["usage"]) == 6
+    assert sum(item["last"]["totalTokens"] for item in finished["usage"]) == 90
+    assert all(item["last"]["totalTokens"] == 15 for item in finished["usage"])
+
+
+@pytest.mark.parametrize("failure", [ProviderError("USAGE_LIMIT", "Limit reached"),
+                                     ProviderError("INTERRUPTED", "Cancelled"),
+                                     RuntimeError("Transport disconnected")])
+def test_failed_turn_preserves_observed_tokens_and_budget_blocks_resume(rig, failure):
+    make, _, _, _ = rig
+
+    class FailedUsageProvider(FakeCodexProvider):
+        def execute(self, agent, workspace, prompt, schema, thread_id, on_event, on_thread, cancel):
+            on_thread(thread_id or "observed-thread")
+            self.calls.append({"agent": agent["name"]})
+            # These are SDK observations, not estimates or account-wide quota.
+            on_event("thread/tokenUsage/updated", {"tokenUsage": {
+                "total": {"inputTokens": 80, "outputTokens": 20, "totalTokens": 100},
+                "last": {"totalTokens": 100}}})
+            raise failure
+
+    provider = FailedUsageProvider()
+    engine, run = make(provider, max_total_tokens=100)
+    failed = engine.launch(run["id"], background=False)
+    assert failed["state"] == (failure.code if isinstance(failure, ProviderError) else "FAILED")
+    assert failed["stage"] == 0
+    assert len(failed["usage"]) == 1
+    assert failed["usage"][0]["last"]["totalTokens"] == 100
+    resumed = engine.launch(run["id"], background=False)
+    assert resumed["state"] == "USER_DECISION_REQUIRED"
+    assert "budget" in resumed["error"]
+    assert len(provider.calls) == 1
+    assert len(resumed["usage"]) == 1
+
+
+def test_failed_turn_resume_counts_only_new_cumulative_usage_and_no_duplicate_events(rig):
+    make, _, _, _ = rig
+
+    class RetryingProvider(FakeCodexProvider):
+        coordinator_calls = 0
+
+        def execute(self, agent, workspace, prompt, schema, thread_id, on_event, on_thread, cancel):
+            response = super().execute(agent, workspace, prompt, schema, thread_id, on_event, on_thread, cancel)
+            if agent["name"] == "coordinator":
+                self.coordinator_calls += 1
+                total = 100 if self.coordinator_calls == 1 else 140
+                usage = {"total": {"totalTokens": total}, "last": {"totalTokens": 40}}
+                on_event("thread/tokenUsage/updated", {"tokenUsage": {"total": {"totalTokens": total - 10}}})
+                on_event("thread/tokenUsage/updated", {"tokenUsage": usage})
+                if self.coordinator_calls == 1:
+                    raise ProviderError("USAGE_LIMIT", "Retry later")
+                response["usage"] = usage
+            return response
+
+    provider = RetryingProvider([result("PLAN"), *standard_results()])
+    engine, run = make(provider)
+    interrupted = engine.launch(run["id"], background=False)
+    assert interrupted["state"] == "USAGE_LIMIT"
+    first_thread = interrupted["threads"]["coordinator"]
+    finished = engine.launch(run["id"], background=False)
+    assert finished["state"] == "DONE", finished.get("error")
+    assert finished["threads"]["coordinator"] == first_thread
+    assert len(finished["usage"]) == 6
+    assert [entry["last"]["totalTokens"] for entry in finished["usage"][:2]] == [100, 40]
+    assert sum(entry["last"]["totalTokens"] for entry in finished["usage"]) == 200
