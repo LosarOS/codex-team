@@ -76,13 +76,27 @@ async function browserTests() {
     await trigger.click(); await page.keyboard.press('Escape'); assert.equal(await trigger.evaluate(node => node === document.activeElement), true);
     await page.evaluate(() => document.querySelector('#other').showModal()); await page.evaluate(() => window.mounted.open()); assert.equal(await page.locator('#run-comparison').evaluate(node => node.open), false); await page.evaluate(() => document.querySelector('#other').close());
     await page.setViewportSize({width: 390, height: 740}); await trigger.click(); const bounds = await page.locator('#run-comparison').boundingBox(); assert(bounds.x >= 0 && bounds.x + bounds.width <= 390); assert(bounds.y >= 0 && bounds.y + bounds.height <= 740); assert.equal(await page.locator('#run-comparison').evaluate(node => node.scrollWidth <= node.clientWidth), true, 'mobile dialog does not overflow horizontally');
+    await page.locator('.run-comparison-card').first().waitFor();
+    await page.locator('#run-comparison').evaluate(node => {node.scrollTop = node.scrollHeight;});
+    const scrolled = await page.locator('#run-comparison').evaluate(node => {
+      const rect = node.getBoundingClientRect(), header = node.querySelector('.run-comparison-header'), headerRect = header.getBoundingClientRect(), close = node.querySelector('.run-comparison-close').getBoundingClientRect();
+      return {top: rect.top, bottom: rect.bottom, headerTop: headerRect.top, closeTop: close.top, closeBottom: close.bottom, scrollTop: node.scrollTop, headerHeight: headerRect.height, padding: parseFloat(getComputedStyle(node).scrollPaddingTop), opaque: getComputedStyle(header).backgroundColor === getComputedStyle(node).backgroundColor};
+    });
+    assert(scrolled.scrollTop > 0, 'comparison has enough content to exercise scrolling');
+    assert(scrolled.headerTop >= scrolled.top && scrolled.headerTop < scrolled.top + 3 && scrolled.closeTop >= scrolled.top && scrolled.closeBottom <= scrolled.bottom, 'sticky header and close button remain visible at the bottom');
+    assert(scrolled.opaque && scrolled.padding >= scrolled.headerHeight, 'opaque sticky header has enough scroll padding for focused content');
+    await page.getByRole('button', {name: 'Открыть запуск', exact: true}).last().focus();
+    assert.equal(await page.getByRole('button', {name: 'Открыть запуск', exact: true}).last().evaluate(node => {
+      const rect = node.getBoundingClientRect(), dialog = node.closest('dialog'), header = dialog.querySelector('.run-comparison-header').getBoundingClientRect();
+      return document.activeElement === node && rect.top >= header.bottom && rect.bottom <= dialog.getBoundingClientRect().bottom;
+    }), true, 'focusing the lower open-run action reveals it below the sticky header');
     await page.getByRole('button', {name: 'Закрыть сравнение', exact: true}).focus(); await page.keyboard.press('Shift+Tab'); assert.equal(await page.getByRole('button', {name: 'Открыть запуск', exact: true}).last().evaluate(node => node === document.activeElement), true, 'Shift+Tab wraps inside dialog');
     const english = await browser.newPage(); await setup(english, 'en', true); await english.getByRole('button', {name: 'Compare runs', exact: true}).click(); await english.locator('#run-comparison-right').selectOption('a'); await english.locator('.run-comparison-card').first().waitFor();
     assert.equal(await english.locator('.run-comparison-role h5').innerText(), 'QA review', 'host formatter supplies the same role label as Mission Control');
     assert.match(await english.locator('.run-comparison-card').first().innerText(), /Measured tokens\s+No data/); assert.match(await english.locator('.run-comparison-notes').innerText(), /Different projects/); assert.match(await english.locator('.run-comparison-card').first().innerText(), /<img src=x onerror=alert\(1\)> & literal/);
     assert.equal(await english.locator('.run-comparison-content').evaluate(node => /[А-Яа-яЁё]/u.test(node.innerText)), false, 'authored comparison UI is translated in English');
     await english.evaluate(() => window.mounted.destroy()); assert.equal(await english.locator('#run-comparison').count(), 0); assert.equal(await english.locator('#run-comparison-open').count(), 0);
-    console.log('PASS browser: selected baseline, no empty-pair requests, null/zero metrics, real attempts, literal content, localized warnings, pagination-stable choices, explicit refresh, busy state, permission/offline errors, swap/open-run, Escape/focus trap, modal exclusion, mobile fit, English and destroy.');
+    console.log('PASS browser: selected baseline, no empty-pair requests, null/zero metrics, real attempts, literal content, localized warnings, pagination-stable choices, explicit refresh, busy state, permission/offline errors, swap/open-run, Escape/focus trap, modal exclusion, mobile fit, sticky close and focus reveal, English and destroy.');
   } finally {await browser.close();}
 }
 (async () => {await pureTests(); if (process.argv.includes('--browser')) await browserTests();})().catch(error => {console.error(error); process.exitCode = 1;});
