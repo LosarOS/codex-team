@@ -60,7 +60,7 @@ async function browserTests() {
     assert.equal(await page.locator('.run-comparison-card').count(), 2); assert.equal(await page.locator('.run-comparison img').count(), 0);
     const leftFacts = await page.locator('.run-comparison-metrics').first().innerText(); assert.match(leftFacts, /Вызовы агентов\s+0/); assert.match(leftFacts, /Измеренные токены\s+Нет данных/); assert.match(leftFacts, /Изменённые файлы\s+Нет данных/); assert.match(leftFacts, /Полнота учёта\s+Частичный/);
     assert.equal(await page.locator('.run-comparison-role h5').innerText(), 'qa', 'default role formatter preserves the stored ID');
-    assert.match(await page.locator('.run-comparison-role').innerText(), /Попытки\s+2/); assert.match(await page.locator('.run-comparison-notes').innerText(), /Разные проекты/); assert.match(await page.locator('.run-comparison-notes').innerText(), /незавершённые/);
+    assert.match(await page.locator('.run-comparison-role').innerText(), /Результатов в истории\s+2/); assert.match(await page.locator('.run-comparison-notes').innerText(), /Разные проекты/); assert.match(await page.locator('.run-comparison-notes').innerText(), /незавершённые/);
     const count = await page.evaluate(() => window.requests.length);
     await page.evaluate(() => {window.loadedRuns = [{id: 'c', task: 'New page'}]; window.mounted.refresh();});
     assert.equal(await page.locator('#run-comparison-left').inputValue(), 'b'); assert.equal(await page.locator('#run-comparison-right').inputValue(), 'a'); assert.equal(await page.evaluate(() => window.requests.length), count, 'history refresh retains explicit pair without a request');

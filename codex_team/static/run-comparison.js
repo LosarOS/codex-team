@@ -68,7 +68,7 @@
     'Режим': 'Mode', 'Набор агентов': 'Agent pack', 'Уровень доступа': 'Access level', 'Рабочая папка': 'Workspace', 'Исходный проект': 'Original project', 'Состояние': 'State',
     'Вызовы агентов': 'Agent calls', 'Длительность': 'Duration', 'Измеренные токены': 'Measured tokens', 'Полнота учёта': 'Usage completeness', 'Изменённые файлы': 'Changed files',
     'Лимит итераций': 'Iteration limit', 'Лимит вызовов': 'Call limit', 'Лимит времени': 'Duration limit', 'Лимит токенов': 'Token limit',
-    'Полный': 'Complete', 'Частичный': 'Partial', 'Нет данных': 'No data', 'Открыть запуск': 'Open run', 'Вердикт': 'Verdict', 'Сводка': 'Summary', 'Ошибка': 'Error', 'Попытки': 'Attempts',
+    'Полный': 'Complete', 'Частичный': 'Partial', 'Нет данных': 'No data', 'Открыть запуск': 'Open run', 'Вердикт': 'Verdict', 'Сводка': 'Summary', 'Ошибка': 'Error', 'Результатов в истории': 'Recorded results',
     'Параллельные агенты': 'Parallel agents', 'Изолированная копия': 'Isolated workspace', 'Автоматический коммит': 'Automatic commit', 'Специалисты': 'Specialists', 'Да': 'Yes', 'Нет': 'No',
     'Результаты ролей не сохранены.': 'Role results have not been stored.', '{value} с': '{value} s', 'Показано {count} записей': '{count} records shown',
     'Выполняется': 'Running', 'Завершён': 'Completed', 'Ожидает': 'Queued', 'Пауза': 'Paused', 'Остановлен': 'Stopped', 'Прерван': 'Interrupted',
@@ -163,7 +163,7 @@
         if (!stage || typeof stage !== 'object') continue;
         const section = el('section', 'run-comparison-role'); section.append(el('h5', '', value(formatRole(stage.role))));
         const details = el('dl', 'run-comparison-config');
-        definition(details, 'Вердикт', value(stage.verdict)); definition(details, 'Попытки', number(stage.attempts));
+        definition(details, 'Вердикт', value(stage.verdict)); definition(details, 'Результатов в истории', number(stage.attempts));
         definition(details, 'Сводка', value(stage.summary)); definition(details, 'Ошибка', value(stage.error)); section.append(details); card.append(section);
       }
       if (text(run.error)) {const error = el('p', 'run-comparison-run-error'); error.append(el('strong', '', t('Ошибка') + ': '), doc.createTextNode(run.error)); card.append(error);}
