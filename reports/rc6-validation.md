@@ -57,7 +57,27 @@
 
 ## Windows и выпуск
 
-Нативный build и установочный smoke для rc6 ещё выполняются / будут записаны после получения фактических результатов GitHub Actions. Пропуск полного source suite не запрашивается. Публикация бинарников зависит от успешного build + installed smoke.
+[GitHub Actions 39110379400](https://github.com/LosarOS/codex-team/actions/runs/39110379400) завершён **success**: build и publish. Полный source suite не пропускался: `python -m pytest -q --basetemp <external unique temp>` — **646 passed, 1 skipped, 1 warning**, 800.44 с. Быстрый предварительный intelligence regression — 11 passed, 12.98 с.
+
+Проверен именно коммит **`075f60e46b0a45f779c1d1a1573a2358c1a810e2`**. Он является источником тега `v1.0.0-rc6`; последующие изменения ветки касаются только документации и доказательств, production-код и packaging совпадают.
+
+Нативные результаты:
+
+- Frozen bundle: 38 обязательных файлов, 3207 файлов всего; чувствительных путей — 0. Python 3.12.10, официальный Codex CLI/SDK 0.162.1, bundled Git 2.56.0.windows.2.
+- Реальные SDK permission profiles: standard / read-only / full-access; inference calls — 0, warnings очистки — 0.
+- Тихая per-user установка, Git из Unicode-пути, 18 HTTP assets, создание локального Git-проекта, сохранение настроек и черновика, shutdown, фактический restart установленного backend, повторное чтение SQLite — успешно.
+- После restart: черновик сохранён, его явное удаление сохраняет revision, язык EN и тема Neon Blue сохранились.
+- Обновлятор проверен под Windows PowerShell 5.1 в режиме CheckOnly; uninstall — успешно. Model calls = 0, SDK account calls = 0.
+- Все 12 release assets опубликованы. SHA256 трёх бинарных файлов сверены между build manifest и GitHub asset digest; размеры также совпали.
+
+[Машиночитаемое подтверждение](rc6/native-release-proof.json) · [GitHub Release rc6](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc6) · [PR #11](https://github.com/LosarOS/codex-team/pull/11).
+
+| Архив | Размер | SHA256 |
+|---|---:|---|
+| CodexTeam-Setup-x64.zip | 155 107 987 байт | `7f97687ec3bb41388fef1bfef915b919dc919f713ae9e4971aa9bde09e80de1e` |
+| CodexTeam-Portable-x64.zip | 249 542 423 байт | `4daa34a7d8975f66f21144c7f812da9d5e6e97f4c9ef4ea888dfa4ae4f035372` |
+
+Это доказательство нативного backend/installer smoke, **не интерактивного Windows GUI E2E**.
 
 Ручная приёмка владельцем на Windows остаётся обязательной перед заявлением о готовности стабильного релиза:
 
