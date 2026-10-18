@@ -5,6 +5,8 @@ is deliberately shared with drafts and cannot store security consent.
 """
 import json
 import math
+import ntpath
+import posixpath
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
@@ -55,16 +57,17 @@ class TaskTemplates:
     def page(self, query="", limit=50, offset=0):
         if len(query) > 200 or not 1 <= limit <= 50 or not 0 <= offset <= 100000:
             raise HTTPException(status_code=422, detail="Проверьте параметры списка шаблонов.")
-        search = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-        where = " WHERE name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\'" if query else ""
-        params = [search, search] if query else []
         with self.store.lock:
-            total = self.store.db.execute("SELECT count(*) FROM task_templates" + where, params).fetchone()[0]
             rows = self.store.db.execute(
-                "SELECT id,name,description,revision,created_at,updated_at FROM task_templates" + where
-                + " ORDER BY updated_at DESC,id LIMIT ? OFFSET ?", [*params, limit, offset],
+                "SELECT id,name,description,revision,created_at,updated_at FROM task_templates"
+                " ORDER BY updated_at DESC,id LIMIT ?", (self.MAX_TEMPLATES,),
             ).fetchall()
-        return {"items": [self._response(row) for row in rows], "total": total}
+        # SQLite's built-in LIKE only folds ASCII. The library is capped at
+        # 200 entries, so Unicode search can inspect bounded metadata without
+        # loading task text. Substrings keep %, _ and backslashes literal.
+        folded = query.casefold()
+        matches = [row for row in rows if folded in row[1].casefold() or folded in row[2].casefold()]
+        return {"items": [self._response(row) for row in matches[offset:offset + limit]], "total": len(matches)}
 
     def _row(self, template_id):
         row = self.store.db.execute("SELECT * FROM task_templates WHERE id=?", (template_id,)).fetchone()
@@ -193,6 +196,16 @@ def normalize_run(run):
     return result
 
 
+def _project_key(path):
+    if not path:
+        return None
+    # Interpret saved paths lexically, including Windows records inspected on
+    # another OS. Never resolve a path, follow a worktree or consult projects.
+    if ntpath.splitdrive(path)[0] or "\\" in path:
+        return ntpath.normcase(ntpath.normpath(path))
+    return posixpath.normpath(path)
+
+
 def compare_runs(store, left, right):
     if left == right:
         raise HTTPException(status_code=422, detail="Выберите два разных запуска для сравнения.")
@@ -201,7 +214,7 @@ def compare_runs(store, left, right):
     except KeyError:
         raise HTTPException(status_code=404, detail="Один из запусков не найден. Обновите историю.") from None
     left_run, right_run = map(normalize_run, runs)
-    projects = [item["original_workspace"] or item["workspace"] for item in (left_run, right_run)]
+    projects = [_project_key(item["original_workspace"] or item["workspace"]) for item in (left_run, right_run)]
     comparable = bool(all(projects) and projects[0] == projects[1])
     warnings = []
     if not all(projects):

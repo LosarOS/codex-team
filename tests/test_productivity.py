@@ -1,5 +1,6 @@
 """Local persistence and comparison contracts. These tests never launch a model."""
 from concurrent.futures import ThreadPoolExecutor
+import sqlite3
 
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -90,6 +91,28 @@ def test_search_is_literal_bounded_and_paginated(productivity):
     assert page["total"] == 2 and len(page["items"]) == 1
     for suffix in ("limit=0", "limit=51", "offset=-1", "offset=100001", "query=" + "x" * 201):
         assert client.get("/api/task-templates?" + suffix).status_code == 422
+
+
+def test_unicode_search_filters_before_pagination_and_never_reads_task_data(productivity):
+    client, store = productivity
+    items = [create(client, name, task="я" * 30000).json() for name in ("Авторизация", "Не подходит", "АВТОРИЗАЦИЯ API")]
+    body = {"expected_revision": 1, "name": "Третий", "description": "Проверка авторизации %_\\", "data": {}}
+    assert client.put("/api/task-templates/" + items[1]["id"], json=body).status_code == 200
+    def metadata_only(action, table, column, *_):
+        return sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_READ and table == "task_templates" and column == "data" else sqlite3.SQLITE_OK
+    store.db.set_authorizer(metadata_only)
+    try:
+        names = client.get("/api/task-templates", params={"query": "АВТОРИЗАЦИЯ"}).json()
+        assert names["total"] == 2
+        response = client.get("/api/task-templates", params={"query": "АВТОРИЗАЦ", "limit": 1, "offset": 1})
+        assert response.status_code == 200
+        page = response.json()
+        assert page["total"] == 3 and len(page["items"]) == 1 and "data" not in page["items"][0]
+        exact = client.get("/api/task-templates", params={"query": "%_\\"}).json()
+        assert exact["total"] == 1 and exact["items"][0]["id"] == items[1]["id"]
+        assert client.get("/api/task-templates", params={"query": "НЕСУЩЕСТВУЮЩИЙ"}).json()["total"] == 0
+    finally:
+        store.db.set_authorizer(None)
 
 
 @pytest.mark.parametrize("extra", [
@@ -192,6 +215,26 @@ def test_comparison_different_projects_missing_and_identical_ids(productivity):
     assert client.get("/api/run-comparison?left=a").status_code == 422
     store.save_run({"id": "b"})
     assert "project_unknown" in client.get("/api/run-comparison?left=a&right=b").json()["warnings"]
+
+
+@pytest.mark.parametrize("left_path,right_path,comparable", [
+    ("C:\\Проекты\\Авторизация", "c:/проекты/авторизация/", True),
+    ("\\\\Сервер\\Общая\\Проект\\", "//сервер/общая/проект", True),
+    ("C:\\Projects\\one", "D:\\Projects\\one", False),
+    ("C:\\Projects\\one", "C:\\Projects\\two", False),
+    ("/Projects/One/", "/Projects/One", True),
+    ("/Projects/One", "/projects/one", False),
+])
+def test_project_comparison_uses_saved_paths_without_filesystem_or_project_records(productivity, left_path, right_path, comparable):
+    client, store = productivity
+    for run_id, workspace in (("left", left_path), ("right", right_path)):
+        store.save_run({"id": run_id, "state": "DONE", "workspace": workspace,
+                        "project_id": "no-longer-registered", "worktree": "/different-isolated-worktree/" + run_id})
+    result = client.get("/api/run-comparison?left=left&right=right").json()
+    assert result["comparable_project"] is comparable
+    assert ("different_projects" in result["warnings"]) is not comparable
+    assert result["left"]["workspace"] == left_path and result["right"]["workspace"] == right_path
+    assert store.projects() == []
 
 
 def test_latest_recorded_stage_error_does_not_reuse_an_older_pass():
