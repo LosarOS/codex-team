@@ -106,7 +106,7 @@ class MissionQueue:
         run_state = row[0] if row else None
         result = {key: item.get(key) for key in ("id", "client_id", "position", "status", "run_id", "reason", "created_at", "updated_at")}
         result.update(task=sanitize(request.task)[:400], workspace=request.workspace, mode=request.mode,
-                      access_level=request.access_level, isolated=request.isolated,
+                      access_level=request.access_level, isolated=request.isolated, auto_commit=request.auto_commit, pack=request.pack, specialists=request.specialists,
                       max_agent_calls=request.max_agent_calls, max_run_duration=request.max_run_duration,
                       max_total_tokens=request.max_total_tokens, run_state=run_state)
         result["reason"] = sanitize(result["reason"])
