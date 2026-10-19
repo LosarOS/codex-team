@@ -14,7 +14,7 @@ function setup({data={task:'',workspace:'/repo',mode:'standard'}, response={revi
 }
 (async()=>{
   {
-    const s=setup();await s.draft.load();assert.equal(s.calls.length,1);assert.equal(s.last().status,'empty');
+    const s=setup();assert.equal(s.draft.canReplace,false,'unloaded draft cannot be replaced');await s.draft.load();assert.equal(s.draft.canReplace,true);assert.equal(s.calls.length,1);assert.equal(s.last().status,'empty');
     s.input({workspace:'/another'});await s.fire();assert.equal(s.calls.length,1,'empty initial task never mutates backend');
     s.input({task:'literal <script> user text',access_level:'full-access',confirmed_full_access:true,provider:'secret',api_key:'NO'});await s.fire();
     const data=s.calls.at(-1).body.data;assert.equal(data.task,'literal <script> user text');for(const key of ['access_level','confirmed_full_access','provider','api_key'])assert(!(key in data));
@@ -23,9 +23,9 @@ function setup({data={task:'',workspace:'/repo',mode:'standard'}, response={revi
   }
   {
     const late=deferred();const saved={revision:3,draft:{revision:3,data:{task:'saved remote',workspace:'/old'}}};
-    const s=setup({handler:()=>late.promise});const loading=s.draft.load();s.input({task:'typing during GET'});late.resolve(saved);await loading;
-    assert.equal(s.data().task,'typing during GET');assert.equal(s.applied.length,0);assert.equal(s.last().status,'conflict');
-    await s.draft.restore();assert.equal(s.data().task,'saved remote');assert.equal(s.calls.length,1,'restoration does not autosave');
+    const s=setup({handler:()=>late.promise});const loading=s.draft.load();assert.equal(s.draft.canReplace,false,'pending draft cannot be replaced');s.input({task:'typing during GET'});late.resolve(saved);await loading;
+    assert.equal(s.data().task,'typing during GET');assert.equal(s.applied.length,0);assert.equal(s.last().status,'conflict');assert.equal(s.draft.canReplace,false,'remote conflict must be resolved before replay');
+    await s.draft.restore();assert.equal(s.draft.canReplace,true);assert.equal(s.data().task,'saved remote');assert.equal(s.calls.length,1,'restoration does not autosave');
     const next=s.draft.checkpoint();s.input({task:'newer than submitted'});assert.equal(await s.draft.consume(next),false);assert.equal(s.calls.length,1,'run success cannot clear newer editing');
   }
   {

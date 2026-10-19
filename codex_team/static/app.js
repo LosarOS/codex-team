@@ -3,6 +3,9 @@
 (() => {
   const I = (typeof window !== "undefined" ? window.CodexI18n : null) || {language:"ru",setLanguage:()=>{},t:v=>v,tr:(s,...v)=>s.reduce((a,x,i)=>a+x+(v[i]??""),"")};
   I.register?.({
+    "Новая задача из запуска {id}":"New task from run {id}",
+    "Доступ: рабочая папка. Изоляция включена, автоматический коммит выключен. Проверьте проект, набор, специалистов и лимиты перед запуском.":"Access: workspace. Isolation is enabled and automatic commits are disabled. Review the project, pack, specialists and limits before starting.",
+    "Скрыть подсказку":"Dismiss hint",
     "Только избранные":"Favorites only", "Избранное":"Favorite", "Есть заметка":"Has a note",
     "Личные заметки":"Personal notes", "Заметки":"Notes",
     "Нет подходящих запусков. Измените фильтры.":"No matching runs. Change the filters.",
@@ -1440,6 +1443,7 @@
       max_iterations:Number($("max-iterations").value),max_agent_calls:Number($("max-calls").value),max_run_duration:Math.round(Number($("max-duration").value)*60)};
   }
   function applyComposeDraft(data) {
+    $("compose-replay-note").hidden=true;
     for(const [key,id,divisor] of [["task","task",1],["workspace","workspace",1],["mode","run-mode",1],["pack","run-pack",1],["max_iterations","max-iterations",1],["max_agent_calls","max-calls",1],["max_run_duration","max-duration",60]]) {
       if(data[key]!==undefined) $(id).value=typeof data[key]==="number"?data[key]/divisor:data[key];
     }
@@ -1468,6 +1472,16 @@
       for(const run of [...state.historyRows,...state.runs])if(run.id===record.run_id)run.notebook=metadata;
       if(state.page==="history")loadHistory();else renderHistory();
     }}) || null;
+  window.CodexRunReplay?.mount({anchor:$("run-notebook-tools"),api,getSelectedRun:()=>state.selectedRun,confirm:confirmOperation,notify:toast,
+    read:()=>({...readComposeDraft(),access_level:$("run-access-level").value,isolated:$("isolated").checked,auto_commit:$("auto-commit").checked,max_parallel_agents:$("max-parallel").value}),
+    canApply:()=>!state.creatingRun&&(!taskDraft||taskDraft.canReplace===true),
+    apply:data=>{
+      const source=state.selectedRun.id;
+      $("run-access-level").value="standard";$("isolated").checked=true;$("auto-commit").checked=false;$("max-parallel").value="2";
+      applyComposeDraft(data);taskDraft?.changed();showFormError("run-form-error","");
+      const banner=$("compose-replay-note");banner.replaceChildren(node("strong","",I.t("Новая задача из запуска {id}",{id:source})),node("p","",I.t("Доступ: рабочая папка. Изоляция включена, автоматический коммит выключен. Проверьте проект, набор, специалистов и лимиты перед запуском.")),actionButton(I.t("Скрыть подсказку"),()=>{banner.hidden=true;}));banner.hidden=false;
+      setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});
+    }});
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   refreshLoop = window.CodexRefreshLoop?.create({run:poll,visible:()=>!document.hidden}) || null;

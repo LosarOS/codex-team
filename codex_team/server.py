@@ -95,6 +95,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     app.include_router(create_productivity_router(db))
     from .run_notebook import create_run_notebook_router
     app.include_router(create_run_notebook_router(db))
+    from .run_replay import create_run_replay_router
+    app.include_router(create_run_replay_router(db))
     @app.get("/health")
     def health():
         import shutil
@@ -491,7 +493,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
+        assets = {"run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
                   "task-templates.js": "text/javascript", "task-templates.css": "text/css",
                   "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
                   "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
