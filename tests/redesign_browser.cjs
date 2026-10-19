@@ -36,8 +36,18 @@ if(process.env.QA_SHOWCASE==='1'){
  knowledge=[wrap('fixture-fact',{category:'verified_fact',title:'ТЕСТ: стек проекта',content:'Python API и TypeScript-клиент определены по fixture-манифестам.',sources:['pyproject.toml','package.json']}),wrap('fixture-derived',{category:'derived_finding',title:'ТЕСТ: модульные границы',content:'Каталоги src и packages разделены в fixture-структуре.',sources:['src/auth.py','packages/client.ts']}),wrap('fixture-decision',{category:'decision',title:'ТЕСТ: отдельная проверка',content:'Результат проверяется тестами проекта; это пользовательская тестовая запись.',sources:['tests/test_auth.py']})];
 }
 
+let queueItems=[];let queueState='paused';let queueSequence=0;
+const queueView=()=>({items:queueItems,summary:{state:queueState,pending:queueItems.filter(i=>['pending','running','blocked'].includes(i.status)).length,active_id:queueItems.find(i=>i.status==='running')?.id||null,max_pending:20,total_pending_call_limit:queueItems.filter(i=>['pending','running','blocked'].includes(i.status)).reduce((n,i)=>n+i.max_agent_calls,0)}});
+if(process.env.QA_QUEUE_ONLY==='1')queueItems=[0,1,2].map(index=>({id:'fixture-overview-'+index,client_id:'fixture-id-'+index,position:index,status:index===1?'blocked':'pending',task:'ТЕСТОВЫЕ ДАННЫЕ: '+['Проверить авторизацию и добавить тесты','Обновить интерфейс — требуется решение','Подготовить документацию'][index],workspace:project.path+'\\Очень длинный путь проекта',mode:'quick',run_id:index===1?run.id:null,run_state:index===1?'USER_DECISION_REQUIRED':null,reason:index===1?'ТЕСТОВЫЕ ДАННЫЕ: нужен ответ пользователя.':null,access_level:index===2?'full-access':'standard',isolated:true,max_agent_calls:5,max_run_duration:600,max_total_tokens:5000,request:{task:'ТЕСТОВЫЕ ДАННЫЕ: полная постановка'}}));
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
+ if(p==='/api/mission-queue'){
+  if(method==='POST'){const old=queueItems.find(i=>i.client_id===body.client_id);if(old)return old;const item={id:'fixture-mission-'+(++queueSequence),client_id:body.client_id,position:queueItems.length,status:'pending',task:body.request.task.slice(0,400),workspace:body.request.workspace,mode:body.request.mode,run_id:null,run_state:null,reason:null,access_level:body.request.access_level,isolated:true,auto_commit:body.request.auto_commit,max_agent_calls:body.request.max_agent_calls,max_run_duration:body.request.max_run_duration,max_total_tokens:null,request:body.request};queueItems.push(item);return item;}return queueView();
+ }
+ if(p==='/api/mission-queue/start'){if(body.confirmed!==true)return {__status:400,detail:'TEST: explicit confirmation required'};if(JSON.stringify(body.item_ids)!==JSON.stringify(queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id)))return {__status:409,detail:'TEST: stale queue snapshot'};queueState='running';const first=queueItems.find(i=>i.status==='pending');if(first){first.status='running';first.run_id=run.id;first.run_state='RUNNING';}return queueView();}
+ if(p==='/api/mission-queue/pause'){queueState='paused';return queueView();}
+ if(p.startsWith('/api/mission-queue/')){const [id,action]=p.slice('/api/mission-queue/'.length).split('/');const item=queueItems.find(i=>i.id===id);if(!item)return {__status:404,detail:'TEST: missing mission'};if(action==='skip')item.status='skipped';if(action==='move'){const index=queueItems.indexOf(item),target=index+(body.direction==='up'?-1:1);if(target>=0&&target<queueItems.length){[queueItems[index],queueItems[target]]=[queueItems[target],queueItems[index]];queueItems.forEach((i,n)=>i.position=n);}}return action?queueView():item;}
+
  const replayRoute=p.match(/^\/api\/runs\/([^/]+)\/replay$/);
  if(replayRoute){const id=decodeURIComponent(replayRoute[1]);replayReads.push(id);return id===run.id?replaySnapshot(id):{__status:404,detail:'ТЕСТ: исходный запуск недоступен'};}
  const notebookRoute=p.match(/^\/api\/runs\/([^/]+)\/(notebook|report)$/);
@@ -225,7 +235,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
       }
      }
     // Optional focused matrix avoids unrelated rc7 dialogs while testing rc8 integrations.
-    if(process.env.QA_NOTEBOOK_ONLY==='1'||process.env.QA_REPLAY_ONLY==='1')continue;
+    if(process.env.QA_NOTEBOOK_ONLY==='1'||process.env.QA_REPLAY_ONLY==='1'||process.env.QA_QUEUE_ONLY==='1')continue;
     // rc7 dialogs receive the same requested RU/EN, theme and viewport coverage as pages.
     await visit('workbench');
     await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-1"]').click();await page.locator('#task-template-save').waitFor();await page.waitForFunction(()=>!document.querySelector('#task-template-name').disabled);
@@ -236,6 +246,25 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
     await auditDialog('#run-comparison','run-comparison',language,theme);await page.locator('.run-comparison-close').click();
     }
    }
+  }
+  if(process.env.QA_QUEUE_ONLY==='1'){
+   queueItems=[];queueState='paused';
+   await visit('settings');if(await page.locator('#settings-language').inputValue()!=='ru')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption('ru')]);await page.locator('#settings-theme').selectOption('obsidian-violet');
+   await visit('workbench');await page.waitForFunction(()=>window.CodexTeamSuite.state.initialRefreshDone);await page.locator('#workspace').fill(project.path);const task='ТЕСТОВЫЕ ДАННЫЕ: локальная миссия <script>literal</script>\n'+ 'Полный текст задания. '.repeat(50);await page.locator('#task').fill(task);await page.locator('#run-mode').selectOption('quick');
+   const enqueues=()=>writes.filter(w=>w.path==='/api/mission-queue').length;
+   await page.locator('#mission-queue-add').click();await page.locator('#confirm-dialog[open]').waitFor();await page.keyboard.press('Escape');assert.equal(enqueues(),0);
+   await page.locator('#mission-queue-add').click();await page.locator('#confirm-accept').click();await page.locator('#page-mission-queue').waitFor();await page.locator('.mq-pending').waitFor();assert.equal(enqueues(),1);assert.equal(queueState,'paused');assert.equal(queueItems[0].request.task,task.trim());
+   await page.locator('.mq-task summary').first().click();await page.waitForFunction(task=>document.querySelector('.mq-task pre')?.textContent===task,task.trim());assert.equal(await page.locator('.mq-task script').count(),0);
+   await visit('workbench');assert.equal(await page.locator('#task').inputValue(),task);await page.locator('#task').fill('ТЕСТОВЫЕ ДАННЫЕ: вторая независимая задача');await page.locator('#mission-queue-add').click();await page.locator('#confirm-accept').click();await page.locator('.mq-card').nth(1).waitFor();assert.equal(queueItems.length,2);
+   await page.locator('.mq-card').nth(1).getByRole('button',{name:'Выше',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.mq-card h2')?.textContent.includes('вторая'));assert(queueItems[0].task.includes('вторая'));
+   await page.waitForFunction(()=>!document.querySelector('.toast-region .toast'));await captureCurated('mission-queue');
+   await page.getByRole('button',{name:'Запустить очередь',exact:true}).click();await page.locator('#confirm-dialog[open]').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,0);await captureCurated('mission-queue-confirmation','#confirm-dialog');await page.locator('#confirm-accept').click();await page.locator('.mq-running').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,1);assert.deepEqual(writes.find(w=>w.path==='/api/mission-queue/start').body.item_ids,queueItems.map(i=>i.id));
+   await page.getByRole('button',{name:'После текущей задачи',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.mq-status')?.textContent==='Очередь приостановлена');assert.equal(queueItems[0].status,'running');assert.equal(writes.filter(w=>w.path.includes('/control')).length,0);
+   queueItems[0].status='blocked';queueItems[0].run_state='AUTH_REQUIRED';queueItems[0].reason='ТЕСТОВЫЕ ДАННЫЕ: нужен вход, следующая задача не запущена.';queueState='blocked';await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('.mq-blocked').waitFor();assert(await page.getByRole('button',{name:'Запустить очередь',exact:true}).isDisabled());await captureCurated('mission-queue-blocked');
+   await page.locator('.mq-blocked').getByRole('button',{name:'Пропустить',exact:true}).click();await page.locator('#confirm-cancel').click();assert.equal(queueItems[0].status,'blocked');await page.locator('.mq-blocked').getByRole('button',{name:'Пропустить',exact:true}).click();await page.locator('#confirm-accept').click();await page.waitForFunction(()=>document.querySelector('.mq-skipped'));assert.equal(queueItems[1].status,'pending');
+   await page.route('**/api/mission-queue',r=>r.abort());await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('#page-mission-queue .form-error').waitFor();assert.equal(queueItems.length,2);await page.unroute('**/api/mission-queue');await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('#page-mission-queue .form-error').waitFor({state:'hidden'});
+   assert(!writes.some(w=>w.path==='/api/runs'||w.path.includes('/control')||w.path.includes('/login')||w.path.includes('/test')),'Queue UI must use only queue endpoints, not execute fixtures');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);assert(contrast.every(c=>c.ratio>=4.5));
+   productivityChecks.push('queue: explicit enqueue/start, cancel/Escape, literal full task, draft retained, reorder, pause-after-current, blocked/skip, offline/reconnect, no direct run/provider calls');console.log(JSON.stringify({checks:checks.length,productivityChecks,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false}));return;
   }
   if(process.env.QA_REPLAY_MATRIX_ONLY==='1'){
    assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);

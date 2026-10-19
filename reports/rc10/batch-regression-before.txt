@@ -1,0 +1,1 @@
+BEFORE: late-added task started without a new batch confirmation; fake launches=2. No real provider/inference.

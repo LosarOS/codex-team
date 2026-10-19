@@ -1,5 +1,6 @@
 /* Authored UI text only. Keys remain stable Russian source identifiers. */
 window.CodexI18nCatalog = {
+  "Очередь миссий": "Mission queue",
   "Только избранные": "Favorites only",
   "Координатор": "Coordinator",
   "План и организация работы": "Planning and orchestration",
