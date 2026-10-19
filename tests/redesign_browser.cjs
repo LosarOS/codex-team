@@ -268,6 +268,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
    await page.waitForFunction(()=>document.querySelector('.task-draft-panel').dataset.state==='saved');assert.equal(composeDraft.draft.data.task,run.task);assert.equal(composeDraft.draft.data.max_run_duration,31);assert(!('access_level' in composeDraft.draft.data));
    await page.waitForFunction(()=>!document.querySelector('#toast-region .toast'));await page.locator('#task-composer').scrollIntoViewIfNeeded();await captureCurated('replay-composer');
    await page.locator('#compose-replay-note button').click();assert(await page.locator('#compose-replay-note').isHidden());
+   await visit('runs');await captureCurated('runs');
    assert.equal(writes.filter(write=>write.path==='/api/runs').length,0,'Replay must not start a run');assert(!writes.some(write=>/\/providers\/.*\/test|\/login|\/control$/.test(write.path)),'Replay must not invoke providers, login or control');
    productivityChecks.push('replay confirmation and cancel preserve editor; missing source and late form edit do not overwrite; complete literal task uses original project; unsafe controls reset; 31-second limit remains valid and autosaved; hint dismiss works; zero run creation or provider calls');
    assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
