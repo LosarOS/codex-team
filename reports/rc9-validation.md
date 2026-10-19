@@ -49,4 +49,16 @@ Targeted API18 passed; API+история23 passed; API+UI contracts40 passed. N
 
 ## Нативная сборка
 
-Windows workflow выполняет полные source tests, bundle verification, настоящую установку/restart/uninstall и проверку replay endpoint на обозначенной синтетической записи в изолированном CI-профиле. Итоги, исходный SHA и SHA256 архивов добавляются после реального завершения. GUI и inference не объявляются проверенными.
+Windows workflow выполняет полные source tests, bundle verification, настоящую установку/restart/uninstall и проверку replay endpoint на обозначенной синтетической записи в изолированном CI-профиле. Полный Windows suite: **802 passed, 1 skipped**, 768.51 с; одна прежняя deprecation warning Starlette/httpx. [Actions](https://github.com/LosarOS/codex-team/actions/runs/39318614712) успешно завершён на SHA `167fae59eda67f49bd3809b3a10064b9c6092890`, без пропуска исходных тестов. Проверены 45 обязательных файлов frozen bundle, 25 HTTP-ресурсов и три профиля доступа без inference.
+
+Настоящая установка/restart/uninstall прошла. Подтверждены сохранение черновика, шаблона, заметки/избранного и внешнего вида, создание Unicode-проекта с bundled Git, Markdown report с редакцией тестового секрета и проверка обновлятора. Новый read-only replay endpoint проверен на обозначенной синтетической записи после restart. Model calls и SDK account calls: 0.
+
+[Релиз rc9](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc9) содержит 12 файлов. Размеры и SHA256 всех трёх бинарников сверены с GitHub asset digest. [Машиночитаемые доказательства](rc9/native-release-proof.json).
+
+| Файл | SHA256 |
+|---|---|
+| `CodexTeam-Setup-x64.exe` | `1296cb755421c1109e9dc4b05bbb0bc2bd702cec22210c893cfb356b54918dfe` |
+| `CodexTeam-Setup-x64.zip` | `9e82a9c0ca400cb2388b2b3e48d9d544387c28df579208657a13c4523d34bc97` |
+| `CodexTeam-Portable-x64.zip` | `19354b5d3aedf92f27aab0f3ee22a678c65b059ef3c5f198049a1257352f4645` |
+
+После сборки добавлены только документы и доказательства. Production/packaging/workflow diff к собранному SHA пустой.  GUI и inference не объявляются проверенными.
