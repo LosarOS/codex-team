@@ -499,13 +499,13 @@
     table.append(head, body); return table;
   }
   async function selectRun(id,scroll=true) {
-    const version=++state.selectionVersion;state.selecting=true;
+    const version=++state.selectionVersion;state.selecting=true;state.eventsRequest=null;state.diffLoading=false;
     try{const run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version!==state.selectionVersion)return;
       // Commit the new view only after its request succeeds. A missing run or
       // stale selection must not erase the current run's unsent instruction.
       $("steer-instruction").value="";state.events=[];state.lastEventsFetch=0;state.eventCursor=0;state.eventsLoaded=false;state.eventsHasMore=false;state.eventsState=null;state.selectedRole=null;state.selectedAttempt=null;state.selectedAttemptInfo=null;state.stageEvents=[];state.eventsRequest=null;$("events-error").hidden=true;$("more-events-button").disabled=false;$("more-events-button").hidden=true;state.runSignature="";state.actionsSignature="";state.diffLimit=1000;state.diffLines=[];state.diffRun=null;state.diffHasMore=false;state.diffLoading=false;state.diffError=null;state.diffStat=null;
       state.selectedRun=run;setPage("runs");renderRun();renderRuns(true);renderActions();if(scroll)$("run-detail").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});}
-    catch(error){if(version===state.selectionVersion)toast(error.message,true);}finally{if(version===state.selectionVersion)state.selecting=false;}
+    catch(error){if(version===state.selectionVersion){$("more-events-button").disabled=false;$("more-diff-button").disabled=false;if(state.selectedRun&&state.detailTab==="diff")renderDiff();toast(error.message,true);}}finally{if(version===state.selectionVersion)state.selecting=false;}
   }
   function availableRoles(run) {
     const pipeline = list(run.pipeline).map((role) => typeof role === "string" ? role : role.role || role.name).filter(Boolean);

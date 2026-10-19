@@ -154,4 +154,27 @@ assert.equal(selectionState.historyPage,0,'history did not return to last availa
 assert.deepEqual(historyQueries.slice(-2).map(params=>params.get('offset')),['20','0']);
 assert.equal(selectionState.historyRows[0].id,run.id);
 sandbox.fetch=originalHistoryFetch;
+// Failed navigation must release the previous selection's in-flight readers.
+// Their stale finally blocks cannot own the new version's busy indicators.
+const beforeReaderFetch=sandbox.fetch;let releaseEventsRead;
+sandbox.fetch=async(url,opts)=>{if(url.includes('/events'))await new Promise(resolve=>releaseEventsRead=resolve);return beforeReaderFetch(url,opts);};
+selectionState.detailTab='overview';selectionState.eventsLoaded=false;selectionState.eventsRequest=null;
+sandbox.window.CodexTeamSuite.setPage('runs');await settle();assert(releaseEventsRead,'activity request was not held');
+assert.equal(idMap['more-events-button'].disabled,true);
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.eventsRequest,null,'failed selection stranded pending activity request');
+assert.equal(idMap['more-events-button'].disabled,false,'failed selection stranded activity loading button');
+releaseEventsRead();await settle();assert.equal(selectionState.eventsRequest,null,'stale activity response reclaimed a request');
+sandbox.fetch=beforeReaderFetch;sandbox.window.CodexTeamSuite.setPage('runs');await settle();assert.equal(selectionState.eventsLoaded,true,'activity could not load after failed navigation');
+let releaseDiffRead;
+sandbox.fetch=async(url,opts)=>{if(url.includes('/diff'))await new Promise(resolve=>releaseDiffRead=resolve);return beforeReaderFetch(url,opts);};
+selectionState.diffRun=null;selectionState.diffLines=['+preserved loaded diff'];selectionState.diffHasMore=true;
+await idMap['open-diff-button'].click();await settle();assert(releaseDiffRead,'diff request was not held');
+assert.equal(selectionState.diffLoading,true);assert.equal(idMap['more-diff-button'].disabled,true);
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.diffLoading,false,'failed selection stranded diff loading state');
+assert.equal(idMap['more-diff-button'].disabled,false,'failed selection stranded diff loading button');
+assert.deepEqual(selectionState.diffLines,['+preserved loaded diff']);
+releaseDiffRead();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+preserved loaded diff'],'stale diff response replaced preserved content');
+sandbox.fetch=beforeReaderFetch;await idMap['open-diff-button'].click();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+safe line'],'diff could not reload after failed navigation');
 console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events','favorites server filter and page clamp']}));})().catch(e=>{console.error(e);process.exitCode=1;});
