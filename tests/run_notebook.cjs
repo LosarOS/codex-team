@@ -91,6 +91,15 @@ async function browserTests() {
     assert.equal(await page.evaluate(()=>window.calls.some(args=>args[0].includes('/report?'))),false,'native export does not request report bytes in JavaScript');
     await page.evaluate(()=>window.nativeResponse={cancelled:true}); await page.locator('#run-notebook-export').click(); await page.getByText('Report saving was cancelled.',{exact:true}).waitFor();
     await page.evaluate(()=>window.nativeResponse={error:'Private failure'}); await page.locator('#run-notebook-export').click(); await page.getByText('Could not complete the action. Your input is preserved; try again.',{exact:true}).waitFor(); assert.equal(await page.locator('#run-notebook').evaluate(node=>node.innerText.includes('Private failure')),false);
+    await page.evaluate(()=>{
+      window.module.destroy();window.bridgeReady=false;window.dynamicReportRequests=0;window.dynamicNativeCalls=0;
+      window.module=window.CodexRunNotebook.mount({anchor:document.querySelector('#toolbar'),getSelectedRun:()=> 'r1',getNativeExport:()=>window.bridgeReady ? async()=>{window.dynamicNativeCalls++;return {ok:true,path:'report.md'};} : null,
+        api:async(url)=>{if(url.includes('/report?')){window.dynamicReportRequests++;return {run_id:'r1',filename:'r1.md',markdown:'# Browser report'};} return window.stored;}});
+    });
+    await page.locator('#run-notebook-open').click(); await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
+    await page.locator('#run-notebook-export').click(); await page.waitForFunction(()=>window.dynamicReportRequests===1); await page.waitForFunction(()=>document.querySelector('#run-notebook').getAttribute('aria-busy')==='false');
+    await page.evaluate(()=>window.bridgeReady=true); await page.locator('#run-notebook-export').click(); await page.getByText('Report saved.',{exact:true}).waitFor();
+    assert.deepEqual(await page.evaluate(()=>[window.dynamicReportRequests,window.dynamicNativeCalls]),[1,1],'late-injected native bridge is detected at click time without a browser fallback');
     console.log('PASS browser notebook: CRUD/favorite, literal text, focus, dirty close/refresh, CAS/offline preservation, closed saves, explicit download, boundaries, mobile/sticky/focus trap, English and modal exclusion.');
   } finally {await browser.close();}
 }

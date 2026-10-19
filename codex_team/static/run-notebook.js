@@ -95,7 +95,7 @@
     'Сохранение ещё выполняется. Повторное открытие будет доступно после его завершения.':'Saving is still in progress. You can reopen the notebook when it finishes.',
     '{count} / 10 000 символов':'{count} / 10,000 characters', 'Запуск: {id}':'Run: {id}',
   };
-  function mount({anchor, api, getSelectedRun = () => null, onSaved = () => {}, confirm, nativeExport}) {
+  function mount({anchor, api, getSelectedRun = () => null, onSaved = () => {}, confirm, nativeExport, getNativeExport}) {
     const doc = root.document;
     if (!doc || !anchor) return null;
     const I = root.CodexI18n || {t: value => value, register() {}}; I.register(labels);
@@ -164,7 +164,11 @@
     refresh.addEventListener('click', async () => {const version = epoch; if (!await canDiscard() || version !== epoch || destroyed || !dialog.open) return; const result = await controller.load(); if (version === epoch && dialog.open) (result ? note : refresh).focus();});
     exportButton.addEventListener('click', async () => {
       if (dirty()) {status.textContent = t('Сначала сохраните изменения, затем скачайте отчёт.'); return;}
-      const version = epoch, report = await controller.report(I.language);
+      const version = epoch;
+      let handler;
+      try {handler = typeof getNativeExport === 'function' ? getNativeExport() : nativeExport; if (handler != null && typeof handler !== 'function') throw new Error('Invalid native export handler');}
+      catch (_) {status.textContent = t('Не удалось выполнить действие. Ввод сохранён; повторите попытку.'); status.classList.add('is-error'); return;}
+      const report = await controller.report(I.language, handler);
       if (!report || version !== epoch || destroyed || !dialog.open) return;
       if (report.native) {exportButton.focus(); return;}
       let url, link;
