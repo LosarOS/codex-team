@@ -14,7 +14,7 @@ MissionQueue хранит задания и идемпотентные UUID в �
 
 Unit/integration покрывают последовательность, восемь проблемных исходов, строгий start, full-access, отказ без изоляции, отсутствие вызовов на enqueue/GET, конкурентные UUID, несовпадающий повторный payload, pause, restart, ошибку launch, внешний запуск, смену порядка/skip, потерянную ссылку, delayed create при shutdown, сохранение всей истории и фиксацию проектного бюджета. API наследует Host/Origin-защиты. Node проверяет строгую схему UI, существующий ui_smoke сохраняет все rc9 regression checks.
 
-Backend: **28 passed** на финальном коде; release workflow contracts: **8 passed**. Существующий ui_smoke: PASS, 288 статических ID и 142 запроса. Браузер: **108 проверок матрицы** (9 тем × RU/EN × 6 размеров) плюс сквозной сценарий добавления/отмены/порядка/start/pause/block/skip/offline. Errors, unknown endpoints, untranslated, overflow: 0. Это настоящий Chromium с явными HTTP fixtures, не live Codex. [Результаты](rc10/browser-results.json), [очередь](rc10/mission-queue.png), [подтверждение](rc10/mission-queue-confirmation.png), [блокировка](rc10/mission-queue-blocked.png). Полные Python/Windows suites фиксируются после завершения.
+Backend: **28 passed** на финальном коде; release workflow contracts: **8 passed**. Существующий ui_smoke: PASS, 288 статических ID и 142 запроса. Браузер: **108 проверок матрицы** (9 тем × RU/EN × 6 размеров) плюс сквозной сценарий добавления/отмены/порядка/start/pause/block/skip/offline. Errors, unknown endpoints, untranslated, overflow: 0. Это настоящий Chromium с явными HTTP fixtures, не live Codex. [Результаты](rc10/browser-results.json), [очередь](rc10/mission-queue.png), [подтверждение](rc10/mission-queue-confirmation.png), [блокировка](rc10/mission-queue-blocked.png). Полные Python/Windows suites завершены; итоги ниже.
 
 ## Безопасность и ограничения
 
@@ -37,3 +37,26 @@ UI вставляет задачи через textContent; полный текс
 Проверка перед выпуском обнаружила расширение уже активного пакета при добавлении задания. Исправлено: start фиксирует набор ID, API сверяет порядок/состав снимка, повторный start не расширяет активный пакет. Два regression cases проверяют позднее добавление и устаревшее подтверждение; новый UI отправляет утверждённый снимок. Первая Windows-сборка отменена до публикации, заменена финальным прогоном.
 
 [Проверка до исправления](rc10/batch-regression-before.txt) воспроизвела два fake launch вместо одного при позднем добавлении. [Финальный browser scenario](rc10/browser-batch-results.json) отправляет точный снимок ID; прежняя матрица108 относится к тем же визуальным компонентам и переводам. Последнее изменение добавляет поле запроса start и не меняет оформление.
+
+## Повторная проверка Linux
+
+Финальный полный `python -m pytest -q`: **828 passed, 4 skipped**, 347.27 с. В промежуточном прогоне было 827 passed/4 skipped/1 failed: `test_ai_shutdown_is_bounded_and_preserves_owned_resources` не дождался `Fake.execute_entered.wait(1)` до вызова проверяемого shutdown. Исходники этого теста и TaskArchitectService не менялись относительно master. Три отдельных повтора прошли без изменения кода/таймаутов, затем полный suite прошёл целиком. Это нестабильное секундное ожидание тестового старта; тест не отключён и его функциональные проверки не ослаблены. [Три повторных запуска](rc10/ai-shutdown-recheck.txt). Реальный Windows GUI/DPI этим не проверялся.
+
+Frontend: `node tests/ui_smoke.cjs codex_team/static`, Node schema contract и `node --check` всех JS прошли. Браузерная матрица: `QA_QUEUE_ONLY=1 QA_SCREENS=mission-queue` с 9 темами, RU/EN и шестью viewport; финальный сквозной сценарий после batch-guard проверен дополнительно. Fixtures явно обозначены.
+
+## Финальная проверка релиза
+
+- Полный Linux suite: **828 passed, 4 skipped**. Полный Windows suite: **831 passed, 1 skipped**, 1025.60 с. Итоговые прогоны успешны; одна прежняя deprecation warning Starlette/httpx.
+- Настоящая Windows-установка, backend, restart и uninstall прошли. Очередь сохранилась после restart, осталась pending и не запустилась автоматически. Сохранение прежних черновиков, шаблонов, заметок/избранного и внешнего вида также подтверждено.
+- Проверены 47 обязательных файлов frozen bundle, 27 HTTP-ресурсов, три профиля доступа, локальный Unicode-проект, replay/report endpoints и проверка обновлятора.
+- Model calls и SDK account calls: 0. Интерактивный WebView2/DPI и live Codex остаются NOT VERIFIED.
+- [Windows CI](https://github.com/LosarOS/codex-team/actions/runs/39328783236), source SHA `f9c5dfd2e7fcef28578e3d7d927651b8d357349e`; [машиночитаемые доказательства](rc10/native-release-proof.json).
+- [Опубликованный rc10](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc10) содержит 12 файлов. Размеры и SHA256 трёх бинарников совпадают с release-checksums.json, SHA256SUMS.txt и GitHub asset digest.
+
+| Файл | SHA256 |
+|---|---|
+| `CodexTeam-Setup-x64.exe` | `51f61168c218538c56f7e2a012cd8c14480e272126bd37b04c3f666c04d2a0b0` |
+| `CodexTeam-Setup-x64.zip` | `693fc119da6a4dea6690b38aba0553aa2f2dc8720030af16b19cbd09d053295d` |
+| `CodexTeam-Portable-x64.zip` | `c3d2684249e587445b28b57374da25389ef51bb1fb5dcd85106308549addfb3e` |
+
+После сборки изменены только документы и доказательства. Production/packaging/workflow diff к собранному SHA пустой.
