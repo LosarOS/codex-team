@@ -106,4 +106,33 @@ idMap['run-access-level'].value='full-access';sandbox.window.confirm=()=>false;l
 await idMap['run-form'].dispatchEvent({type:'submit',preventDefault(){}});assert.equal(commands.filter(c=>c.url==='/api/runs'&&c.method==='POST').length,countAccessCreates,'full access created without consent');
 sandbox.window.confirm=()=>true;await idMap['run-form'].dispatchEvent({type:'submit',preventDefault(){}});const accessCreate=JSON.parse(commands.filter(c=>c.url==='/api/runs'&&c.method==='POST').at(-1).body);assert.equal(accessCreate.access_level,'full-access');assert.equal(accessCreate.confirmed_full_access,true);
 const priorAccessFetch=sandbox.fetch;sandbox.fetch=async(url,opts)=>{if(url==='/api/runs/'+run.id+'/control'){const payload=JSON.parse(opts.body);if(payload.action==='set_access')run.access_level=payload.access_level;}return priorAccessFetch(url,opts);};run.state='PAUSED';await sandbox.window.CodexTeamSuite.selectRun(run.id,false);idMap['detail-access-select'].value='read-only';await idMap['detail-access-select'].dispatchEvent({type:'change'});await idMap['run-access-form'].dispatchEvent({type:'submit',preventDefault(){}});const accessControl=JSON.parse(commands.filter(c=>c.url==='/api/runs/'+run.id+'/control').at(-1).body);assert.deepEqual(accessControl,{action:'set_access',access_level:'read-only'});assert.equal(idMap['detail-access-level'].textContent,'Только чтение');assert.equal(run.state,'PAUSED','access apply unexpectedly resumed run');run.state='RUNNING';await sandbox.window.CodexTeamSuite.selectRun(run.id,false);assert.equal(idMap['run-access-form'].hidden,true);sandbox.fetch=priorAccessFetch;
-console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run']}));})().catch(e=>{console.error(e);process.exitCode=1;});
+// Failed navigation preserves the current run's draft and loaded inspector data.
+const selectionState=sandbox.window.CodexTeamSuite.state;
+selectionState.detailTab='tests';
+selectionState.events=[{id:41,type:'fixture_event'}];selectionState.eventsLoaded=true;
+selectionState.stageEvents=[{id:42,type:'agent_started',role:'developer'}];
+selectionState.diffLines=['+keep loaded diff'];selectionState.eventCursor=41;selectionState.selectedRole='developer';
+const preservedContext={events:selectionState.events,stageEvents:selectionState.stageEvents,diffLines:selectionState.diffLines};
+idMap['steer-instruction'].value='Не потерять моё указание';
+const selectedBeforeFailedOpen=selectionState.selectedRun.id;
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.selectedRun.id,selectedBeforeFailedOpen);
+assert.equal(idMap['steer-instruction'].value,'Не потерять моё указание','failed selection discarded steering draft');
+for(const [key,value]of Object.entries(preservedContext))assert.strictEqual(selectionState[key],value,`failed selection discarded ${key}`);
+assert.equal(selectionState.eventsLoaded,true);assert.equal(selectionState.eventCursor,41);assert.equal(selectionState.selectedRole,'developer');assert.equal(selectionState.selecting,false);
+// A slow older selection cannot clear a draft entered after a newer run opens.
+const beforeSelectionFetch=sandbox.fetch;let releaseSlowSelection;
+sandbox.fetch=async(url,opts)=>{if(url==='/api/runs/'+run.id)await new Promise(resolve=>releaseSlowSelection=resolve);return beforeSelectionFetch(url,opts);};
+const slowSelection=sandbox.window.CodexTeamSuite.selectRun(run.id,false);await settle();assert(releaseSlowSelection);
+await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+assert.equal(selectionState.selectedRun.id,secondRun.id);assert.equal(selectionState.selecting,false);
+assert.equal(idMap['steer-instruction'].value,'','successful selection retained prior instruction');
+assert.equal(selectionState.events.length,0);assert.equal(selectionState.stageEvents.length,0);assert.equal(selectionState.diffLines.length,0);assert.equal(selectionState.eventCursor,0);
+idMap['steer-instruction'].value='Новое указание для второго запуска';
+selectionState.events=[{id:73,type:'fixture_event'}];const newerEvents=selectionState.events;
+releaseSlowSelection();await slowSelection;
+assert.equal(selectionState.selectedRun.id,secondRun.id,'older selection replaced newer run');
+assert.equal(idMap['steer-instruction'].value,'Новое указание для второго запуска','stale selection discarded newer steering draft');
+assert.strictEqual(selectionState.events,newerEvents,'stale selection discarded newer events');assert.equal(selectionState.selecting,false);
+sandbox.fetch=beforeSelectionFetch;
+console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events']}));})().catch(e=>{console.error(e);process.exitCode=1;});
