@@ -4,6 +4,7 @@ import os
 import platform
 import re
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -17,6 +18,26 @@ from .storage import sanitize
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 NOTIFICATION_DEFAULTS = {"task_complete": True, "needs_attention": True, "stage_complete": False}
 SECRET_HEADER = re.compile(r"(?im)((?:Authorization|Cookie|Set-Cookie)\s*[:=]\s*)[^\r\n]+")
+
+
+def save_run_report(destination, markdown):
+    """Write only a bounded report to a user-chosen Markdown file, atomically."""
+    path = Path(destination)
+    if path.suffix.lower() != ".md" or path.is_symlink():
+        raise ValueError("Выберите обычный Markdown-файл с расширением .md.")
+    if not isinstance(markdown, str) or not markdown.strip() or len(markdown) > 2000000:
+        raise ValueError("Отчёт недоступен или превышает допустимый размер.")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=path.parent,
+                                         prefix=".codex-report-", suffix=".tmp", delete=False) as output:
+            temporary = Path(output.name)
+            output.write(markdown)
+        os.replace(temporary, path)
+        return path
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def diagnostic_redact(text):
