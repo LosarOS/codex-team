@@ -65,6 +65,10 @@ class Store:
         CREATE INDEX IF NOT EXISTS actions_run ON actions(run_id,status);
         CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,path TEXT UNIQUE NOT NULL,data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS packs(name TEXT PRIMARY KEY,data TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS run_notebooks(
+            run_id TEXT PRIMARY KEY, revision INTEGER NOT NULL CHECK(revision>=1),
+            favorite INTEGER NOT NULL CHECK(favorite IN (0,1)), note TEXT NOT NULL,
+            updated_at TEXT NOT NULL);
         """)
         self.db.commit()
 
@@ -85,7 +89,7 @@ class Store:
             rows = self.db.execute("SELECT data FROM runs ORDER BY rowid DESC").fetchall()
         return [json.loads(r[0]) for r in rows]
 
-    def run_page(self, limit=20, offset=0, q="", state="", project="", mode="", date="", archived=False):
+    def run_page(self, limit=20, offset=0, q="", state="", project="", mode="", date="", archived=False, favorite=False):
         clauses, values = [], []
         if not archived:
             clauses.append("COALESCE(json_extract(data,'$.archived'),0)=0")
@@ -99,16 +103,19 @@ class Store:
         if date:
             clauses.append("substr(json_extract(data,'$.created_at'),1,10)=?")
             values.append(date)
+        if favorite:
+            clauses.append("EXISTS (SELECT 1 FROM run_notebooks n WHERE n.run_id=runs.id AND n.favorite=1)")
         where = ' WHERE ' + ' AND '.join(clauses) if clauses else ''
         with self.lock:
             total = self.db.execute('SELECT count(*) FROM runs' + where,values).fetchone()[0]
             # Strip large artifacts/diffs inside SQLite before Python/HTTP decoding.
-            rows = self.db.execute("SELECT json_remove(data,'$.results','$.result_history','$.diff','$.diff_stat','$.executions','$.agents','$.instructions','$.checkpoint_git') FROM runs" + where + ' ORDER BY rowid DESC LIMIT ? OFFSET ?', [*values,limit,offset]).fetchall()
+            rows = self.db.execute("SELECT json_remove(data,'$.results','$.result_history','$.diff','$.diff_stat','$.executions','$.agents','$.instructions','$.checkpoint_git'), COALESCE(n.revision,0), COALESCE(n.favorite,0), COALESCE(length(n.note)>0,0), n.updated_at FROM runs LEFT JOIN run_notebooks n ON n.run_id=runs.id" + where + ' ORDER BY runs.rowid DESC LIMIT ? OFFSET ?', [*values,limit,offset]).fetchall()
         items = [json.loads(row[0]) for row in rows]
-        for run in items:
+        for run, row in zip(items, rows):
             run.update(_usage_summary(run.pop('usage', []), run.get('calls')))
-            run['task'] = run.get('task','')[:400]
-            run['changed_files_count'] = len(run.get('changed_files',[]))
+            run['task'] = run['task'][:400] if isinstance(run.get('task'), str) else ''
+            run['changed_files_count'] = len(run['changed_files']) if isinstance(run.get('changed_files'), list) else None
+            run['notebook'] = {'revision': row[1], 'favorite': bool(row[2]), 'has_note': bool(row[3]), 'updated_at': row[4]}
         return {'items':items,'total':total}
 
     def event_page(self, run_id, after=0, limit=100, meaningful=False):

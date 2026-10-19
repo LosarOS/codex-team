@@ -116,3 +116,22 @@ def test_summary_api_preserves_unknown_usage_and_full_run_evidence(local_app):
     assert run["usage_total"] == {"input": None, "output": None, "cached": None, "total": 12}
     assert run["usage_complete"] is False
     assert client.get("/api/runs/run_summary").json()["usage"] == saved["usage"]
+
+
+@pytest.mark.parametrize('task', [None, 42, {'title': 'Legacy'}])
+def test_malformed_legacy_task_does_not_break_summary_or_change_saved_record(store, task):
+    run = summary(store, task=task, changed_files=[])
+    assert run['task'] == ''
+    assert store.run('run_summary')['task'] == task
+
+
+@pytest.mark.parametrize('files', [None, 'file.py', {'path': 'file.py'}])
+def test_malformed_or_missing_files_are_unknown_instead_of_crashing(store, files):
+    run = summary(store, changed_files=files)
+    assert run['changed_files_count'] is None
+    assert store.run('run_summary')['changed_files'] == files
+
+
+def test_missing_files_are_unknown_but_measured_empty_list_is_zero(store):
+    assert summary(store)['changed_files_count'] is None
+    assert summary(store, changed_files=[])['changed_files_count'] == 0
