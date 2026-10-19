@@ -577,7 +577,7 @@ input,textarea,select {border-radius:7px}
 @media(max-width:800px){#page-history .page-heading{align-items:flex-start}.workspace-tools{width:100%}.workspace-tools .button{flex:1}}
 
 /* History: concise local annotations and independent report actions. */
-.history-options{display:flex;align-items:center;gap:var(--space-5,20px);flex-wrap:wrap;margin:8px 0 18px}
+.history-options{display:flex;align-items:center;gap:var(--space-5,20px);flex-wrap:wrap;margin:8px 0 18px;padding-inline:20px}
 .history-options .check-label{margin:0}
 .history-task-cell{display:grid;gap:8px;min-width:0}
 .history-task-link{font-weight:600;text-align:start;overflow-wrap:anywhere}
