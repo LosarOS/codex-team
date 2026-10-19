@@ -1,0 +1,31 @@
+/* Semantic surfaces inherit every application theme. */
+#page-mission-queue {max-width:1600px}
+.mq-overview {background:radial-gradient(ellipse at 100% 0,var(--accent-soft),transparent 65%),var(--panel);margin-bottom:20px}
+.mq-status {font-size:18px;font-weight:650;margin:20px 0 12px;color:var(--accent-text)}
+.mq-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.mq-metric {display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.mq-metric strong {font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.mq-list {display:grid;gap:14px;margin-top:22px}
+.mq-card {border-inline-start:3px solid var(--line);min-width:0}
+.mq-card.mq-running,.mq-card.mq-dispatching {border-inline-start-color:var(--accent)}
+.mq-card.mq-blocked {border-inline-start-color:var(--yellow)}
+.mq-card.mq-done {border-inline-start-color:var(--green)}
+.mq-card-heading {display:flex;align-items:flex-start;gap:14px;min-width:0}
+.mq-card-heading h2 {font-size:17px;line-height:1.5;margin:0;flex:1;white-space:pre-wrap;overflow-wrap:anywhere}
+.mq-card-heading .tiny-badge {flex-shrink:0}
+.mq-position {display:grid;place-items:center;min-width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent-text);font-weight:650;font-variant-numeric:tabular-nums}
+.mq-path {font:12px/1.6 var(--font-mono,monospace);color:var(--muted);overflow-wrap:anywhere;margin:12px 0}
+.mq-facts {display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;color:var(--muted);font-size:12px}
+.mq-warning {color:var(--yellow)}
+.mq-task {margin-top:14px}.mq-task summary {cursor:pointer;color:var(--accent-text)}
+.mq-task pre {max-height:360px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mq-list .button-row {flex-wrap:wrap}
+@media(max-width:1100px){.mq-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.mq-card-heading{flex-wrap:wrap}.mq-card-heading h2{min-width:60%}}
+@media(prefers-reduced-motion:reduce){.mq-card{animation:none}}
+
+.mq-card[data-access="full-access"] .mq-facts .tiny-badge {color:var(--red);background:var(--danger-soft)}
+.mq-history {border-top:1px solid var(--line);padding-top:16px}.mq-history>summary {cursor:pointer;color:var(--muted);font-weight:600}
+
+.mq-overview,.mq-card {padding:22px}
+.mq-guidance {background:var(--surface-highlight);border-color:var(--line);color:var(--muted)}
+.mq-guidance strong {color:var(--accent-text)}

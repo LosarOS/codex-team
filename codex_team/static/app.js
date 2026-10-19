@@ -178,7 +178,7 @@
     const changed=state.page!==page||(page==="suite"&&state.lastSuiteFeature!==state.suiteFeature);state.lastSuiteFeature=state.suiteFeature;state.page = page;if(changed)window.scrollTo?.({top:0,behavior:"auto"});
     qa(".page").forEach((el) => { el.hidden = el.id !== "page-" + page; });
     qa(".nav-item").forEach((el) => {const active=el.dataset.page===page&&(!el.dataset.suiteFeatureLink||el.dataset.suiteFeatureLink===state.suiteFeature);el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
-    $("page-label").textContent={workbench:I.t("Обзор"),projects:I.t("Проекты"),runs:I.t("Запуски"),history:I.t("История"),agents:I.t("Агенты"),packs:I.t("Наборы"),actions:I.t("Центр действий"),usage:I.t("Использование"),settings:I.t("Настройки"),suite:({architect:I.t("Архитектор задач"),intelligence:I.t("Знания проекта"),git:I.t("Машина времени Git"),qa:I.t("Проверка качества"),budget:I.t("Бюджет запусков")}[state.suiteFeature])}[page];
+    $("page-label").textContent={workbench:I.t("Обзор"),projects:I.t("Проекты"),runs:I.t("Запуски"),history:I.t("История"),"mission-queue":I.t("Очередь миссий"),agents:I.t("Агенты"),packs:I.t("Наборы"),actions:I.t("Центр действий"),usage:I.t("Использование"),settings:I.t("Настройки"),suite:({architect:I.t("Архитектор задач"),intelligence:I.t("Знания проекта"),git:I.t("Машина времени Git"),qa:I.t("Проверка качества"),budget:I.t("Бюджет запусков")}[state.suiteFeature])}[page];
     const hash="#"+(page==="suite"?state.suiteFeature:page);
     if(window.location.hash!==hash){if(navigation&&typeof history.pushState==="function")history.pushState(null,"",hash);else history.replaceState(null,"",hash);}
     if(page==="usage"){renderGlobalUsage();loadAccountUsage();}
@@ -1356,10 +1356,10 @@
     try{if(!await confirmRunAccess(level)||state.selectedRun?.id!==id)return;const applied=await control("set_access",null,{access_level:level,...(level==="full-access"?{confirmed_full_access:true}:{})});if(applied)state.accessDraftRun=null;}
     catch(error){showFormError("run-access-error",error);}finally{state.accessApplying=false;if(state.selectedRun)renderRun();}
   });
-  $("run-form").addEventListener("submit", async (event) => {
-    event.preventDefault(); if (state.creatingRun || !$("run-form").reportValidity()) return;
+  function readRunRequest() {
+    if (!$("run-form").reportValidity()) return null;
     const workspace = $("workspace").value.trim(); const task = $("task").value.trim();
-    if (!workspace || !task) { showFormError("run-form-error", I.t("Укажите путь к проекту и непустую задачу.")); return; }
+    if (!workspace || !task) { showFormError("run-form-error", I.t("Укажите путь к проекту и непустую задачу.")); return null; }
     const request = {
       workspace, task, access_level:$("run-access-level").value||"standard", mode: $("run-mode").value, pack: $("run-pack").value,
       max_iterations: Number($("max-iterations").value), max_agent_calls: Number($("max-calls").value),
@@ -1367,7 +1367,11 @@
       auto_commit: $("auto-commit").checked, isolated: $("isolated").checked,
       specialists: ["deep", "audit"].includes($("run-mode").value) ? qa("#specialist-options input:checked").map((input) => input.value) : [],
     };
-    const packError=validateComposerPack();if(packError){showFormError("run-form-error",packError);return;}
+    const packError=validateComposerPack();if(packError){showFormError("run-form-error",packError);return null;}
+    return request;
+  }
+  $("run-form").addEventListener("submit", async (event) => {
+    event.preventDefault();if(state.creatingRun)return;const request=readRunRequest();if(!request)return;const workspace=request.workspace;
     const draftCheckpoint = taskDraft?.checkpoint();
     state.creatingRun=true;const button = $("start-button"); button.disabled = true; button.textContent = I.t("Подготовка запуска…"); showFormError("run-form-error", "");
     try {
@@ -1482,6 +1486,7 @@
       const banner=$("compose-replay-note");banner.replaceChildren(node("strong","",I.t("Новая задача из запуска {id}",{id:source})),node("p","",I.t("Доступ: рабочая папка. Изоляция включена, автоматический коммит выключен. Проверьте проект, набор, специалистов и лимиты перед запуском.")),actionButton(I.t("Скрыть подсказку"),()=>{banner.hidden=true;}));banner.hidden=false;
       setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});
     }});
+  window.CodexMissionQueue?.mount({page:$("page-mission-queue"),anchor:$("composer-tools"),api,read:readRunRequest,canAdd:()=>!state.creatingRun,confirmAccess:confirmRunAccess,confirm:confirmOperation,notify:toast,openRun:selectRun,navigate:page=>setPage(page,true)});
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   refreshLoop = window.CodexRefreshLoop?.create({run:poll,visible:()=>!document.hidden}) || null;

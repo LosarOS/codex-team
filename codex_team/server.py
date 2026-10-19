@@ -69,6 +69,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     db = store or Store(root / ".ai-team" / "team.sqlite3")
     secrets = secret_store or WindowsSecretStore(root)
     engine = Engine(root, db, provider_factory, secret_store=secrets)
+    from .mission_queue import MissionQueue
+    queue = MissionQueue(engine, db)
     auth = CodexProvider(root)
     providers = ProviderSettings(db,secrets,auth)
     projects = Projects(root,db)
@@ -78,6 +80,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         suite["qa"].recover()
         db.recover()
         yield
+        await asyncio.to_thread(queue.close)
         await asyncio.to_thread(suite["architect"].close)
         await asyncio.to_thread(suite["qa"].close)
         await asyncio.to_thread(engine.close)
@@ -86,6 +89,9 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
             db.close()
     app = FastAPI(title="Codex Team", lifespan=lifespan)
     app.state.engine, app.state.store = engine, db
+    app.state.mission_queue = queue
+    from .mission_queue_api import create_queue_router
+    app.include_router(create_queue_router(queue))
     app.state.providers, app.state.projects = providers, projects
     from .suite_api import install_suite
     suite=install_suite(app,root,db,engine,qa_runner)
@@ -493,7 +499,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
+        assets = {"mission-queue.js": "text/javascript", "mission-queue.css": "text/css", "run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
                   "task-templates.js": "text/javascript", "task-templates.css": "text/css",
                   "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
                   "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",

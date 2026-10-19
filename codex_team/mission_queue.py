@@ -8,6 +8,8 @@ Tasks use the normal independent run/worktree lifecycle; no automatic merge occu
 import json
 import threading
 import uuid
+from pathlib import Path
+from codex_team.budget_guardian import BudgetGuardian
 
 from codex_team.models import RunRequest
 from codex_team.storage import now, sanitize
@@ -22,7 +24,7 @@ class MissionQueue:
     HISTORY_LIMIT = 100
     OPEN = {"pending", "running", "blocked"}
 
-    def __init__(self, engine, store, poll_interval=0.1):
+    def __init__(self, engine, store, poll_interval=0.5):
         self.engine, self.store = engine, store
         self.lock = threading.RLock()
         self._wake = threading.Event()
@@ -33,6 +35,8 @@ class MissionQueue:
         self._reason = None
         with self.store.lock:
             self.store.db.execute("CREATE TABLE IF NOT EXISTS mission_queue (id TEXT PRIMARY KEY, client_id TEXT UNIQUE NOT NULL, data TEXT NOT NULL)")
+            self.store.db.execute("CREATE INDEX IF NOT EXISTS mission_queue_open ON mission_queue(json_extract(data,'$.status')) WHERE json_extract(data,'$.status') IN ('pending','running','blocked')")
+            self.store.db.execute("CREATE INDEX IF NOT EXISTS mission_queue_recent ON mission_queue(json_extract(data,'$.updated_at') DESC,id DESC) WHERE json_extract(data,'$.status') NOT IN ('pending','running','blocked')")
             self.store.db.commit()
 
     def _check(self):
@@ -46,7 +50,7 @@ class MissionQueue:
             rows = self.store.db.execute("""
                 SELECT data FROM mission_queue
                 WHERE json_extract(data,'$.status') IN ('pending','running','blocked')
-                OR id IN (SELECT id FROM mission_queue
+                UNION ALL SELECT data FROM (SELECT data FROM mission_queue
                     WHERE json_extract(data,'$.status') NOT IN ('pending','running','blocked')
                     ORDER BY json_extract(data,'$.updated_at') DESC, id DESC LIMIT ?)
             """, (self.HISTORY_LIMIT,)).fetchall()
@@ -96,12 +100,15 @@ class MissionQueue:
 
     def _view(self, item, full=False):
         request = RunRequest.model_validate(item["request"])
-        run = self._run(item)
+        # A card needs only state, never the run's potentially large diff/results.
+        with self.store.lock:
+            row = self.store.db.execute("SELECT json_extract(data,'$.state') FROM runs WHERE id=?", (item.get("run_id"),)).fetchone()
+        run_state = row[0] if row else None
         result = {key: item.get(key) for key in ("id", "client_id", "position", "status", "run_id", "reason", "created_at", "updated_at")}
         result.update(task=sanitize(request.task)[:400], workspace=request.workspace, mode=request.mode,
                       access_level=request.access_level, isolated=request.isolated,
                       max_agent_calls=request.max_agent_calls, max_run_duration=request.max_run_duration,
-                      max_total_tokens=request.max_total_tokens, run_state=run.get("state") if run else None)
+                      max_total_tokens=request.max_total_tokens, run_state=run_state)
         result["reason"] = sanitize(result["reason"])
         if full:
             result["request"] = {**request.model_dump(), "confirmed_full_access": request.confirmed_full_access}
@@ -152,17 +159,26 @@ class MissionQueue:
                 row = self.store.db.execute("SELECT data FROM mission_queue WHERE client_id=?", (client_id,)).fetchone()
             existing = json.loads(row[0]) if row else None
             if existing:
-                if existing["request"] != payload:
+                if existing.get("source_request", existing["request"]) != payload:
                     raise QueueConflict("Этот client_id уже принадлежит другому запросу")
                 return self._view(existing)
             if sum(item["status"] in self.OPEN for item in rows) >= self.MAX_PENDING:
                 raise QueueConflict("Очередь заполнена: не более 20 незавершённых миссий")
             # Validation is local and never creates a run/provider or changes Git.
-            self.engine.workspace.validate(request.workspace)
+            workspace = self.engine.workspace.validate(request.workspace)
             self.engine.registry.pipeline(request.mode, request.pack, request.specialists)
             with self.store.lock:
                 last_position = self.store.db.execute("SELECT COALESCE(MAX(json_extract(data,'$.position')),-1) FROM mission_queue").fetchone()[0]
-            item = {"id": "mission_" + uuid.uuid4().hex, "client_id": client_id, "request": payload,
+            # Freeze the effective project budget so review and execution agree.
+            effective = request.model_dump()
+            project = next((p for p in self.store.projects() if Path(p["path"]).resolve() == Path(workspace).resolve()), None)
+            policy = BudgetGuardian(self.store).project_policy(project["id"]) if project else {}
+            for key, value in policy.items():
+                if key not in request.model_fields_set:
+                    effective[key] = value
+            frozen = RunRequest.model_validate({**effective, "confirmed_full_access": request.confirmed_full_access})
+            item = {"id": "mission_" + uuid.uuid4().hex, "client_id": client_id, "source_request": payload,
+                    "request": {**frozen.model_dump(), "confirmed_full_access": frozen.confirmed_full_access},
                     "position": last_position + 1,
                     "status": "pending", "run_id": None, "reason": None, "created_at": now()}
             self._save(item)

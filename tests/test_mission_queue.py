@@ -320,3 +320,20 @@ def test_history_is_bounded_in_response_preserved_and_idempotent_in_database(que
     assert len(service.list()["items"]) == 120
     assert service.list()["summary"]["pending"] == 20
     assert not engine.created
+
+
+def test_project_budget_is_frozen_and_idempotent_after_policy_change(queue):
+    from pathlib import Path
+    from codex_team.budget_guardian import BudgetGuardian
+    service, engine, store = queue
+    store.save_project({'id':'budget-project','path':str(Path('/local').resolve()),'name':'Budget'})
+    guardian=BudgetGuardian(store)
+    guardian.set_project_policy('budget-project', {'max_agent_calls':30,'max_total_tokens':1000})
+    request=RunRequest(workspace='/local',task='Frozen policy')
+    key=uuid.uuid4();item=service.enqueue(request,key)
+    assert item['max_agent_calls']==30 and item['max_total_tokens']==1000
+    guardian.set_project_policy('budget-project', {'max_agent_calls':90,'max_total_tokens':9000})
+    assert service.enqueue(request,key)['id']==item['id']
+    service.start(True);eventually(lambda: len(engine.created)==1)
+    assert engine.created[0].max_agent_calls==30 and engine.created[0].max_total_tokens==1000
+    assert set(RunRequest.model_fields)-{'confirmed_full_access'}<=engine.created[0].model_fields_set
