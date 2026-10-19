@@ -44,6 +44,7 @@ def test_smoke_installs_and_checks_only_its_own_temporary_backend():
     assert '$report.synthetic_run_fixture = $true' in SMOKE
     assert '$report.notebook_restart_verified = $true' in SMOKE
     assert '$report.run_report_verified = $true' in SMOKE
+    assert '$report.run_replay_verified = $true' in SMOKE
     assert '& $installedGit --version' in SMOKE
     assert '$report.installed_git_version = $gitVersion' in SMOKE
     assert 'unins000.exe' in SMOKE and '$report.uninstall_verified = $true' in SMOKE
@@ -67,10 +68,10 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
 
 
 def test_release_uses_russian_notes_from_the_same_verified_source():
-    assert 'docs/releases/v1.0.0-rc8.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'docs/releases/v1.0.0-rc9.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
-    notes = (ROOT / 'docs/releases/v1.0.0-rc8.md').read_text(encoding='utf-8')
+    notes = (ROOT / 'docs/releases/v1.0.0-rc9.md').read_text(encoding='utf-8')
     for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
         assert label in notes
 

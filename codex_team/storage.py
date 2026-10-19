@@ -109,7 +109,7 @@ class Store:
         with self.lock:
             total = self.db.execute('SELECT count(*) FROM runs' + where,values).fetchone()[0]
             # Strip large artifacts/diffs inside SQLite before Python/HTTP decoding.
-            rows = self.db.execute("SELECT json_remove(data,'$.results','$.result_history','$.diff','$.diff_stat','$.executions','$.agents','$.instructions','$.checkpoint_git'), COALESCE(n.revision,0), COALESCE(n.favorite,0), COALESCE(length(n.note)>0,0), n.updated_at FROM runs LEFT JOIN run_notebooks n ON n.run_id=runs.id" + where + ' ORDER BY runs.rowid DESC LIMIT ? OFFSET ?', [*values,limit,offset]).fetchall()
+            rows = self.db.execute("SELECT json_remove(data,'$.results','$.result_history','$.diff','$.diff_stat','$.executions','$.agents','$.instructions','$.checkpoint_git'), COALESCE(n.revision,0), COALESCE(n.favorite,0), COALESCE(n.note<>'',0), n.updated_at FROM runs LEFT JOIN run_notebooks n ON n.run_id=runs.id" + where + ' ORDER BY runs.rowid DESC LIMIT ? OFFSET ?', [*values,limit,offset]).fetchall()
         items = [json.loads(row[0]) for row in rows]
         for run, row in zip(items, rows):
             run.update(_usage_summary(run.pop('usage', []), run.get('calls')))

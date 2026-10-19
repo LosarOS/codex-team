@@ -117,6 +117,7 @@
       checkpoint: () => ({version}),
       consume: (checkpoint) => clear({ifVersion: checkpoint.version, consuming: true}),
       get dirty() { return dirty; },
+      get canReplace() { return revision !== null && !operation && !remote && !conflict && !destroyed; },
       get version() { return version; },
       destroy() { destroyed = true; cancelTimer(); },
     };

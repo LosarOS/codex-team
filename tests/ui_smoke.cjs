@@ -8,13 +8,13 @@ const html=fs.readFileSync(path.join(folder,'index.html'),'utf8');const idMap={}
 for(const match of html.matchAll(/<([a-z][a-z0-9]*)\b([^>]*)>/gi)){const el=new El(match[1]);for(const a of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)){const [_,k,v]=a;if(k==='class')el.className=v||'';else if(k==='id'){el.id=v;assert(!idMap[v],`duplicate ID ${v}`);idMap[v]=el;}else if(k.startsWith('data-'))el.dataset[k.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=v||'';else el.attributes[k]=v||'';if(k==='value')el.value=v||'';if(k==='checked')el.checked=true;if(k==='hidden')el.hidden=true;if(k==='name')el.name=v;}}
 for(const [id,value]of Object.entries({'run-mode':'standard','run-pack':'software-development','settings-theme':'system','agent-permission':'read-only','max-iterations':'3','max-calls':'15','max-parallel':'2','max-duration':'30'}))idMap[id].value=value;
 const document={getElementById:id=>{assert(idMap[id],`missing ID ${id}`);return idMap[id];},querySelectorAll:query,querySelector:s=>query(s)[0],createElement:tag=>new El(tag),createTextNode:t=>new El('#text'),createDocumentFragment:()=>new El('#fragment'),documentElement:new El('html'),body:new El('body'),addEventListener(){},hidden:false};
-const commands=[];const agent={name:'developer',role:'Разработчик',instructions:'<img src=x onerror=alert(1)>',permission:'workspace-write',enabled:true,builtin:true};
+const pollCallbacks=[];const commands=[];const agent={name:'developer',role:'Разработчик',instructions:'<img src=x onerror=alert(1)>',permission:'workspace-write',enabled:true,builtin:true};
 const run={id:'fixture_run',task:'Проверить локальную задачу '.repeat(50),workspace:'C:\\fixture',state:'USER_DECISION_REQUIRED',current_role:'developer',calls:3,iteration:1,max_iterations:1,max_agent_calls:3,max_run_duration:120,elapsed_seconds:130,mode:'standard',created_at:'2026-10-10T00:00:00Z',pipeline:['coordinator','developer','qa'],worktree:{path:'C:\\fixture-worktree',branch:'codex/fixture'},results:{developer:{verdict:'USER_DECISION_REQUIRED',summary:'Требуется решение'}},usage:[],error:'Test-only decision',usage_total:{input:20,output:10,cached:0,total:30}};
 const action={id:'fixture_action',run_id:run.id,role:'developer',kind:'permission',reason:'Проверка',command:'npm install',cwd:run.workspace,scope:'Current fixture',risk:'high',requires_confirmation:true,status:'pending',allowed_decisions:['deny','cancel'],questions:[],details:{},limitation:'No grant supported in fixture'};
 const productAction={...action,id:'fixture_budget',kind:'product',risk:'low',requires_confirmation:false,allowed_decisions:['resume','stop','explain']};
 const settingsResponse={theme:'dark',execution_backend:'openai_api'};
 const responses={'/api/settings':settingsResponse,'/api/providers/openai/key':{ok:true},'/api/providers/openai/test':{ok:true},'/api/status':{auth:{status:'CONNECTED',account:{type:'chatgpt'}},capabilities:{},settings:{theme:'dark',execution_backend:'codex_chatgpt'}},'/api/agents':[agent],'/api/packs':[{name:'software-development',description:'fixture',builtin:true}],'/health':{status:'ok',version:'0.2.0',checks:{backend:true,codex:true}},'/api/providers':{active:'codex_chatgpt',codex:{status:'CONNECTED'},openai_api:{status:'NOT CONFIGURED',configured:false}},'/api/actions':[action,productAction],'/api/actions/fixture_budget/resolve':{ok:true},'/api/projects':[],'/api/models':{data:[{model:'fixture-model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'medium'},{reasoningEffort:'high'}]}]}};
-const sandbox={document,window:{location:{hash:''},matchMedia:()=>({matches:false,addEventListener(){}}),addEventListener(){},confirm:()=>false},location:{hash:''},history:{replaceState(){}},navigator:{clipboard:{writeText:async()=>{}}},localStorage:{getItem(){return null;},setItem(k,v){commands.push({storage:k,value:v});}},Node:El,Event:class{constructor(type,opts){this.type=type;Object.assign(this,opts);}},Intl,Date,JSON,Set,Map,URL,URLSearchParams,AbortController,Blob,console,setTimeout:()=>1,clearTimeout(){},setInterval(){},fetch:async(url,opts)=>{commands.push({url,method:opts.method,body:opts.body});if(url==='/api/settings'&&opts.method==='POST')Object.assign(settingsResponse,JSON.parse(opts.body));if(url==='/api/providers/openai/key'&&opts.method==='POST')responses['/api/providers'].openai_api.configured=true;let body=responses[url.split('?')[0]];if(url.startsWith('/api/runs?'))body={items:[run],total:1};if(url==='/api/runs/'+run.id)body=run;if(url.includes('/events'))body={items:[],next_cursor:0,has_more:false};if(url.includes('/diff'))body={diff:'+safe line',has_more:false};return {ok:!!body,status:body?200:404,headers:{get:()=> 'application/json'},json:async()=>body||{detail:'not found'}};}};
+const sandbox={document,window:{location:{hash:''},matchMedia:()=>({matches:false,addEventListener(){}}),addEventListener(){},confirm:()=>false},location:{hash:''},history:{replaceState(){}},navigator:{clipboard:{writeText:async()=>{}}},localStorage:{getItem(){return null;},setItem(k,v){commands.push({storage:k,value:v});}},Node:El,Event:class{constructor(type,opts){this.type=type;Object.assign(this,opts);}},Intl,Date,JSON,Set,Map,URL,URLSearchParams,AbortController,Blob,console,setTimeout:()=>1,clearTimeout(){},setInterval(callback){pollCallbacks.push(callback);},fetch:async(url,opts)=>{commands.push({url,method:opts.method,body:opts.body});if(url==='/api/settings'&&opts.method==='POST')Object.assign(settingsResponse,JSON.parse(opts.body));if(url==='/api/providers/openai/key'&&opts.method==='POST')responses['/api/providers'].openai_api.configured=true;let body=responses[url.split('?')[0]];if(url.startsWith('/api/runs?'))body={items:[run],total:1};if(url==='/api/runs/'+run.id)body=run;if(url.includes('/events'))body={items:[],next_cursor:0,has_more:false};if(url.includes('/diff'))body={diff:'+safe line',has_more:false};return {ok:!!body,status:body?200:404,headers:{get:()=> 'application/json'},json:async()=>body||{detail:'not found'}};}};
 const code=fs.readFileSync(path.join(folder,'app.js'),'utf8');
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(folder,'api-client.js'),'utf8'),sandbox);vm.runInContext(fs.readFileSync(path.join(folder,'mission-control.js'),'utf8'),sandbox);vm.runInContext(code,sandbox);
 const settle=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -177,4 +177,75 @@ assert.equal(idMap['more-diff-button'].disabled,false,'failed selection stranded
 assert.deepEqual(selectionState.diffLines,['+preserved loaded diff']);
 releaseDiffRead();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+preserved loaded diff'],'stale diff response replaced preserved content');
 sandbox.fetch=beforeReaderFetch;await idMap['open-diff-button'].click();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+safe line'],'diff could not reload after failed navigation');
-console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events','favorites server filter and page clamp']}));})().catch(e=>{console.error(e);process.exitCode=1;});
+// A reader launched for the old run while another selection is pending shares
+// its generation; only run ownership can distinguish their eventual responses.
+const readerRaceFetch=sandbox.fetch;
+const responseBody=body=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>body});
+for(const [target,oldStatus]of [[run,200],[run,404],[run,500],[secondRun,200]]){
+ selectionState.detailTab='tests';await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+ let releasePendingSelection,releaseOldDiff,releaseNewDiff,diffReads=0;
+ sandbox.fetch=async(url,opts)=>{
+  if(url==='/api/runs/'+target.id){await new Promise(resolve=>releasePendingSelection=resolve);return readerRaceFetch(url,opts);}
+  if(url.includes('/diff')&&(url.includes('/'+secondRun.id+'/')||url.includes('/'+target.id+'/'))){
+   if(++diffReads===1){await new Promise(resolve=>releaseOldDiff=resolve);return oldStatus===200?responseBody({diff:'+wrong old run',has_more:false}):{ok:false,status:oldStatus,headers:{get:()=> 'application/json'},json:async()=>({detail:'wrong old diff error'})};}
+   await new Promise(resolve=>releaseNewDiff=resolve);return responseBody({diff:'+correct new run',has_more:false});
+  }
+  return readerRaceFetch(url,opts);
+ };
+ const pendingDiffSelection=sandbox.window.CodexTeamSuite.selectRun(target.id,false);await settle();
+ await idMap['open-diff-button'].click();await settle();assert(releaseOldDiff);
+ releasePendingSelection();await pendingDiffSelection;await settle();assert(releaseNewDiff);assert.equal(selectionState.selectedRun.id,target.id);
+ releaseOldDiff();await settle();assert.equal(selectionState.diffLoading,true,'old diff completion cleared the newer run loading indicator');
+ assert(!selectionState.diffLines.includes('+wrong old run'),'old diff replaced the newer run content');assert.equal(selectionState.diffError,null,'old diff failure leaked into the newer run');
+ releaseNewDiff();await settle();assert.deepEqual(selectionState.diffLines,['+correct new run']);assert.equal(selectionState.diffRun,target.id);
+ sandbox.fetch=readerRaceFetch;
+}
+for(const [target,oldFails]of [[run,false],[run,true],[secondRun,false],[secondRun,true]]){
+ selectionState.detailTab='tests';await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+ let releaseSelection,releaseOldEvents,releaseNewEvents,eventReads=0;
+ sandbox.fetch=async(url,opts)=>{
+  if(url==='/api/runs/'+target.id){await new Promise(resolve=>releaseSelection=resolve);return readerRaceFetch(url,opts);}
+  if(url.includes('/events')&&(url.includes('/'+secondRun.id+'/')||url.includes('/'+target.id+'/'))){
+   if(++eventReads===1){await new Promise(resolve=>releaseOldEvents=resolve);return oldFails?{ok:false,status:500,headers:{get:()=> 'application/json'},json:async()=>({detail:'wrong old event error'})}:responseBody({items:[{id:800,type:'fixture_old'}],next_cursor:800,has_more:false});}
+   await new Promise(resolve=>releaseNewEvents=resolve);return responseBody({items:[{id:900,type:'fixture_new'}],next_cursor:900,has_more:false});
+  }
+  return readerRaceFetch(url,opts);
+ };
+ const pendingEventsSelection=sandbox.window.CodexTeamSuite.selectRun(target.id,false);await settle();
+ selectionState.detailTab='overview';selectionState.eventsLoaded=false;sandbox.window.CodexTeamSuite.setPage('runs');await settle();assert(releaseOldEvents);
+ releaseSelection();await pendingEventsSelection;await settle();assert(releaseNewEvents);const newEventRequest=selectionState.eventsRequest;
+ releaseOldEvents();await settle();assert.strictEqual(selectionState.eventsRequest,newEventRequest,'old activity completion cleared the newer request');
+ assert.equal(idMap['more-events-button'].disabled,true);assert.equal(idMap['events-error'].hidden,true,'old activity failure leaked into the newer run');
+ releaseNewEvents();await settle();assert.equal(selectionState.eventCursor,900);assert.deepEqual(selectionState.events.map(event=>event.id),[900]);assert.equal(selectionState.eventsRequest,null);
+ sandbox.fetch=readerRaceFetch;
+}
+selectionState.detailTab='tests';await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+let releaseRefreshSelection,releaseOldRefresh;
+sandbox.fetch=async(url,opts)=>{
+ if(url==='/api/runs/'+run.id){await new Promise(resolve=>releaseRefreshSelection=resolve);return readerRaceFetch(url,opts);}
+ if(url==='/api/runs/'+secondRun.id){await new Promise(resolve=>releaseOldRefresh=resolve);return readerRaceFetch(url,opts);}
+ return readerRaceFetch(url,opts);
+};
+const pendingRefreshSelection=sandbox.window.CodexTeamSuite.selectRun(run.id,false);await settle();
+const olderRefresh=idMap['refresh-button'].click();await settle();assert(releaseOldRefresh);
+releaseRefreshSelection();await pendingRefreshSelection;assert.equal(selectionState.selectedRun.id,run.id);
+releaseOldRefresh();await olderRefresh;await settle();assert.equal(selectionState.selectedRun.id,run.id,'old manual refresh replaced the newer selected run');
+sandbox.fetch=readerRaceFetch;
+// Polling can already be awaiting actions when a new selection begins.
+selectionState.detailTab='tests';await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+const oldPollState=secondRun.state;secondRun.state='RUNNING';
+selectionState.lastStatus=Date.now();selectionState.lastRunList=Date.now();selectionState.lastRegistry=Date.now();selectionState.lastRunDetail=0;
+let releasePollActions,releasePollSelection,releaseOldPoll;
+sandbox.fetch=async(url,opts)=>{
+ if(url.startsWith('/api/actions?')){await new Promise(resolve=>releasePollActions=resolve);return readerRaceFetch(url,opts);}
+ if(url==='/api/runs/'+run.id){await new Promise(resolve=>releasePollSelection=resolve);return readerRaceFetch(url,opts);}
+ if(url==='/api/runs/'+secondRun.id){await new Promise(resolve=>releaseOldPoll=resolve);return readerRaceFetch(url,opts);}
+ return readerRaceFetch(url,opts);
+};
+assert(pollCallbacks.length);const olderPoll=pollCallbacks[0]();await settle();assert(releasePollActions);
+const pendingPollSelection=sandbox.window.CodexTeamSuite.selectRun(run.id,false);await settle();
+releasePollActions();await settle();assert(releaseOldPoll);
+releasePollSelection();await pendingPollSelection;assert.equal(selectionState.selectedRun.id,run.id);
+releaseOldPoll();await olderPoll;await settle();assert.equal(selectionState.selectedRun.id,run.id,'old poll replaced the newer selected run');
+secondRun.state=oldPollState;sandbox.fetch=readerRaceFetch;
+console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events','favorites server filter and page clamp','pending-selection readers retain run and request ownership','manual refresh and polling cannot replace newer selection']}));})().catch(e=>{console.error(e);process.exitCode=1;});
