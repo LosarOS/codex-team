@@ -30,6 +30,7 @@ class MissionQueue:
         self._wake = threading.Event()
         self._closed = False
         self._enabled = False
+        self._batch = set()
         self._worker = None
         self._poll = max(0.01, poll_interval)
         self._reason = None
@@ -186,18 +187,24 @@ class MissionQueue:
             self._save(item)
             return self._view(item)
 
-    def start(self, confirmed=False):
+    def start(self, confirmed=False, item_ids=None):
         if confirmed is not True:
             raise ValueError("Требуется явное подтверждение запуска очереди")
         with self.engine.lock, self.lock:
             self._check()
             self._reconcile()
             rows = self._rows()
+            expected = [item["id"] for item in rows if item["status"] in {"pending", "running"}]
+            if item_ids is not None and item_ids != expected:
+                raise QueueConflict("Список или порядок задач изменился. Обновите очередь и подтвердите запуск заново.")
+            if self._enabled:
+                return self._list()  # A repeated start cannot extend an active batch.
             own_ids = {item["run_id"] for item in rows if item["status"] == "running"}
             if any(run_id not in own_ids for run_id in self.engine.active):
                 raise QueueConflict("Уже выполняется другой запуск. Дождитесь завершения или приостановите его перед запуском очереди.")
             if any(item["status"] == "blocked" for item in rows):
                 raise QueueConflict("Завершите заблокированный связанный запуск до DONE или пропустите миссию перед запуском очереди.")
+            self._batch = set(expected)
             self._enabled = True
             self._reason = None
             if self._worker is None:
@@ -264,7 +271,7 @@ class MissionQueue:
                         self._enabled = False
                         self._reason = "Начался другой запуск. После его завершения явно запустите очередь."
                     return
-                item = next((item for item in rows if item["status"] == "pending"), None)
+                item = next((item for item in rows if item["status"] == "pending" and item["id"] in self._batch), None)
                 if item is None:
                     self._enabled = False
                     self._reason = None

@@ -337,3 +337,26 @@ def test_project_budget_is_frozen_and_idempotent_after_policy_change(queue):
     service.start(True);eventually(lambda: len(engine.created)==1)
     assert engine.created[0].max_agent_calls==30 and engine.created[0].max_total_tokens==1000
     assert set(RunRequest.model_fields)-{'confirmed_full_access'}<=engine.created[0].model_fields_set
+
+
+def test_new_tasks_and_repeated_start_do_not_extend_confirmed_batch(queue):
+    service, engine, _=queue
+    add(service,'Approved first');service.start(True)
+    eventually(lambda: len(engine.launched)==1)
+    second=add(service,'Added later, not approved to run yet')
+    service.start(True)  # A duplicate start must remain idempotent.
+    engine.finish();eventually(lambda: service.list()['summary']['state']!='running')
+    assert len(engine.launched)==1 and service.get(second['id'])['status']=='pending'
+    service.start(True,[second['id']]);eventually(lambda: len(engine.launched)==2)
+
+
+def test_stale_start_snapshot_cannot_launch_changed_members_or_order(queue):
+    service, engine, _=queue
+    first=add(service,'First');second=add(service,'Second')
+    ids=[first['id'],second['id']]
+    service.move(second['id'],'up')
+    with pytest.raises(QueueConflict,match='изменился'):
+        service.start(True,ids)
+    with pytest.raises(QueueConflict,match='изменился'):
+        service.start(True,[second['id']])
+    assert engine.created==[] and engine.launched==[]

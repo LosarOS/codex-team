@@ -13,7 +13,7 @@ def test_queue_api_is_explicit_idempotent_and_inert(local_app):
     changed={**payload,'request':{**payload['request'],'task':'Different'}}
     assert client.post('/api/mission-queue',json=changed).status_code==409
     assert client.get('/api/mission-queue/'+item['id']).json()['request']['task']==payload['request']['task']
-    assert client.post('/api/mission-queue/start',json={}).status_code==400
+    assert client.post('/api/mission-queue/start',json={'item_ids':[item['id']]}).status_code==400
     assert client.post('/api/mission-queue/start',json={'confirmed':'yes'}).status_code==422
     assert client.get('/api/mission-queue',headers={'host':'evil.invalid'}).status_code==403
     assert client.post('/api/mission-queue/start',json={'confirmed':True},headers={'origin':'https://evil.invalid'}).status_code==403

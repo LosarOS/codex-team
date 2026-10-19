@@ -14,7 +14,7 @@ MissionQueue хранит задания и идемпотентные UUID в �
 
 Unit/integration покрывают последовательность, восемь проблемных исходов, строгий start, full-access, отказ без изоляции, отсутствие вызовов на enqueue/GET, конкурентные UUID, несовпадающий повторный payload, pause, restart, ошибку launch, внешний запуск, смену порядка/skip, потерянную ссылку, delayed create при shutdown, сохранение всей истории и фиксацию проектного бюджета. API наследует Host/Origin-защиты. Node проверяет строгую схему UI, существующий ui_smoke сохраняет все rc9 regression checks.
 
-Backend: **26 passed** на финальном коде; release workflow contracts: **8 passed**. Существующий ui_smoke: PASS, 288 статических ID и 142 запроса. Браузер: **108 проверок матрицы** (9 тем × RU/EN × 6 размеров) плюс сквозной сценарий добавления/отмены/порядка/start/pause/block/skip/offline. Errors, unknown endpoints, untranslated, overflow: 0. Это настоящий Chromium с явными HTTP fixtures, не live Codex. [Результаты](rc10/browser-results.json), [очередь](rc10/mission-queue.png), [подтверждение](rc10/mission-queue-confirmation.png), [блокировка](rc10/mission-queue-blocked.png). Полные Python/Windows suites фиксируются после завершения.
+Backend: **28 passed** на финальном коде; release workflow contracts: **8 passed**. Существующий ui_smoke: PASS, 288 статических ID и 142 запроса. Браузер: **108 проверок матрицы** (9 тем × RU/EN × 6 размеров) плюс сквозной сценарий добавления/отмены/порядка/start/pause/block/skip/offline. Errors, unknown endpoints, untranslated, overflow: 0. Это настоящий Chromium с явными HTTP fixtures, не live Codex. [Результаты](rc10/browser-results.json), [очередь](rc10/mission-queue.png), [подтверждение](rc10/mission-queue-confirmation.png), [блокировка](rc10/mission-queue-blocked.png). Полные Python/Windows suites фиксируются после завершения.
 
 ## Безопасность и ограничения
 
@@ -33,3 +33,7 @@ UI вставляет задачи через textContent; полный текс
 7. Проверить RU/EN, все темы, клавиатуру, WebView2, DPI100/125/150/175%, updater.
 
 Интерактивный GUI, DPI и live Codex: NOT VERIFIED. Unsigned prerelease.
+
+Проверка перед выпуском обнаружила расширение уже активного пакета при добавлении задания. Исправлено: start фиксирует набор ID, API сверяет порядок/состав снимка, повторный start не расширяет активный пакет. Два regression cases проверяют позднее добавление и устаревшее подтверждение; новый UI отправляет утверждённый снимок. Первая Windows-сборка отменена до публикации, заменена финальным прогоном.
+
+[Проверка до исправления](rc10/batch-regression-before.txt) воспроизвела два fake launch вместо одного при позднем добавлении. [Финальный browser scenario](rc10/browser-batch-results.json) отправляет точный снимок ID; прежняя матрица108 относится к тем же визуальным компонентам и переводам. Последнее изменение добавляет поле запроса start и не меняет оформление.

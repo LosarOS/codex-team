@@ -2,7 +2,7 @@
 from typing import Literal
 from uuid import UUID
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, StrictBool, Field
 from .models import RunRequest
 from .mission_queue import QueueConflict
 
@@ -14,6 +14,7 @@ class Enqueue(BaseModel):
 class StartQueue(BaseModel):
     model_config = ConfigDict(extra='forbid')
     confirmed: StrictBool = False
+    item_ids: list[str] = Field(max_length=20)
 
 class Move(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -35,7 +36,7 @@ def create_queue_router(queue):
         return call(queue.enqueue, body.request, body.client_id)
     @router.post('/start')
     def start(body: StartQueue):
-        return call(queue.start, body.confirmed)
+        return call(queue.start, body.confirmed, body.item_ids)
     @router.post('/pause')
     def pause():
         return call(queue.pause)
