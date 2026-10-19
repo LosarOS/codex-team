@@ -101,9 +101,11 @@ class MissionQueue:
     def _view(self, item, full=False):
         request = RunRequest.model_validate(item["request"])
         # A card needs only state, never the run's potentially large diff/results.
-        with self.store.lock:
-            row = self.store.db.execute("SELECT json_extract(data,'$.state') FROM runs WHERE id=?", (item.get("run_id"),)).fetchone()
-        run_state = row[0] if row else None
+        run_state = "DONE" if item["status"] == "done" else None
+        if item["status"] in self.OPEN and item.get("run_id"):
+            with self.store.lock:
+                row = self.store.db.execute("SELECT json_extract(data,'$.state') FROM runs WHERE id=?", (item["run_id"],)).fetchone()
+            run_state = row[0] if row else None
         result = {key: item.get(key) for key in ("id", "client_id", "position", "status", "run_id", "reason", "created_at", "updated_at")}
         result.update(task=sanitize(request.task)[:400], workspace=request.workspace, mode=request.mode,
                       access_level=request.access_level, isolated=request.isolated, auto_commit=request.auto_commit, pack=request.pack, specialists=request.specialists,

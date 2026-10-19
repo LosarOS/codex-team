@@ -74,7 +74,7 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css','/run-replay.js')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css','/run-replay.js','/mission-queue.js','/mission-queue.css')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -104,6 +104,11 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $templateBody = @{ name = 'Шаблон проверки'; description = 'Локальная проверка без модели'; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
     $savedTemplate = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($templateBody)) -TimeoutSec 10
     if (-not $savedTemplate.id -or $savedTemplate.revision -ne 1) { throw 'Installed task template did not save.' }
+    # Persist a queue entry without starting an agent or provider session.
+    $queueKey = [guid]::NewGuid().ToString()
+    $queueBody = @{ client_id = $queueKey; request = @{ workspace = (Join-Path $temporary 'Новый проект'); task = $draftText; max_agent_calls = 2; access_level = 'standard'; isolated = $true } } | ConvertTo-Json -Depth 5
+    $savedMission = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($queueBody)) -TimeoutSec 30
+    if (-not $savedMission.id -or $savedMission.status -ne 'pending' -or $savedMission.run_id) { throw 'Installed queue entry is invalid or was started implicitly.' }
     $notebookText = 'Личная заметка проверки перезапуска'
     $notebookBody = @{ expected_revision = 0; favorite = $true; note = $notebookText } | ConvertTo-Json
     $savedNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($notebookBody)) -TimeoutSec 10
@@ -121,6 +126,9 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
         try { $healthy = Invoke-RestMethod -Uri ($baseUrl + '/health') -TimeoutSec 2 } catch { Start-Sleep -Milliseconds 200 }
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok') { throw 'Restarted installed backend did not become healthy.' }
+    $restoredQueue = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue') -TimeoutSec 10
+    if ($restoredQueue.summary.state -eq 'running' -or $restoredQueue.items.Count -ne 1 -or $restoredQueue.items[0].id -ne $savedMission.id -or $restoredQueue.items[0].status -ne 'pending' -or $restoredQueue.items[0].run_id) { throw 'Queue did not survive restart safely without automatic execution.' }
+    $report.mission_queue_restart_verified = $true
     $restoredDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -TimeoutSec 10
     if ($restoredDraft.revision -ne 1 -or $restoredDraft.draft.data.task -ne $draftText) { throw 'Draft was lost after installed backend restart.' }
     $null = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft?expected_revision=1') -Method Delete -ContentType 'application/json' -Body '{}' -TimeoutSec 10

@@ -14,7 +14,7 @@ import urllib.request
 from contextlib import closing
 from pathlib import Path
 
-VERSION = "1.0.0-rc9"
+VERSION = "1.0.0-rc10"
 
 def hide_child_consoles():
     """Desktop-only process presentation; official SDK requests stay unchanged."""
