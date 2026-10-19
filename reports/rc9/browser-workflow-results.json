@@ -1,0 +1,78 @@
+{
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "rc9-replay-workflow",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "replay-confirmation",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 558,
+      "dialog_scroll": 558,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc9-replay-workflow",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "replay-composer",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    }
+  ],
+  "untranslated": [],
+  "errors": [],
+  "unknown": [],
+  "productivityChecks": [
+    "replay confirmation and cancel preserve editor; missing source and late form edit do not overwrite; complete literal task uses original project; unsafe controls reset; 31-second limit remains valid and autosaved; hint dismiss works; zero run creation or provider calls"
+  ],
+  "overflows": [],
+  "writes": 4
+}

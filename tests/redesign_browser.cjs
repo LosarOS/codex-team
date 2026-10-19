@@ -18,6 +18,9 @@ function comparisonRun(source){return {id:source.id,state:source.state,task:sour
 const defaultPacks=fs.readdirSync(path.join(__dirname,'../packs')).filter(f=>f.endsWith('.json')).map(f=>({...JSON.parse(fs.readFileSync(path.join(__dirname,'../packs',f),'utf8')),builtin:true,agents:['coordinator','developer','qa']}));
 const defaultAgents=fs.readdirSync(path.join(__dirname,'../agents')).filter(f=>f.endsWith('.md')).map(f=>({name:f.slice(0,-3),role:f.slice(0,-3),instructions:'Fixture technical instructions',enabled:true,builtin:true,permission:f==='developer.md'?'workspace-write':'read-only'}));
 const project={id:'fixture-project',name:'ТЕСТОВЫЕ ДАННЫЕ — проект',path:'C:\\Projects\\fixture'};
+if(process.env.QA_REPLAY_ONLY==='1'){run.task='ТЕСТОВЫЕ ДАННЫЕ: повторная задача — user content <script>literal</script> & "quotes".\n'.repeat(80);run.original_workspace=project.path;}
+const replayReads=[];
+const replaySnapshot=id=>({run_id:id,data:{task:run.task,workspace:project.path,mode:'quick',pack:'software-development',specialists:[],max_iterations:2,max_agent_calls:7,max_run_duration:31},warnings:['security_reset']});
 const wrap=(id,data)=>({id,project_id:project.id,version:1,created_at:'2026-10-15T12:00:00Z',data});
 const intel=wrap('arch1',{head:'a'.repeat(40),files:['src/auth.py','pyproject.toml'],technologies:[{name:'Python',source:'pyproject.toml'}],modules:[{path:'src',files:1}],dependencies:[],summary:'Локальный анализ fixture',limitations:'Тестовые данные'});
 const cp=wrap('cp1',{label:'ТЕСТОВАЯ контрольная точка',sha:'a'.repeat(40),stage:'developer',run_id:'fixture-run'});
@@ -35,6 +38,8 @@ if(process.env.QA_SHOWCASE==='1'){
 
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
+ const replayRoute=p.match(/^\/api\/runs\/([^/]+)\/replay$/);
+ if(replayRoute){const id=decodeURIComponent(replayRoute[1]);replayReads.push(id);return id===run.id?replaySnapshot(id):{__status:404,detail:'ТЕСТ: исходный запуск недоступен'};}
  const notebookRoute=p.match(/^\/api\/runs\/([^/]+)\/(notebook|report)$/);
  if(notebookRoute){
   const id=decodeURIComponent(notebookRoute[1]),entry=notebooks.get(id);
@@ -132,7 +137,23 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,run-notebook,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
   const visit=async name=>{
    if(process.env.QA_VERBOSE)console.log('visit',name);
+   if(await page.locator('#confirm-dialog[open]').count()){
+    if(name==='replay-composer'){await page.locator('#confirm-accept').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});await page.locator('#compose-replay-note').waitFor();return;}
+    await page.locator('#confirm-cancel').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});
+   }
    if(await page.locator('#run-notebook[open]').count()){await page.locator('.run-notebook-close').click();await page.locator('#run-notebook').waitFor({state:'hidden'});}
+   if(name==='replay-confirmation'||name==='replay-composer'){
+    await visit('workbench');
+    await page.waitForFunction(()=>window.CodexTeamSuite.state.initialRefreshDone&&document.querySelector('.task-draft-panel')?.dataset.state!=='loading');
+    if(await page.locator('#task-draft-restore').isVisible()){
+     await page.locator('#task-draft-restore').click();
+     if(await page.locator('#confirm-dialog[open]').count())await page.locator('#confirm-accept').click();
+    }
+    await page.waitForFunction(()=>!['loading','saving','available','conflict'].includes(document.querySelector('.task-draft-panel')?.dataset.state));
+    await visit('runs');await page.locator('#run-replay-open').click();await page.locator('#confirm-dialog[open]').waitFor();
+    if(name==='replay-composer'){await page.locator('#confirm-accept').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});await page.locator('#compose-replay-note').waitFor();}
+    return;
+   }
    if(name==='run-notebook'){
     await page.locator('.navigation [data-page="runs"]').first().click();
     await page.locator('#runs-list button').first().click();
@@ -159,7 +180,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
    assert(await page.locator(selector).evaluate(dialog=>dialog.contains(document.activeElement)),`${name} must contain focus`);
    const closeVisible=await page.locator(selector).evaluate(dialog=>{
     dialog.scrollTop=dialog.scrollHeight;
-    const bounds=dialog.getBoundingClientRect(),close=dialog.querySelector('#task-templates-close,.run-comparison-close,.run-notebook-close').getBoundingClientRect();
+    const bounds=dialog.getBoundingClientRect(),close=dialog.querySelector('#task-templates-close,.run-comparison-close,.run-notebook-close,#confirm-cancel').getBoundingClientRect();
     const visible=close.top>=bounds.top&&close.bottom<=bounds.bottom;
     dialog.scrollTop=0;return visible;
    });
@@ -194,6 +215,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
      for(const name of screens){
       await visit(name);
       if(name==='run-notebook'){await auditDialog('#run-notebook',name,language,theme);continue;}
+      if(name==='replay-confirmation'){await auditDialog('#confirm-dialog',name,language,theme);continue;}
       const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,lang:document.documentElement.lang,theme:document.documentElement.dataset.theme}));
       checks.push({phase,language,theme,name,...dims});
       if(language==='en'&&theme==='obsidian-violet'&&width===1366){const labels=await page.evaluate(()=>[...document.querySelectorAll('button,label,legend,summary,option,h1,h2,h3,th')].filter(n=>n.getClientRects().length&&!n.closest('pre,code')).map(n=>n.textContent.trim()).filter(text=>/[А-Яа-яЁё]/.test(text)&&!/(?:ТЕСТ|Тестов|тестов|Русский)/.test(text)));for(const text of labels)untranslated.push({name,text});}
@@ -203,7 +225,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
       }
      }
     // Optional focused matrix avoids unrelated rc7 dialogs while testing rc8 integrations.
-    if(process.env.QA_NOTEBOOK_ONLY==='1')continue;
+    if(process.env.QA_NOTEBOOK_ONLY==='1'||process.env.QA_REPLAY_ONLY==='1')continue;
     // rc7 dialogs receive the same requested RU/EN, theme and viewport coverage as pages.
     await visit('workbench');
     await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-1"]').click();await page.locator('#task-template-save').waitFor();await page.waitForFunction(()=>!document.querySelector('#task-template-name').disabled);
@@ -214,6 +236,42 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
     await auditDialog('#run-comparison','run-comparison',language,theme);await page.locator('.run-comparison-close').click();
     }
    }
+  }
+  if(process.env.QA_REPLAY_MATRIX_ONLY==='1'){
+   assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
+   console.log(JSON.stringify({checks:checks.length,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false}));return;
+  }
+  if(process.env.QA_REPLAY_ONLY==='1'){
+   await visit('settings');
+   if(await page.locator('#settings-language').inputValue()!=='ru')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption('ru')]);
+   await visit('settings');await page.locator('#settings-theme').selectOption('obsidian-violet');await visit('workbench');
+   if(await page.locator('#task-draft-restore').isVisible())await page.locator('#task-draft-restore').click();
+   await page.locator('#task').fill('ТЕСТ: текущая задача до повторения');await page.locator('#workspace').fill(project.path);
+   await page.locator('#run-access-level').selectOption('full-access');await page.locator('#run-form .advanced-options').evaluate(node=>node.open=true);
+   await page.locator('#auto-commit').check();await page.locator('#isolated').uncheck();await page.locator('#max-parallel').fill('4');
+   const readEditor=()=>page.evaluate(()=>Object.fromEntries(['task','workspace','run-mode','run-pack','run-access-level','max-iterations','max-calls','max-duration','max-parallel','auto-commit','isolated'].map(id=>{const input=document.getElementById(id);return [id,input.type==='checkbox'?input.checked:input.value];})));
+   const originalEditor=await readEditor();
+   await visit('runs');await page.locator('#run-replay-open').click();await page.locator('#confirm-dialog[open]').waitFor();await page.waitForFunction(()=>!document.querySelector('#toast-region .toast'));await captureCurated('replay-confirmation','#confirm-dialog');
+   await page.locator('#confirm-cancel').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});assert.deepEqual(await readEditor(),originalEditor,'Cancelled replay changed the task form');
+   await page.route('**/api/runs/*/replay',route=>route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({detail:'ТЕСТ: исходный запуск недоступен'})}));
+   await page.locator('#run-replay-open').click();await page.waitForFunction(()=>!document.querySelector('#run-replay-open').disabled);assert.deepEqual(await readEditor(),originalEditor,'Unavailable source changed the task form');assert.equal(await page.locator('#confirm-dialog[open]').count(),0);await page.unroute('**/api/runs/*/replay');
+   let releaseReplay,replayEntered,replayFinished;const enteredReplay=new Promise(resolve=>replayEntered=resolve),finishedReplay=new Promise(resolve=>replayFinished=resolve);
+   await page.route('**/api/runs/*/replay',async route=>{replayEntered();await new Promise(resolve=>releaseReplay=resolve);await route.fulfill({contentType:'application/json',body:JSON.stringify(replaySnapshot(run.id))});replayFinished();});
+   await page.locator('#run-replay-open').click();await enteredReplay;await visit('workbench');await page.locator('#task').fill('ТЕСТ: новый ввод, пока источник загружается');
+   releaseReplay();await finishedReplay;await page.waitForFunction(()=>!document.querySelector('#run-replay-open').disabled);assert.equal(await page.locator('#task').inputValue(),'ТЕСТ: новый ввод, пока источник загружается');assert.equal(await page.locator('#confirm-dialog[open]').count(),0);await page.unroute('**/api/runs/*/replay');
+   await visit('replay-composer');
+   const applied=await readEditor();assert.equal(applied.task,run.task,'Replay must use the complete literal task, not a summary');assert.equal(applied.workspace,run.original_workspace,'Replay must use the original project, not the isolated run path');
+   assert.equal(applied['run-mode'],'quick');assert.equal(applied['run-pack'],'software-development');assert.equal(applied['max-iterations'],'2');assert.equal(applied['max-calls'],'7');
+   assert.equal(Math.round(Number(applied['max-duration'])*60),31,'Replay changed a valid second-based limit');assert(await page.locator('#max-duration').evaluate(input=>input.validity.valid),'31 seconds must be a valid composer limit');
+   assert.equal(applied['run-access-level'],'standard');assert.equal(applied.isolated,true);assert.equal(applied['auto-commit'],false);assert.equal(applied['max-parallel'],'2');
+   assert((await page.locator('#compose-replay-note').innerText()).includes(run.id));
+   await page.waitForFunction(()=>document.querySelector('.task-draft-panel').dataset.state==='saved');assert.equal(composeDraft.draft.data.task,run.task);assert.equal(composeDraft.draft.data.max_run_duration,31);assert(!('access_level' in composeDraft.draft.data));
+   await page.waitForFunction(()=>!document.querySelector('#toast-region .toast'));await page.locator('#task-composer').scrollIntoViewIfNeeded();await captureCurated('replay-composer');
+   await page.locator('#compose-replay-note button').click();assert(await page.locator('#compose-replay-note').isHidden());
+   assert.equal(writes.filter(write=>write.path==='/api/runs').length,0,'Replay must not start a run');assert(!writes.some(write=>/\/providers\/.*\/test|\/login|\/control$/.test(write.path)),'Replay must not invoke providers, login or control');
+   productivityChecks.push('replay confirmation and cancel preserve editor; missing source and late form edit do not overwrite; complete literal task uses original project; unsafe controls reset; 31-second limit remains valid and autosaved; hint dismiss works; zero run creation or provider calls');
+   assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
+   console.log(JSON.stringify({checks:checks.length,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false,productivityChecks}));return;
   }
   if(process.env.QA_NOTEBOOK_MATRIX_ONLY==='1'){
    assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
