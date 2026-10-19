@@ -3,6 +3,9 @@
 (() => {
   const I = (typeof window !== "undefined" ? window.CodexI18n : null) || {language:"ru",setLanguage:()=>{},t:v=>v,tr:(s,...v)=>s.reduce((a,x,i)=>a+x+(v[i]??""),"")};
   I.register?.({
+    "Только избранные":"Favorites only", "Избранное":"Favorite", "Есть заметка":"Has a note",
+    "Личные заметки":"Personal notes", "Заметки":"Notes",
+    "Нет подходящих запусков. Измените фильтры.":"No matching runs. Change the filters.",
     "Не удалось подключиться к приложению":"Could not connect to the application",
     "Расход не передан SDK":"Usage was not provided by the SDK",
     "Часть расхода неизвестна":"Some usage is unknown",
@@ -37,7 +40,7 @@
     stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
     desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
   };
-  let taskDraft = null, refreshLoop = null, taskTemplates = null, runComparison = null;
+  let taskDraft = null, refreshLoop = null, taskTemplates = null, runComparison = null, runNotebook = null;
   state.initialRefreshDone = false;
   state.refreshQueued = false;
   const roles = {
@@ -469,7 +472,19 @@
     if(state.page==="usage")renderGlobalUsage();
   }
   function renderHistory() {
-    const table=makeTable([I.t("Задача / проект"),I.t("Состояние"),I.t("Агент"),I.t("Вызовы"),I.t("Создан")],state.historyRows.map(run=>{const title=node("div"),open=node("button","",run.task);open.type="button";open.addEventListener("click",()=>selectRun(run.id));title.append(open,node("small","mono",run.workspace));if(run.archived)title.append(node("small","muted",I.t("Архивный запуск")));if(run.worktree_deleted)title.append(node("small","muted",I.t("Рабочая копия удалена")));return [title,badge(run.state),roleName(run.current_role),run.calls??"—",prettyDate(run.created_at)];}),state.historyTotal?I.t("По этим фильтрам запуски не найдены."):I.t("Запусков пока нет. Создайте первую задачу на странице «Обзор»."));
+    const table=makeTable([I.t("Задача / проект"),I.t("Состояние"),I.t("Агент"),I.t("Вызовы"),I.t("Создан"),I.t("Личные заметки")],state.historyRows.map(run=>{
+      const title=node("div","history-task-cell"),open=node("button","history-task-link",run.task||run.id);open.type="button";open.addEventListener("click",()=>selectRun(run.id));
+      title.append(open,node("small","mono",run.workspace));
+      const marks=node("div","history-marks");
+      if(run.notebook?.favorite)marks.append(node("span","tiny-badge notebook-favorite-badge",I.t("Избранное")));
+      if(run.notebook?.has_note)marks.append(node("span","tiny-badge",I.t("Есть заметка")));
+      if(run.archived)marks.append(node("small","muted",I.t("Архивный запуск")));
+      if(run.worktree_deleted)marks.append(node("small","muted",I.t("Рабочая копия удалена")));
+      title.append(marks);
+      const notes=actionButton(I.t("Заметки"),()=>runNotebook?.open(run.id));notes.className="button secondary compact history-note-action";
+      notes.setAttribute("aria-label",`${I.t("Личные заметки")} · ${run.id}`);
+      return [title,badge(run.state),roleName(run.current_role),run.calls??"—",prettyDate(run.created_at),notes];
+    }),I.t("Нет подходящих запусков. Измените фильтры."));
     runComparison?.refresh();
     $("history-list").replaceChildren(table);$("history-prev").disabled=state.historyPage===0;$("history-next").disabled=(state.historyPage+1)*20>=state.historyTotal;$("history-page-info").textContent=I.tr`Страница ${state.historyPage+1} · ${formatNumber.format(state.historyTotal)} запусков`;
   }
@@ -1037,8 +1052,8 @@
     if(reset)state.historyPage=0;
     const version=++state.historyVersion,offset=state.historyPage*20;
     $("history-list").setAttribute("aria-busy","true");
-    try { const p=new URLSearchParams({summary:"true",limit:"20",offset:String(offset),archived:String($("history-archived").checked),q:$("history-search").value.trim(),state:$("history-filter").value,project:$("history-project").value,mode:$("history-mode").value,date:$("history-date").value});const response=await api("/api/runs?"+p);if(version!==state.historyVersion)return;
-      if(Array.isArray(response)){const query=$("history-search").value.trim().toLowerCase(),filter=$("history-filter").value;const rows=response.filter(r=>(!query||`${r.task} ${r.workspace} ${r.id}`.toLowerCase().includes(query))&&(!filter||normalizedState(r.state)===filter));state.historyTotal=rows.length;state.historyRows=rows.slice(offset,offset+20);}else{state.historyRows=response.items||response.runs||[];state.historyTotal=response.total??state.historyRows.length;}renderHistory();
+    try { const p=new URLSearchParams({summary:"true",limit:"20",offset:String(offset),archived:String($("history-archived").checked),favorite:String($("history-favorites").checked),q:$("history-search").value.trim(),state:$("history-filter").value,project:$("history-project").value,mode:$("history-mode").value,date:$("history-date").value});const response=await api("/api/runs?"+p);if(version!==state.historyVersion)return;
+      if(Array.isArray(response)){const query=$("history-search").value.trim().toLowerCase(),filter=$("history-filter").value;const rows=response.filter(r=>(!query||`${r.task} ${r.workspace} ${r.id}`.toLowerCase().includes(query))&&(!filter||normalizedState(r.state)===filter)&&(!$("history-favorites").checked||r.notebook?.favorite===true));state.historyTotal=rows.length;state.historyRows=rows.slice(offset,offset+20);}else{state.historyRows=response.items||response.runs||[];state.historyTotal=response.total??state.historyRows.length;}if(offset>0&&offset>=state.historyTotal){state.historyPage=Math.max(0,Math.ceil(state.historyTotal/20)-1);await loadHistory();return;}renderHistory();
     }catch(error){if(version===state.historyVersion)empty($("history-list"),I.t("История временно недоступна"),error.message);}finally{if(version===state.historyVersion)$("history-list").removeAttribute("aria-busy");}
   }
   function renderRunList() {
@@ -1262,7 +1277,7 @@
     $("open-worktree-button").addEventListener("click",()=>nativeOperation("open_worktree",state.selectedRun?.id));$("refresh-actions-button").addEventListener("click",loadActions);
     $("archive-run-button").addEventListener("click",()=>manageRunArtifact("archive"));$("delete-worktree-button").addEventListener("click",()=>manageRunArtifact("worktree"));
     $("history-prev").addEventListener("click",()=>{state.historyPage=Math.max(0,state.historyPage-1);loadHistory();});$("history-next").addEventListener("click",()=>{state.historyPage++;loadHistory();});
-    for(const id of ["history-project","history-mode","history-date","history-archived"])$(id).addEventListener("change",()=>loadHistory(true));
+    for(const id of ["history-project","history-mode","history-date","history-archived","history-favorites"])$(id).addEventListener("change",()=>loadHistory(true));
     $("dismiss-onboarding").addEventListener("click",()=>setOnboarding(true));$("show-onboarding-button").addEventListener("click",()=>{setOnboarding(false);setPage("workbench");});
     $("dismiss-recovery").addEventListener("click",async()=>{await nativeOperation("dismiss_recovery");$("recovery-banner").hidden=true;});
     $("project-create-browse").addEventListener("click",async()=>{
@@ -1442,6 +1457,13 @@
   runComparison = window.CodexRunComparison?.mount({anchor:$("history-tools"),api,
     getRuns:()=>[...new Map([...state.historyRows,...state.runs].map(run=>[run.id,run])).values()],
     getSelectedRun:()=>state.selectedRun,formatRole:roleName,openRun:id=>selectRun(id)}) || null;
+  runNotebook = window.CodexRunNotebook?.mount({anchor:$("run-notebook-tools"),api,getSelectedRun:()=>state.selectedRun,confirm:confirmOperation,
+    getNativeExport:()=>{const bridge=desktopBridge();return typeof bridge?.export_run_report==="function"?(id,language)=>bridge.export_run_report(id,language):null;},
+    onSaved:record=>{
+      const metadata={revision:record.revision,favorite:record.favorite,has_note:!!record.note,updated_at:record.updated_at};
+      for(const run of [...state.historyRows,...state.runs])if(run.id===record.run_id)run.notebook=metadata;
+      if(state.page==="history")loadHistory();else renderHistory();
+    }}) || null;
   // Handle injection before or after this deferred script without assuming a bridge in debug browsers.
   initializePolicies(); initializeAppearance(); bindFeatures(); renderPreview(); renderGlobalUsage(); renderStatus(); setPage(location.hash.slice(1) || "workbench");
   refreshLoop = window.CodexRefreshLoop?.create({run:poll,visible:()=>!document.hidden}) || null;

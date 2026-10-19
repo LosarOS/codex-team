@@ -135,4 +135,23 @@ assert.equal(selectionState.selectedRun.id,secondRun.id,'older selection replace
 assert.equal(idMap['steer-instruction'].value,'Новое указание для второго запуска','stale selection discarded newer steering draft');
 assert.strictEqual(selectionState.events,newerEvents,'stale selection discarded newer events');assert.equal(selectionState.selecting,false);
 sandbox.fetch=beforeSelectionFetch;
-console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events']}));})().catch(e=>{console.error(e);process.exitCode=1;});
+// Favorites are a server query, and deleting the final item on a page clamps pagination.
+const originalHistoryFetch=sandbox.fetch,historyQueries=[];
+sandbox.fetch=async(url,opts)=>{
+  if(url.startsWith('/api/runs?')){
+    const params=new URL(url,'http://localhost').searchParams;historyQueries.push(params);
+    const offset=Number(params.get('offset'));
+    return {ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({items:offset?[]:[run],total:20})};
+  }
+  return originalHistoryFetch(url,opts);
+};
+idMap['history-favorites'].checked=true;
+await idMap['history-favorites'].dispatchEvent({type:'change'});await settle();
+assert.equal(historyQueries.at(-1).get('favorite'),'true','favorite checkbox did not filter the whole server history');
+selectionState.historyTotal=21;
+await idMap['history-next'].click();await settle();
+assert.equal(selectionState.historyPage,0,'history did not return to last available page');
+assert.deepEqual(historyQueries.slice(-2).map(params=>params.get('offset')),['20','0']);
+assert.equal(selectionState.historyRows[0].id,run.id);
+sandbox.fetch=originalHistoryFetch;
+console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events','favorites server filter and page clamp']}));})().catch(e=>{console.error(e);process.exitCode=1;});
