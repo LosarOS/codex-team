@@ -9,7 +9,7 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc8
+        default: v1.0.0-rc9
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
@@ -90,9 +90,9 @@ jobs:
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
-          Copy-Item -LiteralPath docs/releases/v1.0.0-rc8.md -Destination release-assets/RELEASE-NOTES-RU.md
-          foreach ($image in @('run-notebook','history-favorites','runs')) {
-            Copy-Item -LiteralPath ("reports/rc8/$image.png") -Destination release-assets
+          Copy-Item -LiteralPath docs/releases/v1.0.0-rc9.md -Destination release-assets/RELEASE-NOTES-RU.md
+          foreach ($image in @('replay-confirmation','replay-composer','runs')) {
+            Copy-Item -LiteralPath ("reports/rc9/$image.png") -Destination release-assets
           }
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
           @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8

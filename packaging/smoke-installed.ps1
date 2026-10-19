@@ -74,7 +74,7 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css','/run-replay.js')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -143,6 +143,9 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     if ($runReport.run_id -ne 'installed-smoke-run' -or $runReport.markdown -notmatch '# Codex Team run report' -or -not $runReport.markdown.Contains($notebookText) -or $runReport.markdown.Contains('sk-fixturesecret123456')) { throw 'Installed report data, localization or redaction is invalid.' }
     $report.notebook_restart_verified = $true
     $report.run_report_verified = $true
+    $replay = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/replay') -TimeoutSec 10
+    if ($replay.run_id -ne 'installed-smoke-run' -or $replay.data.task -ne 'CI FIXTURE ONLY token=sk-fixturesecret123456' -or $replay.data.mode -ne 'standard' -or $replay.data.max_agent_calls -ne 15 -or $replay.data.PSObject.Properties.Name -contains 'access_level' -or $replay.data.PSObject.Properties.Name -contains 'auto_commit' -or $replay.warnings -notcontains 'security_reset') { throw 'Installed replay does not preserve the task or respect its safe allowlist.' }
+    $report.run_replay_verified = $true
 
     $afterRestart = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
     if ($afterRestart.theme -ne 'neon-blue' -or $afterRestart.language -ne 'en') { throw 'Appearance was lost after restart.' }
