@@ -651,10 +651,12 @@
   async function loadDiff(more=false) {
     const run=state.selectedRun;if(!run||state.diffLoading)return;
     if(state.diffRun===run.id&&!more){renderDiff();return;}
-    const version=state.selectionVersion;state.diffLoading=true;state.diffError=null;renderDiff();
-    try{const response=await api(`/api/runs/${encodeURIComponent(run.id)}/diff?offset=${more?state.diffLines.length:0}&limit=1000`);if(version!==state.selectionVersion)return;const chunk=(response.diff||"").split("\n");if(chunk.at(-1)==="")chunk.pop();state.diffLines=more?[...state.diffLines,...chunk]:chunk;state.diffStat=response.diff_stat;state.diffHasMore=Boolean(response.has_more);state.diffTotal=response.total_lines??state.diffLines.length;state.diffRun=run.id;}
-    catch(error){if(error.status===404&&version===state.selectionVersion){state.diffLines=(typeof run.diff==="string"?run.diff:"").split("\n");if(!run.diff)state.diffLines=[];state.diffHasMore=false;state.diffRun=run.id;}else if(version===state.selectionVersion)state.diffError=error.message;}
-    finally{if(version===state.selectionVersion){state.diffLoading=false;renderDiff();}}
+    const version=state.selectionVersion,request={};state.diffRequest=request;
+    const ownsView=()=>version===state.selectionVersion&&state.selectedRun?.id===run.id&&state.diffRequest===request;
+    state.diffLoading=true;state.diffError=null;renderDiff();
+    try{const response=await api(`/api/runs/${encodeURIComponent(run.id)}/diff?offset=${more?state.diffLines.length:0}&limit=1000`);if(!ownsView())return;const chunk=(response.diff||"").split("\n");if(chunk.at(-1)==="")chunk.pop();state.diffLines=more?[...state.diffLines,...chunk]:chunk;state.diffStat=response.diff_stat;state.diffHasMore=Boolean(response.has_more);state.diffTotal=response.total_lines??state.diffLines.length;state.diffRun=run.id;}
+    catch(error){if(!ownsView())return;if(error.status===404){state.diffLines=(typeof run.diff==="string"?run.diff:"").split("\n");if(!run.diff)state.diffLines=[];state.diffHasMore=false;state.diffRun=run.id;}else state.diffError=error.message;}
+    finally{if(ownsView()){state.diffRequest=null;state.diffLoading=false;renderDiff();}}
   }
   function renderTests() {
     const entries = Object.entries(state.selectedRun?.results || {}).flatMap(([role, result]) => list(result?.tests).map((test) => ({role, test})));
@@ -850,12 +852,14 @@
     $("events-status").textContent=I.tr`Показано ${visible.length} · загружено ${state.events.length}${state.eventsHasMore?I.t(" · есть следующие страницы"):""}`;
   }
   async function fetchEvents(id,version) {
+    if(version!==state.selectionVersion||state.selectedRun?.id!==id)return;
     if(state.eventsRequest)return state.eventsRequest;
     const button=$("more-events-button");button.disabled=true;
-    const request=(async()=>{
+    const request=Promise.resolve().then(async()=>{
+      const ownsView=()=>version===state.selectionVersion&&state.selectedRun?.id===id&&state.eventsRequest===request;
       try {
         const response=await api(`/api/runs/${encodeURIComponent(id)}/events?after=${state.eventCursor}&limit=100&meaningful=true`);
-        if(version!==state.selectionVersion||state.selectedRun?.id!==id)return;
+        if(!ownsView())return;
         const data=Array.isArray(response)?response:response.items||response.events||[];
         state.lastEventsFetch=Date.now();state.eventsLoaded=true;state.eventsHasMore=Boolean(response.has_more);state.eventsState=normalizedState(state.selectedRun.state);
         const ids=new Set(state.events.map(e=>e.id));const added=data.filter(e=>!ids.has(e.id));state.events.push(...added);
@@ -864,9 +868,9 @@
         if(state.events.length>600)state.events.splice(0,state.events.length-600);
         $("events-error").hidden=true;button.hidden=!state.eventsHasMore;renderEvents();renderActivePipeline();
         if(state.detailTab==="overview"&&added.length)renderRoles();
-      }catch(error){if(version===state.selectionVersion)showEventError(error);}
-      finally{if(version===state.selectionVersion){state.eventsRequest=null;button.disabled=false;}}
-    })();
+      }catch(error){if(ownsView())showEventError(error);}
+      finally{if(ownsView()){state.eventsRequest=null;button.disabled=false;}}
+    });
     state.eventsRequest=request;return request;
   }
   async function refresh() {
@@ -879,7 +883,7 @@
       if(responses[2].status==="fulfilled"||responses[3].status==="fulfilled"){renderRegistry();state.lastRegistry=Date.now();}
       if(responses[5].status==="fulfilled"){state.providers=responses[5].value;renderProviders();renderConnection();}
       if(state.online){await loadActions();if(!state.projects.length||["projects","history","workbench"].includes(state.page))await loadProjects();if(state.page==="history")await loadHistory();}
-      if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
+      if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision&&state.selectedRun?.id===id){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
       const partial = [1,2,3,5].map(index=>responses[index]).find(response=>response.status==="rejected");
       if (state.online && partial) showServiceIssue(partial.reason.message, true);
     }catch(error){if(error.kind==="offline"||error.kind==="timeout")setOnline(false,error.message);else showServiceIssue(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
@@ -891,7 +895,7 @@
       if(Date.now()-state.lastRunList>(active?1800:10000)){acceptRuns(await api("/api/runs?summary=true&limit=20&offset=0"));state.lastRunList=Date.now();}
       await loadActions();
       const run=state.selectedRun,id=run?.id,version=state.selectionVersion,revision=state.runRevision,summary=state.runs.find(r=>r.id===id);
-      if(id&&state.page==="runs"&&Date.now()-state.lastRunDetail>1800&&((summary&&(summary.state!==run.state||summary.calls!==run.calls||summary.current_role!==run.current_role||summary.iteration!==run.iteration))||(activeStates.has(normalizedState(run.state))&&Date.now()-state.lastRunDetail>30000))){const updated=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision){state.selectedRun=updated;state.lastRunDetail=Date.now();renderRun();}}
+      if(id&&state.page==="runs"&&Date.now()-state.lastRunDetail>1800&&((summary&&(summary.state!==run.state||summary.calls!==run.calls||summary.current_role!==run.current_role||summary.iteration!==run.iteration))||(activeStates.has(normalizedState(run.state))&&Date.now()-state.lastRunDetail>30000))){const updated=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision&&state.selectedRun?.id===id){state.selectedRun=updated;state.lastRunDetail=Date.now();renderRun();}}
       if(id&&state.page==="runs"&&["overview","activity"].includes(state.detailTab)&&(activeStates.has(normalizedState(state.selectedRun.state))||Date.now()-state.lastEventsFetch>10000||state.eventsHasMore||!state.eventsLoaded||state.eventsState!==normalizedState(state.selectedRun.state)))await fetchEvents(id,version);
       if(Date.now()-state.lastRegistry>30000){const rs=await Promise.allSettled([api("/api/agents"),api("/api/packs")]);if(rs[0].status==="fulfilled")state.agents=Array.isArray(rs[0].value)?rs[0].value:rs[0].value.agents||[];if(rs[1].status==="fulfilled")state.packs=Array.isArray(rs[1].value)?rs[1].value:rs[1].value.packs||[];state.lastRegistry=Date.now();renderRegistry();const failed=rs.find(item=>item.status==="rejected");if(failed)throw failed.reason;}
       if(state.actionsError){showServiceIssue(state.actionsError,true);return false;}
