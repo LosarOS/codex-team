@@ -4,7 +4,7 @@ from test_server import local_app
 
 def test_new_feature_assets_are_served_by_production_whitelist(local_app):
     client, *_ = local_app
-    for filename in ['task-templates.js', 'run-comparison.js', 'task-templates.css', 'run-comparison.css', 'run-notebook.js', 'run-notebook.css']:
+    for filename in ['task-templates.js', 'run-comparison.js', 'task-templates.css', 'run-comparison.css', 'run-notebook.js', 'run-notebook.css', 'run-replay.js']:
         response = client.get('/' + filename)
         assert response.status_code == 200
         assert response.content
@@ -60,3 +60,13 @@ def test_notebook_uses_existing_same_origin_and_json_boundaries(local_app):
     assert client.put(path, content='{}', headers={'content-type': 'text/plain'}).status_code == 415
     assert client.get(path).json()['revision'] == 0
     assert client.get('/api/runs/protected/report?language=en', headers={'host': 'evil.invalid'}).status_code == 403
+
+
+def test_nonempty_literal_note_with_zero_character_keeps_history_indicator(local_app):
+    client, _, _, store, _ = local_app
+    store.save_run({'id': 'literal-note', 'task': 'Task'})
+    note = '\x00Follow-up decision'
+    saved = client.put('/api/runs/literal-note/notebook', json={'expected_revision': 0, 'favorite': False, 'note': note})
+    assert saved.status_code == 200 and saved.json()['note'] == note
+    page = client.get('/api/runs?summary=true').json()
+    assert page['items'][0]['notebook']['has_note'] is True
