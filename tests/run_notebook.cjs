@@ -29,26 +29,39 @@ async function pureTests() {
   const late = c.report('ru'); c.close(); calls[9].resolve({run_id:'b',filename:'b.md',markdown:'late'}); assert.equal(await late,null,'closed export cannot trigger a late download');
   const offline = c.open('x'); calls[10].reject({status:0}); await offline; assert.equal(c.state.error,'offline'); assert.equal(c.state.loading,false);
   const pending = c.load(); const before=states.length; c.destroy(); calls[11].resolve(notebook('x')); await pending; assert.equal(states.length,before); assert.equal(await c.open('z'),false);
+  const nativeCalls=[], nativeStates=[], nativeRequests=[];
+  const native = createController({api:async(...args)=>{nativeRequests.push(args);return notebook('native');},onState:value=>nativeStates.push(value),nativeExport:(...args)=>{const d=deferred();nativeCalls.push({...d,args});return d.promise;}});
+  await native.open('native'); const nativeSuccess=native.report('en');
+  assert.deepEqual(nativeCalls[0].args,['native','en']); assert.equal(native.state.exporting,true); assert.equal(await native.report('ru'),null,'native exports cannot overlap');
+  nativeCalls[0].resolve({ok:true,path:'C:\\Users\\Иван\\report.md'}); assert.deepEqual(await nativeSuccess,{native:true}); assert.equal(native.state.notice,'nativeExported'); assert.equal(native.state.exporting,false);
+  const cancelledNative=native.report('ru'); nativeCalls[1].resolve({cancelled:true}); assert.equal(await cancelledNative,null); assert.equal(native.state.notice,'exportCancelled'); assert.equal(native.state.error,'');
+  const failedNative=native.report('ru'); nativeCalls[2].resolve({error:'Native private diagnostic'}); assert.equal(await failedNative,null); assert.equal(native.state.error,'error'); assert.equal(native.state.data.note,'');
+  const rejectedNative=native.report('ru'); nativeCalls[3].reject(new TypeError('Private exception')); assert.equal(await rejectedNative,null); assert.equal(native.state.error,'error','native failures use a localized generic error');
+  const lateNative=native.report('en'); native.close(); const nativeEmitted=nativeStates.length; assert.equal(await native.open('native'),false,'pending native dialog serializes reopen');
+  nativeCalls[4].resolve({ok:true,path:'C:\\report.md'}); assert.equal(await lateNative,null); assert.equal(nativeStates.length,nativeEmitted,'late native completion cannot update a closed dialog');
+  assert.equal(nativeRequests.length,1); assert(nativeRequests.every(args=>!args[0].includes('/report?')),'native path never requests browser report bytes');
+  native.destroy();
   console.log('PASS notebook controller: schema/Unicode boundaries, safe filenames, encoded requests, CAS conflicts, serialized writes, closed/destroyed guards, malformed data, offline and report safety.');
 }
 async function browserTests() {
   const {chromium} = require('playwright'); const browser = await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',headless:true,args:['--no-sandbox']});
   try {
     const page = await browser.newPage({viewport:{width:1100,height:900}});
-    async function setup(language='ru') {
+    async function setup(language='ru', nativeMode=false) {
       await page.setContent('<!doctype html><html><body><div id="toolbar"></div><dialog id="other"><button>Other</button></dialog></body></html>');
       for(const file of ['style.css','run-notebook.css']) await page.addStyleTag({content:fs.readFileSync(path.resolve(sourceRoot,file),'utf8')});
       await page.addScriptTag({content:fs.readFileSync(path.resolve(sourceRoot,'i18n.js'),'utf8')}); await page.evaluate(lang=>window.CodexI18n.setLanguage(lang),language);
       await page.addScriptTag({content:fs.readFileSync(path.resolve(sourceRoot,'run-notebook.js'),'utf8')});
-      await page.evaluate(() => {
+      await page.evaluate(nativeMode => {
+        window.nativeCalls=[]; window.nativeResponse={ok:true,path:'C:\\report.md'};
         window.stored = {run_id:'r1',revision:0,note:'',favorite:false,updated_at:null}; window.calls=[]; window.saved=[]; window.downloads=[]; window.allowDiscard=false;
         const original = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click=function(){if(this.download){window.downloads.push({filename:this.download,href:this.href}); return;} return original.call(this);};
-        window.module = window.CodexRunNotebook.mount({anchor:document.querySelector('#toolbar'),getSelectedRun:()=>({id:'r1'}), confirm:async()=>window.allowDiscard,onSaved:value=>window.saved.push(value),api:async(...args)=> {
+        window.module = window.CodexRunNotebook.mount({anchor:document.querySelector('#toolbar'),getSelectedRun:()=>({id:'r1'}),nativeExport:nativeMode ? async(...args)=>{window.nativeCalls.push(args);return window.nativeResponse;} : undefined, confirm:async()=>window.allowDiscard,onSaved:value=>window.saved.push(value),api:async(...args)=> {
           window.calls.push(args); if(window.hold) await new Promise(resolve=>window.release=resolve); if(window.failure) throw window.failure;
           if(args[0].includes('/report?')) return {run_id:'r1',filename:'r1.md',markdown:'# Task\n\n'+window.stored.note};
           if(args[1]==='PUT') window.stored={...window.stored,...args[2],revision:window.stored.revision+1}; return {...window.stored};
         }});
-      });
+      }, nativeMode);
     }
     await setup(); await page.locator('#run-notebook-open').click();
     const note=page.locator('#run-notebook-note'); await note.waitFor(); await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
@@ -71,6 +84,13 @@ async function browserTests() {
     await page.locator('.run-notebook-close').focus(); await page.keyboard.press('Shift+Tab'); assert.equal(await page.locator('#run-notebook-refresh').evaluate(node=>node===document.activeElement),true,'focus wraps to last enabled control with dirty export disabled');
     await page.evaluate(()=>window.module.destroy()); assert.equal(await page.locator('#run-notebook').count(),0);
     await setup('en'); await page.locator('#run-notebook-open').click(); await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled); assert.equal(await page.locator('#run-notebook').evaluate(node=>/[А-Яа-яЁё]/u.test(node.innerText)),false,'English translates all authored labels'); await page.keyboard.press('Escape'); await page.evaluate(()=>document.querySelector('#other').showModal()); await page.evaluate(()=>window.module.open()); assert.equal(await page.locator('#run-notebook').evaluate(node=>node.open),false,'no competing modal');
+    await page.evaluate(()=>document.querySelector('#other').close()); await page.evaluate(()=>window.module.destroy());
+    await setup('en',true); await page.locator('#run-notebook-open').click(); await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
+    await page.locator('#run-notebook-export').click(); await page.getByText('Report saved.',{exact:true}).waitFor(); assert.deepEqual(await page.evaluate(()=>window.nativeCalls),[['r1','en']]);
+    assert.equal(await page.evaluate(()=>window.downloads.length),0,'native success never downloads a browser Blob');
+    assert.equal(await page.evaluate(()=>window.calls.some(args=>args[0].includes('/report?'))),false,'native export does not request report bytes in JavaScript');
+    await page.evaluate(()=>window.nativeResponse={cancelled:true}); await page.locator('#run-notebook-export').click(); await page.getByText('Report saving was cancelled.',{exact:true}).waitFor();
+    await page.evaluate(()=>window.nativeResponse={error:'Private failure'}); await page.locator('#run-notebook-export').click(); await page.getByText('Could not complete the action. Your input is preserved; try again.',{exact:true}).waitFor(); assert.equal(await page.locator('#run-notebook').evaluate(node=>node.innerText.includes('Private failure')),false);
     console.log('PASS browser notebook: CRUD/favorite, literal text, focus, dirty close/refresh, CAS/offline preservation, closed saves, explicit download, boundaries, mobile/sticky/focus trap, English and modal exclusion.');
   } finally {await browser.close();}
 }

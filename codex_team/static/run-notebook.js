@@ -18,9 +18,9 @@
     if (typeof value !== 'string' || value.length > 180 || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.md$/.test(value) || value.includes('..')) return 'codex-team-run-report.md';
     return value;
   }
-  function createController({api, onState = () => {}, onSaved = () => {}}) {
+  function createController({api, onState = () => {}, onSaved = () => {}, nativeExport}) {
     let state = {id: '', data: null, loading: false, saving: false, exporting: false, error: '', notice: ''};
-    let session = 0, active = false, destroyed = false, mutation = false, reading = 0;
+    let session = 0, active = false, destroyed = false, mutation = false, reading = 0, nativePending = false;
     const current = version => active && !destroyed && session === version;
     const emit = patch => {state = {...state, ...patch}; if (active && !destroyed) onState({...state});};
     async function load(id = state.id) {
@@ -48,25 +48,34 @@
       } catch (error) {if (current(version)) emit({error: errorCode(error)}); return false;}
       finally {mutation = false; if (current(version)) emit({saving: false});}
     }
-    async function report(language) {
-      if (!active || destroyed || mutation || state.loading || state.exporting || !state.data) return null;
-      const version = session, id = state.id;
+    async function report(language, exportHandler = nativeExport) {
+      if (!active || destroyed || mutation || nativePending || state.loading || state.exporting || !state.data) return null;
+      const version = session, id = state.id, native = typeof exportHandler === 'function';
+      nativePending = native;
       emit({exporting: true, error: '', notice: ''});
       try {
+        if (native) {
+          const response = await exportHandler(id, language === 'en' ? 'en' : 'ru');
+          if (!current(version)) return null;
+          if (response?.cancelled === true && response.ok !== true) {emit({notice: 'exportCancelled'}); return null;}
+          if (response?.ok !== true || typeof response.path !== 'string' || !response.path) throw new Error('Native export failed');
+          emit({notice: 'nativeExported'}); return {native: true};
+        }
         const response = await api(`/api/runs/${encodeURIComponent(id)}/report?language=${language === 'en' ? 'en' : 'ru'}`);
         if (!current(version)) return null;
         if (response?.run_id !== id || typeof response.markdown !== 'string' || response.markdown.length > 2000000 || !response.markdown.trim()) throw new Error('Invalid report');
         emit({notice: 'exported'}); return {markdown: response.markdown, filename: safeFilename(response.filename)};
-      } catch (error) {if (current(version)) emit({error: errorCode(error)}); return null;}
-      finally {if (current(version)) emit({exporting: false});}
+      } catch (error) {if (current(version)) emit({error: native ? 'error' : errorCode(error)}); return null;}
+      finally {nativePending = false; if (current(version)) emit({exporting: false});}
     }
-    return {async open(id) {if (destroyed || mutation || typeof id !== 'string' || !id) return false; active = true; session++; state = {id, data: null, loading: false, saving: false, exporting: false, error: '', notice: ''}; return load(id);},
+    return {async open(id) {if (destroyed || mutation || nativePending || typeof id !== 'string' || !id) return false; active = true; session++; state = {id, data: null, loading: false, saving: false, exporting: false, error: '', notice: ''}; return load(id);},
       load, save, report, close() {active = false; session++; reading++;},
-      get state() {return {...state};}, get pendingSave() {return mutation;},
+      get state() {return {...state};}, get pendingSave() {return mutation;}, get pendingExport() {return nativePending;},
       destroy() {destroyed = true; active = false; session++; reading++;}};
   }
   const labels = {
     'Не удалось скачать отчёт. Попробуйте ещё раз или откройте приложение в браузере.':'Could not download the report. Try again or open the application in a browser.',
+    'Отчёт сохранён.':'Report saved.', 'Сохранение отчёта отменено.':'Report saving was cancelled.',
     'Заметки и отчёт':'Notes and report', 'Заметки запуска':'Run notebook', 'Закрыть заметки':'Close notebook',
     'Избранный запуск':'Favorite run', 'Личная заметка':'Personal note', 'Решения, наблюдения и следующий шаг…':'Decisions, observations and next step…',
     'Заметка хранится локально и не передаётся агентам.':'This note is stored locally and is not sent to agents.',
@@ -86,7 +95,7 @@
     'Сохранение ещё выполняется. Повторное открытие будет доступно после его завершения.':'Saving is still in progress. You can reopen the notebook when it finishes.',
     '{count} / 10 000 символов':'{count} / 10,000 characters', 'Запуск: {id}':'Run: {id}',
   };
-  function mount({anchor, api, getSelectedRun = () => null, onSaved = () => {}, confirm}) {
+  function mount({anchor, api, getSelectedRun = () => null, onSaved = () => {}, confirm, nativeExport}) {
     const doc = root.document;
     if (!doc || !anchor) return null;
     const I = root.CodexI18n || {t: value => value, register() {}}; I.register(labels);
@@ -121,10 +130,10 @@
       refresh.disabled = busy; exportButton.disabled = !state.data || busy || dirty();
       counter.textContent = t('{count} / 10 000 символов', {count: [...note.value].length}); counter.classList.toggle('is-error', [...note.value].length > MAX_NOTE);
       const errors = {conflict:'Заметка изменена в другом окне. Ваш ввод сохранён. Обновите заметку, чтобы загрузить актуальную версию.',permission:'Нет разрешения на чтение или изменение заметки.',missing:'Запуск недоступен или сервер не поддерживает заметки.',offline:'Нет связи с сервером. Ввод сохранён; повторите после подключения.',validation:'Заметка может содержать не более 10 000 символов.',error:'Не удалось выполнить действие. Ввод сохранён; повторите попытку.'};
-      status.textContent = t(state.loading ? 'Загрузка заметки…' : state.saving ? 'Сохранение…' : state.exporting ? 'Подготовка отчёта…' : errors[state.error] || (dirty() ? 'Изменения не сохранены.' : state.notice === 'saved' ? 'Заметка сохранена.' : state.notice === 'exported' ? 'Отчёт подготовлен для скачивания.' : state.data ? state.data.note ? 'Заметка загружена.' : 'Сохранённых заметок пока нет.' : ''));
+      status.textContent = t(state.loading ? 'Загрузка заметки…' : state.saving ? 'Сохранение…' : state.exporting ? 'Подготовка отчёта…' : errors[state.error] || (dirty() ? 'Изменения не сохранены.' : state.notice === 'saved' ? 'Заметка сохранена.' : state.notice === 'exported' ? 'Отчёт подготовлен для скачивания.' : state.notice === 'nativeExported' ? 'Отчёт сохранён.' : state.notice === 'exportCancelled' ? 'Сохранение отчёта отменено.' : state.data ? state.data.note ? 'Заметка загружена.' : 'Сохранённых заметок пока нет.' : ''));
       status.classList.toggle('is-error', !!state.error);
     }
-    const controller = createController({api, onState: render, onSaved});
+    const controller = createController({api, onState: render, onSaved, nativeExport});
     const askDiscard = () => confirm ? confirm(t('Отменить изменения?'), t('Несохранённая заметка будет потеряна.'), '', t('Отменить изменения')) : Promise.resolve(root.confirm(t('Несохранённая заметка будет потеряна.')));
     async function canDiscard() {if (promptBusy) return false; if (!dirty()) return true; promptBusy = true; try {return !!(await askDiscard());} finally {promptBusy = false;}}
     async function close() {
@@ -137,7 +146,7 @@
       if (previousFocus?.isConnected && !previousFocus.closest?.('[hidden]')) previousFocus.focus();
     }
     async function open(id) {
-      if (destroyed || promptBusy || controller.pendingSave) return false;
+      if (destroyed || promptBusy || controller.pendingSave || controller.pendingExport) return false;
       let selected; try {selected = id || getSelectedRun();} catch (_) {return false;}
       const next = typeof selected === 'string' ? selected : selected?.id;
       if (typeof next !== 'string' || !next) return false;
@@ -157,6 +166,7 @@
       if (dirty()) {status.textContent = t('Сначала сохраните изменения, затем скачайте отчёт.'); return;}
       const version = epoch, report = await controller.report(I.language);
       if (!report || version !== epoch || destroyed || !dialog.open) return;
+      if (report.native) {exportButton.focus(); return;}
       let url, link;
       try {
         url = root.URL.createObjectURL(new root.Blob([report.markdown], {type: 'text/markdown;charset=utf-8'}));
