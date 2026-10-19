@@ -24,7 +24,7 @@ API: `GET/PUT /api/runs/{id}/notebook`, `GET /api/runs/{id}/report?language=ru|e
 
 ## Проверки
 
-Изолированный baseline на master: **715 passed, 4 skipped**, 715.23 с с параллельной нагрузкой QA. Финальный полный Python-прогон фиксируется по завершении. Ранний прогон на изменявшихся файлах не используется как baseline: старый импортированный сервер увидел новый HTML и вернул 404 нового CSS. Первая финальная попытка остановлена после обнаружения устаревшего whitelist-теста: новый узкий native export требует явно разрешить десятый метод. Оба whitelist-контракта обновлены, границы доступа и запись файлов проверены отдельно; финальная проверка запускается повторно.
+Изолированный baseline на master: **715 passed, 4 skipped**, 715.23 с с параллельной нагрузкой QA. Финальный полный Python-прогон: **779 passed, 4 skipped**, 290.38 с; новых падений нет. Одно существующее deprecation warning Starlette/httpx. Ранний прогон на изменявшихся файлах не используется как baseline: старый импортированный сервер увидел новый HTML и вернул 404 нового CSS. Первая финальная попытка остановлена после обнаружения устаревшего whitelist-теста: новый узкий native export требует явно разрешить десятый метод. Оба whitelist-контракта обновлены, границы доступа и запись файлов проверены отдельно; финальная проверка запускается повторно.
 
 Targeted backend: notebook/report 38 passed; summary/history/HTTP 35 passed; safety Time Machine/notebook/native export 72 passed; оба native whitelist и export 18 passed. Node controller + настоящий Chromium notebook suite прошли, включая динамическую desktop-интеграцию, границу длины, конфликт, offline, закрытие при сохранении и отсутствие поздней загрузки.
 
@@ -55,4 +55,18 @@ Targeted backend: notebook/report 38 passed; summary/history/HTTP 35 passed; saf
 
 ## Нативная сборка и релиз
 
-Полные Windows source tests, frozen bundle, установка/restart/uninstall и публикация должны пройти на зафиксированном исходном SHA. Installed smoke использует явно обозначенную синтетическую запись в отдельном CI-профиле, созданную SQLite до старта backend, а не запуском агента. Он проверяет сохранение заметки/избранного после restart и настоящий report endpoint с локализацией/редакцией; GUI не заявляется проверенным. Counts, SHA256 и ссылки добавляются после реального завершения.
+Полные Windows source tests, frozen bundle, установка/restart/uninstall и публикация прошли на зафиксированном исходном SHA. Installed smoke использует явно обозначенную синтетическую запись в отдельном CI-профиле, созданную SQLite до старта backend, а не запуском агента. Он проверяет сохранение заметки/избранного после restart и настоящий report endpoint с локализацией/редакцией; GUI не заявляется проверенным.
+
+[Windows Actions run](https://github.com/LosarOS/codex-team/actions/runs/39305805283) успешно завершён на исходном SHA `887a593f0be7b2f097c2dbf6d4b91033706543a4`. Полный Python suite: **782 passed, 1 skipped**, 796.79 с; он не пропускался. Проверены 44 обязательных файла frozen bundle и три профиля доступа без inference.
+
+Настоящая тихая установка Windows прошла backend и 24 ресурса. Подтверждены Unicode-проект и bundled Git, настройки внешнего вида, черновик, шаблон и заметка/избранное через restart, фильтр metadata-only истории, английский Markdown-отчёт и редакция тестового секрета, проверка обновлятора и uninstall. Модельных вызовов и SDK account calls — 0. Это backend/installer smoke с обозначенной синтетической записью, не интерактивный GUI.
+
+[Опубликованный rc8](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc8) содержит 12 файлов. Размеры и SHA256 трёх бинарников сверены с GitHub asset digest. [Машиночитаемые доказательства](rc8/native-release-proof.json).
+
+| Файл | SHA256 |
+|---|---|
+| `CodexTeam-Setup-x64.exe` | `e2e477061d2429bff109d96f808ee04aff44b1ead852639d12f190d91fbc6b92` |
+| `CodexTeam-Setup-x64.zip` | `3de3dc1838d5498e9e05658e6ad456d048498458d50aa49cba7db6f3b29f4151` |
+| `CodexTeam-Portable-x64.zip` | `a74d815e501b699b615faa5abc37daceb4aba64e75e9c46b62de7ad8c7de7302` |
+
+После сборки изменены только документация и доказательства. Production/packaging/workflow diff к собранному SHA пустой; повторная сборка одних документов не требуется.
