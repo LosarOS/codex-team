@@ -1,0 +1,47 @@
+{
+  "release": "https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc8",
+  "workflow": "https://github.com/LosarOS/codex-team/actions/runs/39305805283",
+  "source_commit": "887a593f0be7b2f097c2dbf6d4b91033706543a4",
+  "windows_tests": {
+    "passed": 782,
+    "skipped": 1
+  },
+  "installed_smoke": {
+    "installed_backend_verified": true,
+    "uninstall_verified": true,
+    "appearance_settings_verified": true,
+    "project_creation_verified": true,
+    "updater_check_verified": true,
+    "draft_restart_verified": true,
+    "appearance_restart_verified": true,
+    "template_restart_verified": true,
+    "notebook_restart_verified": true,
+    "run_report_verified": true,
+    "synthetic_run_fixture": true
+  },
+  "assets_checked": 24,
+  "required_bundle_files": 44,
+  "permission_profiles": [
+    "standard",
+    "read-only",
+    "full-access"
+  ],
+  "model_calls": 0,
+  "sdk_account_calls": 0,
+  "native_gui_verified": false,
+  "windows_dpi_verified": false,
+  "files": {
+    "installer\\CodexTeam-Setup-x64.exe": {
+      "sha256": "e2e477061d2429bff109d96f808ee04aff44b1ead852639d12f190d91fbc6b92",
+      "bytes": 155610538
+    },
+    "dist\\CodexTeam-Setup-x64.zip": {
+      "sha256": "3de3dc1838d5498e9e05658e6ad456d048498458d50aa49cba7db6f3b29f4151",
+      "bytes": 155143587
+    },
+    "dist\\CodexTeam-Portable-x64.zip": {
+      "sha256": "a74d815e501b699b615faa5abc37daceb4aba64e75e9c46b62de7ad8c7de7302",
+      "bytes": 249595787
+    }
+  }
+}

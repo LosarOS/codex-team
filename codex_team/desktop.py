@@ -66,6 +66,8 @@ class NativeApi:
         return self._controller.open_worktree(run_id)
     def export_diagnostics(self):
         return self._controller.export_diagnostics()
+    def export_run_report(self, run_id, language="ru"):
+        return self._controller.export_run_report(run_id, language)
     def recovery_status(self):
         return self._controller.recovery_status()
     def dismiss_recovery(self):
@@ -119,6 +121,31 @@ class DesktopBridge:
             return {"ok": True, "path": str(path), "redacted": True}
         except (OSError, ValueError):
             return {"error": "Не удалось сохранить диагностику. Выберите другую папку."}
+
+    def export_run_report(self, run_id, language="ru"):
+        if not self.trusted() or not self.ready:
+            return {"error": "Сохранение отчёта доступно только в локальном приложении."}
+        try:
+            identifier = verified_identifier(run_id)
+            if language not in ("ru", "en"):
+                raise ValueError("Unsupported report language")
+            # Only the backend may supply report contents; JavaScript supplies
+            # neither an arbitrary destination nor arbitrary bytes to write.
+            report = self.runtime.request(f"/api/runs/{identifier}/report?language={language}")
+            if not isinstance(report, dict) or report.get("run_id") != identifier:
+                raise ValueError("Invalid report")
+            import webview
+            from .desktop_services import save_run_report
+            filename = f"codex-team-{identifier}.md"
+            chosen = self.services.invoke(lambda: self.window.create_file_dialog(
+                webview.FileDialog.SAVE, directory=str(self.root), save_filename=filename,
+                file_types=("Markdown (*.md)",)), wait=True, timeout=None)
+            if not chosen:
+                return {"cancelled": True}
+            path = save_run_report(chosen[0], report.get("markdown"))
+            return {"ok": True, "path": str(path)}
+        except (OSError, ValueError):
+            return {"error": "Не удалось сохранить отчёт. Проверьте запуск и выберите Markdown-файл в доступной папке."}
 
     def recovery_status(self):
         if not self.trusted():

@@ -1,0 +1,158 @@
+{
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "rc8-final-workflow",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc8-final-workflow",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc8-final-workflow",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "run-notebook",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 758,
+      "dialog_scroll": 758,
+      "lang": "ru"
+    },
+    {
+      "phase": "rc8-final-workflow",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc8-final-workflow",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "runs",
+      "width": 1366,
+      "scroll": 1366,
+      "lang": "en"
+    },
+    {
+      "phase": "rc8-final-workflow",
+      "language": "en",
+      "theme": "obsidian-violet",
+      "name": "run-notebook",
+      "width": 1366,
+      "scroll": 1366,
+      "dialog_width": 758,
+      "dialog_scroll": 758,
+      "lang": "en"
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    }
+  ],
+  "untranslated": [],
+  "errors": [],
+  "unknown": [],
+  "productivityChecks": [
+    "run notebook saved once; real Markdown download includes saved literal note; History marks and persisted favorites filter; 409 keeps input; discard cancellation and late export are safe"
+  ],
+  "overflows": [],
+  "writes": 5
+}

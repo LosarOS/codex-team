@@ -8,6 +8,9 @@ const writes=[],unknown=[],errors=[],checks=[],languageIssues=[];
 const run={id:'fixture-run',task:'ТЕСТОВЫЕ ДАННЫЕ: исправление авторизации, длинный русский текст '.repeat(5),workspace:'C:\\Пользователи\\Разработчик\\ПроектОченьДлинныйПуть\\'.repeat(3),state:'RUNNING',current_role:'developer',calls:2,iteration:1,stage:1,mode:'standard',created_at:'2026-10-15T10:00:00Z',elapsed_seconds:120,pipeline:['coordinator','developer','qa'],worktree:null,results:{coordinator:{verdict:'PLAN',summary:'План готов'}},result_history:[{role:'coordinator',iteration:1,result:{verdict:'PLAN',summary:'План готов'}}],usage:[],usage_total:{input:20,output:10,total:30}};
 const secondRun={...run,id:'fixture-run-2',task:'ТЕСТОВЫЕ ДАННЫЕ: документировать локальную проверку',state:'DONE',current_role:'qa',calls:1,stage:3,elapsed_seconds:0,changed_files:[],usage:[{last:{total_tokens:0}}],usage_total:{input:null,output:null,cached:null,total:0},usage_available:true,usage_complete:true,results:{qa:{verdict:'PASS',summary:'ТЕСТОВЫЕ ДАННЫЕ: сохранённый результат роли; отдельный QA Arena не запускался.'}},result_history:[]};
 let fixtureRuns=[run,secondRun];
+const notebooks=new Map(fixtureRuns.map(item=>[item.id,{run_id:item.id,revision:0,favorite:false,note:'',updated_at:null}]));
+const notebookReads=[],reportReads=[];
+const runMetadata=item=>{const notebook=notebooks.get(item.id);return {...item,notebook:{revision:notebook.revision,favorite:notebook.favorite,has_note:!!notebook.note,updated_at:notebook.updated_at}};};
 const comparisonReads=[],productivityChecks=[];
 const templateData={task:'ТЕСТОВЫЕ ДАННЫЕ: повторить проверку документации <script>literal</script>',workspace:run.workspace,mode:'standard',pack:'default',specialists:[],max_iterations:1,max_agent_calls:5,max_run_duration:1800};
 let templates=[{id:'fixture-template-1',name:'ТЕСТОВЫЕ ДАННЫЕ: проверка документации',description:'Локальный HTTP fixture. Разрешения не сохраняются.',revision:1,created_at:'2026-10-18T10:00:00Z',updated_at:'2026-10-18T10:00:00Z',data:templateData}];
@@ -32,6 +35,19 @@ if(process.env.QA_SHOWCASE==='1'){
 
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
+ const notebookRoute=p.match(/^\/api\/runs\/([^/]+)\/(notebook|report)$/);
+ if(notebookRoute){
+  const id=decodeURIComponent(notebookRoute[1]),entry=notebooks.get(id);
+  if(!entry)return {__status:404,detail:'ТЕСТ: запуск не найден'};
+  if(notebookRoute[2]==='report'){
+   reportReads.push({id,language:url.searchParams.get('language')});
+   return {run_id:id,filename:`codex-team-${id}.md`,language:url.searchParams.get('language'),markdown:`# TEST FIXTURE: Codex Team run report\n\nRun: ${id}\n\n${entry.note}\n\nFixture only; no live agent execution.\n`};
+  }
+  notebookReads.push({id,method});
+  if(method==='GET')return entry;
+  if(body.expected_revision!==entry.revision)return {__status:409,detail:{code:'notebook_conflict',revision:entry.revision,message:'ТЕСТ: заметка изменена в другом окне'}};
+  const saved={run_id:id,revision:entry.revision+1,favorite:body.favorite,note:body.note,updated_at:'2026-10-19T10:01:00Z'};notebooks.set(id,saved);return saved;
+ }
  if(p==='/api/task-templates'){
   if(method==='POST'&&body.description.length>1000)return {__status:422,detail:'ТЕСТ: описание не более 1000 символов'};
   if(method==='POST'){const saved={id:'fixture-template-created',name:body.name,description:body.description,revision:1,created_at:'2026-10-18T10:01:00Z',updated_at:'2026-10-18T10:01:00Z',data:body.data};templates.unshift(saved);return saved;}
@@ -68,7 +84,7 @@ function fixture(url,method,body){const p=url.pathname;
  if(p==='/health')return {status:'ok',version:'fixture-only',checks:{backend:true}};
  if(p==='/api/providers')return {active:'codex_chatgpt',codex:{status:'CONNECTED'},openai_api:{configured:false}};
  if(p==='/api/projects')return [project];
- if(p==='/api/runs')return {items:fixtureRuns,total:fixtureRuns.length};if(p==='/api/runs/fixture-run')return run;if(p==='/api/runs/fixture-run-2')return secondRun;if(p.endsWith('/events'))return {items:[{id:1,type:'agent_started',role:'developer',created_at:'2026-10-15T10:00:00Z',payload:{iteration:1,call:2}},{id:2,type:'item/completed',role:'developer',created_at:'2026-10-15T10:00:01Z',payload:{item:{type:'commandExecution',command:'git status',status:'completed',exitCode:0}}}],next_cursor:2,has_more:false};if(p.endsWith('/diff'))return {diff:'+ Тестовое изменение\n',diff_stat:'1 file changed',has_more:false,total_lines:1};
+ if(p==='/api/runs'){const items=fixtureRuns.map(runMetadata).filter(item=>url.searchParams.get('favorite')!=='true'||item.notebook.favorite);return {items,total:items.length};}if(p==='/api/runs/fixture-run')return run;if(p==='/api/runs/fixture-run-2')return secondRun;if(p.endsWith('/events'))return {items:[{id:1,type:'agent_started',role:'developer',created_at:'2026-10-15T10:00:00Z',payload:{iteration:1,call:2}},{id:2,type:'item/completed',role:'developer',created_at:'2026-10-15T10:00:01Z',payload:{item:{type:'commandExecution',command:'git status',status:'completed',exitCode:0}}}],next_cursor:2,has_more:false};if(p.endsWith('/diff'))return {diff:'+ Тестовое изменение\n',diff_stat:'1 file changed',has_more:false,total_lines:1};
  if(p==='/api/actions')return [{id:'fixture-action',run_id:run.id,role:'developer',kind:'permission',reason:'ТЕСТ: разрешение команды',command:'git status',cwd:run.workspace,risk:'low',allowed_decisions:['deny'],questions:[]}];if(p==='/api/agents')return defaultAgents;if(p==='/api/packs')return defaultPacks;
  if(p==='/api/models')return {data:[]};if(p==='/api/usage')return {available:false};
  if(p.startsWith('/api/suite')){
@@ -113,9 +129,17 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   let cancelLanguage=false,warned=false;page.on('dialog',async dialog=>{if(cancelLanguage){warned=true;await dialog.dismiss();}else await dialog.accept();});
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.waitForFunction(()=>window.CodexTeamSuite?.state?.status);
-  const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
+  const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,run-notebook,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
   const visit=async name=>{
    if(process.env.QA_VERBOSE)console.log('visit',name);
+   if(await page.locator('#run-notebook[open]').count()){await page.locator('.run-notebook-close').click();await page.locator('#run-notebook').waitFor({state:'hidden'});}
+   if(name==='run-notebook'){
+    await page.locator('.navigation [data-page="runs"]').first().click();
+    await page.locator('#runs-list button').first().click();
+    await page.locator('#run-notebook-open').click();
+    await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
+    await page.locator('#run-notebook-note').focus();return;
+   }
    if(['intelligence','architect','budget','git','qa'].includes(name)){
     await page.locator(`[data-suite-feature-link="${name}"]`).first().click();
     await page.waitForFunction(()=>document.querySelector('#suite-root .suite-panel')); 
@@ -135,7 +159,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
    assert(await page.locator(selector).evaluate(dialog=>dialog.contains(document.activeElement)),`${name} must contain focus`);
    const closeVisible=await page.locator(selector).evaluate(dialog=>{
     dialog.scrollTop=dialog.scrollHeight;
-    const bounds=dialog.getBoundingClientRect(),close=dialog.querySelector('#task-templates-close,.run-comparison-close').getBoundingClientRect();
+    const bounds=dialog.getBoundingClientRect(),close=dialog.querySelector('#task-templates-close,.run-comparison-close,.run-notebook-close').getBoundingClientRect();
     const visible=close.top>=bounds.top&&close.bottom<=bounds.bottom;
     dialog.scrollTop=0;return visible;
    });
@@ -169,6 +193,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
      await page.setViewportSize({width,height});
      for(const name of screens){
       await visit(name);
+      if(name==='run-notebook'){await auditDialog('#run-notebook',name,language,theme);continue;}
       const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,lang:document.documentElement.lang,theme:document.documentElement.dataset.theme}));
       checks.push({phase,language,theme,name,...dims});
       if(language==='en'&&theme==='obsidian-violet'&&width===1366){const labels=await page.evaluate(()=>[...document.querySelectorAll('button,label,legend,summary,option,h1,h2,h3,th')].filter(n=>n.getClientRects().length&&!n.closest('pre,code')).map(n=>n.textContent.trim()).filter(text=>/[А-Яа-яЁё]/.test(text)&&!/(?:ТЕСТ|Тестов|тестов|Русский)/.test(text)));for(const text of labels)untranslated.push({name,text});}
@@ -177,6 +202,8 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
        await page.screenshot({path:path.join(output,`${phase}-${language}-${theme}-${name}.png`),fullPage:true});
       }
      }
+    // Optional focused matrix avoids unrelated rc7 dialogs while testing rc8 integrations.
+    if(process.env.QA_NOTEBOOK_ONLY==='1')continue;
     // rc7 dialogs receive the same requested RU/EN, theme and viewport coverage as pages.
     await visit('workbench');
     await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-1"]').click();await page.locator('#task-template-save').waitFor();await page.waitForFunction(()=>!document.querySelector('#task-template-name').disabled);
@@ -187,6 +214,75 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
     await auditDialog('#run-comparison','run-comparison',language,theme);await page.locator('.run-comparison-close').click();
     }
    }
+  }
+  if(process.env.QA_NOTEBOOK_MATRIX_ONLY==='1'){
+   assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
+   console.log(JSON.stringify({checks:checks.length,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false}));return;
+  }
+  // rc8 run notebook: production mount, History callbacks and an actual browser download.
+  if(await page.locator('#run-notebook-open').count()){
+   await visit('settings');
+   if(await page.locator('#settings-language').inputValue()!=='ru')await Promise.all([page.waitForNavigation({waitUntil:'load'}),page.locator('#settings-language').selectOption('ru')]);
+   await visit('settings');await page.locator('#settings-theme').selectOption('obsidian-violet');
+   await visit('run-notebook');
+   const localNote='ТЕСТОВЫЕ ДАННЫЕ: проверить страницу авторизации и сохранить решение.\nЛичная заметка: <script>literal</script> — User content stays unchanged.';
+   await page.locator('#run-notebook-note').fill(localNote);await page.locator('#run-notebook-favorite').check();
+   assert(await page.locator('#run-notebook-export').isDisabled(),'Dirty note must block exporting an older report');
+   const beforeSave=writes.filter(write=>write.path.endsWith('/notebook')).length;
+   await page.locator('#run-notebook-save').evaluate(button=>{button.click();button.click();});
+   await page.waitForFunction(()=>/Заметка сохранена|Note saved/.test(document.querySelector('.run-notebook-status').textContent));
+   assert.equal(writes.filter(write=>write.path.endsWith('/notebook')).length,beforeSave+1,'Repeated save must be serialized');
+   assert.equal(notebooks.get(run.id).note,localNote);assert.equal(notebooks.get(run.id).favorite,true);
+   await captureCurated('run-notebook','#run-notebook');
+   const downloaded=page.waitForEvent('download',{timeout:10000});await page.locator('#run-notebook-export').click();const download=await downloaded.catch(async error=>{throw new Error(`${error.message}; notebook status=${await page.locator('.run-notebook-status').innerText()}; report reads=${JSON.stringify(reportReads)}; page errors=${JSON.stringify(errors)}`);});
+   assert.equal(download.suggestedFilename(),'codex-team-fixture-run.md');
+   const downloadPath=await download.path(),downloadText=fs.readFileSync(downloadPath,'utf8');
+   assert(downloadText.includes(localNote));assert(downloadText.includes('TEST FIXTURE'));assert.equal(reportReads.at(-1).language,'ru');
+   await download.saveAs(path.join(output,`${phase}-run-report-fixture.md`));
+   await page.locator('.run-notebook-close').click();await page.locator('#run-notebook').waitFor({state:'hidden'});
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'run-notebook-open','Close should restore the integration trigger focus');
+   await visit('history');await page.locator('#history-list .notebook-favorite-badge').waitFor();
+   const favoriteContrast=await page.locator('#history-list .notebook-favorite-badge').first().evaluate(badge=>{
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d'),layers=[];
+    for(let node=badge;node;node=node.parentElement)layers.push(getComputedStyle(node).backgroundColor);
+    context.fillStyle='#000';context.fillRect(0,0,1,1);for(const color of layers.reverse()){context.fillStyle=color;context.fillRect(0,0,1,1);}
+    const background=[...context.getImageData(0,0,1,1).data].slice(0,3);context.clearRect(0,0,1,1);context.fillStyle=getComputedStyle(badge).color;context.fillRect(0,0,1,1);
+    const foreground=[...context.getImageData(0,0,1,1).data].slice(0,3),lum=rgb=>rgb.map(value=>{value/=255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4;}).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0),a=lum(foreground),b=lum(background);
+    return {theme:document.documentElement.dataset.theme,language:document.documentElement.lang,fg:'favorite badge text',bg:'composited ancestor surfaces',foreground,background,ratio:Number(((Math.max(a,b)+.05)/(Math.min(a,b)+.05)).toFixed(2))};
+   });contrast.push(favoriteContrast);assert(favoriteContrast.ratio>=4.5,'Favorite badge text must remain readable');
+   assert((await page.locator('#history-list').innerText()).includes('Есть заметка'));
+   await page.locator('#history-favorites').check();await page.waitForFunction(()=>window.CodexTeamSuite.state.historyRows.length===1);
+   assert.equal(await page.locator('#history-list .history-note-action').count(),1);await captureCurated('history-favorites');
+   await page.locator('#history-list .history-note-action').first().click();await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
+   assert.equal(await page.locator('#run-notebook-note').inputValue(),localNote,'History action must reopen the saved notebook');
+   const remote={...notebooks.get(run.id),revision:notebooks.get(run.id).revision+1,note:'ТЕСТ: актуальная заметка из другого окна'};notebooks.set(run.id,remote);
+   const conflicting='ТЕСТ: мой несохранённый текст после конфликта';await page.locator('#run-notebook-note').fill(conflicting);await page.locator('#run-notebook-save').click();
+   await page.locator('.run-notebook-status.is-error').waitFor();assert.equal(await page.locator('#run-notebook-note').inputValue(),conflicting);
+   assert(await page.locator('#run-notebook-export').isDisabled());assert.equal(notebooks.get(run.id).note,remote.note);
+   await captureCurated('run-notebook-conflict','#run-notebook');
+   await page.locator('.run-notebook-close').click();await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-cancel').click();
+   assert.equal(await page.locator('#run-notebook-note').inputValue(),conflicting,'Cancel discard must retain the local note');
+   await page.locator('#confirm-dialog').waitFor({state:'hidden'});await page.locator('#run-notebook-note').focus();await page.waitForTimeout(50);
+   await page.keyboard.press('Escape');await page.locator('#confirm-dialog[open]').waitFor();await page.locator('#confirm-accept').click();await page.locator('#run-notebook').waitFor({state:'hidden'});
+   await page.locator('#history-favorites').uncheck();await page.waitForFunction(()=>window.CodexTeamSuite.state.historyRows.length===2);
+   await page.locator('#history-list .history-note-action').first().click();await page.waitForFunction(()=>!document.querySelector('#run-notebook-note').disabled);
+   assert.equal(await page.locator('#run-notebook-note').inputValue(),remote.note,'Reopen must load the server revision after confirmed discard');
+   await page.locator('#run-notebook-favorite').uncheck();await page.locator('#run-notebook-save').click();await page.waitForFunction(()=>/Заметка сохранена|Note saved/.test(document.querySelector('.run-notebook-status').textContent));
+   await page.locator('.run-notebook-close').click();await page.locator('#history-favorites').check();await page.waitForFunction(()=>window.CodexTeamSuite.state.historyRows.length===0);
+   assert.equal(await page.locator('#history-list .history-note-action').count(),0,'Unfavorite must disappear from the saved favorites filter');
+   await page.locator('#history-favorites').uncheck();await page.waitForFunction(()=>window.CodexTeamSuite.state.historyRows.length===2);
+   // Closing during report preparation must suppress the late browser download.
+   await visit('run-notebook');let releaseReport,reportEntered,reportFinished;const enteredReport=new Promise(resolve=>reportEntered=resolve),finishedReport=new Promise(resolve=>reportFinished=resolve);
+   await page.route('**/api/runs/*/report?*',async route=>{reportEntered();await new Promise(resolve=>releaseReport=resolve);await route.fulfill({contentType:'application/json',body:JSON.stringify({run_id:run.id,filename:'late-fixture.md',markdown:'# TEST FIXTURE: late report'})});reportFinished();});
+   let lateDownloads=0;const countLate=()=>lateDownloads++;page.on('download',countLate);
+   await page.locator('#run-notebook-export').click();await enteredReport;await page.locator('.run-notebook-close').click();await page.locator('#run-notebook').waitFor({state:'hidden'});
+   releaseReport();await finishedReport;await page.waitForTimeout(100);page.off('download',countLate);assert.equal(lateDownloads,0);await page.unroute('**/api/runs/*/report?*');
+   productivityChecks.push('run notebook saved once; real Markdown download includes saved literal note; History marks and persisted favorites filter; 409 keeps input; discard cancellation and late export are safe');
+   await visit('runs');await captureCurated('runs');
+  }
+  if(process.env.QA_NOTEBOOK_ONLY==='1'){
+   assert(contrast.every(row=>row.ratio>=4.5),'Theme contrast below AA');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);
+   console.log(JSON.stringify({checks:checks.length,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false,productivityChecks}));return;
   }
   // rc6 production modules under the actual application, with controlled local HTTP data.
   await visit('workbench');await page.locator('#task-draft-status').waitFor();

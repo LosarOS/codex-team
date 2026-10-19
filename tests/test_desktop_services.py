@@ -174,7 +174,7 @@ def test_native_whitelist_has_no_command_or_path_accepting_operations(desktop_mo
     controller = SimpleNamespace()
     api = desktop_module.NativeApi(controller)
     assert {name for name in dir(api) if not name.startswith("_")} == {
-        "choose_project", "open_logs", "retry", "exit", "open_project", "open_worktree", "export_diagnostics", "recovery_status", "dismiss_recovery"}
+        "choose_project", "open_logs", "retry", "exit", "open_project", "open_worktree", "export_diagnostics", "export_run_report", "recovery_status", "dismiss_recovery"}
 
 
 def test_worktree_record_cannot_open_arbitrary_external_directory(tmp_path, monkeypatch):

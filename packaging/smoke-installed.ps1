@@ -41,6 +41,20 @@ try {
     foreach ($folder in @('agents','packs')) {
         Copy-Item -LiteralPath (Join-Path $installation "_internal/$folder") -Destination (Join-Path $profile $folder) -Recurse
     }
+    # Explicit synthetic saved run in the isolated CI profile. No run endpoint
+    # is used to create or launch it; it is not production/user history.
+    @'
+import json, sqlite3, sys
+from pathlib import Path
+folder = Path(sys.argv[1]) / '.ai-team'
+folder.mkdir(parents=True, exist_ok=True)
+with sqlite3.connect(folder / 'team.sqlite3') as database:
+    database.execute('CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,data TEXT NOT NULL)')
+    run = {'id':'installed-smoke-run','state':'DONE','task':'CI FIXTURE ONLY token=sk-fixturesecret123456','calls':1,'usage':[],'changed_files':[]}
+    database.execute('INSERT INTO runs VALUES (?,?)',(run['id'],json.dumps(run)))
+'@ | & python - $profile
+    if ($LASTEXITCODE -ne 0) { throw 'Could not seed the isolated synthetic run fixture.' }
+    $report.synthetic_run_fixture = $true
     $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0)
     $listener.Start()
     $port = $listener.LocalEndpoint.Port
@@ -60,7 +74,7 @@ try {
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
     $report.health = $healthy
-    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css')) {
+    foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10
         if ($response.StatusCode -ne 200 -or -not $response.Content.Length) { throw "Installed asset unavailable: $asset" }
         $report.assets_checked += $asset
@@ -90,6 +104,10 @@ try {
     $templateBody = @{ name = 'Шаблон проверки'; description = 'Локальная проверка без модели'; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
     $savedTemplate = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($templateBody)) -TimeoutSec 10
     if (-not $savedTemplate.id -or $savedTemplate.revision -ne 1) { throw 'Installed task template did not save.' }
+    $notebookText = 'Личная заметка проверки перезапуска'
+    $notebookBody = @{ expected_revision = 0; favorite = $true; note = $notebookText } | ConvertTo-Json
+    $savedNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($notebookBody)) -TimeoutSec 10
+    if ($savedNotebook.revision -ne 1 -or -not $savedNotebook.favorite) { throw 'Installed notebook did not save.' }
     $report.installed_backend_verified = $true
     Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
     if (-not $backend.WaitForExit(20000)) { throw 'Installed backend did not shut down cleanly.' }
@@ -117,6 +135,14 @@ try {
     $templatePage = Invoke-RestMethod -Uri ($baseUrl + '/api/task-templates') -TimeoutSec 10
     if ($templatePage.total -ne 0) { throw 'Installed task template was not deleted.' }
     $report.template_restart_verified = $true
+    $restoredNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -TimeoutSec 10
+    if ($restoredNotebook.revision -ne 1 -or -not $restoredNotebook.favorite -or $restoredNotebook.note -ne $notebookText) { throw 'Notebook was lost after installed backend restart.' }
+    $favoriteRuns = Invoke-RestMethod -Uri ($baseUrl + '/api/runs?summary=true&favorite=true') -TimeoutSec 10
+    if ($favoriteRuns.total -ne 1 -or -not $favoriteRuns.items[0].notebook.favorite -or $favoriteRuns.items[0].notebook.PSObject.Properties.Name -contains 'note') { throw 'Installed favorites metadata filter is invalid.' }
+    $runReport = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/report?language=en') -TimeoutSec 10
+    if ($runReport.run_id -ne 'installed-smoke-run' -or $runReport.markdown -notmatch '# Codex Team run report' -or -not $runReport.markdown.Contains($notebookText) -or $runReport.markdown.Contains('sk-fixturesecret123456')) { throw 'Installed report data, localization or redaction is invalid.' }
+    $report.notebook_restart_verified = $true
+    $report.run_report_verified = $true
 
     $afterRestart = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
     if ($afterRestart.theme -ne 'neon-blue' -or $afterRestart.language -ne 'en') { throw 'Appearance was lost after restart.' }

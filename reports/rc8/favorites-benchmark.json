@@ -1,0 +1,12 @@
+{
+  "environment": "Linux synthetic SQLite fixture; not Windows performance",
+  "runs": 10000,
+  "favorite_runs": 100,
+  "page_size": 20,
+  "milliseconds": [
+    216.88,
+    154.36,
+    201.79
+  ],
+  "metadata_only": true
+}

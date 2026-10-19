@@ -93,6 +93,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     app.include_router(create_draft_router(db))
     from .productivity import create_productivity_router
     app.include_router(create_productivity_router(db))
+    from .run_notebook import create_run_notebook_router
+    app.include_router(create_run_notebook_router(db))
     @app.get("/health")
     def health():
         import shutil
@@ -365,9 +367,9 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
         return {"ok":True,"files_retained":True}
 
     @app.get("/api/runs")
-    def runs(summary: bool=False,limit: int=Query(20,ge=1,le=100),offset: int=Query(0,ge=0),q: str=Query("",max_length=1000),state: str="",project: str="",mode: str="",date: str="",archived: bool=False):
+    def runs(summary: bool=False,limit: int=Query(20,ge=1,le=100),offset: int=Query(0,ge=0),q: str=Query("",max_length=1000),state: str="",project: str="",mode: str="",date: str="",archived: bool=False,favorite: bool=False):
         if summary:
-            return db.run_page(limit,offset,q,state,project,mode,date,archived)
+            return db.run_page(limit,offset,q,state,project,mode,date,archived,favorite)
         return db.runs()
 
     @app.post("/api/runs")
@@ -489,7 +491,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"task-templates.js": "text/javascript", "task-templates.css": "text/css",
+        assets = {"run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
+                  "task-templates.js": "text/javascript", "task-templates.css": "text/css",
                   "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
                   "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
                   "command-palette.js": "text/javascript", "command-palette.css": "text/css",

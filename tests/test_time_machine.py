@@ -4,6 +4,7 @@ import subprocess
 import pytest
 from codex_team.time_machine import TimeMachine
 from codex_team.workspace import WorkspaceError
+from codex_team.storage import now
 
 
 class Records:
@@ -16,7 +17,7 @@ class Records:
         key=record_id or f'record{len(self.records)}'
         old=self.records.get((kind,key))
         if expected_version is not None: assert old['version']==expected_version
-        item={'id':key,'kind':kind,'project_id':project_id,'version':old['version']+1 if old else 1,'data':copy.deepcopy(data)}
+        item={'id':key,'kind':kind,'project_id':project_id,'version':old['version']+1 if old else 1,'data':copy.deepcopy(data),'created_at':old['created_at'] if old else now(),'updated_at':now()}
         self.records[(kind,key)]=item
         return copy.deepcopy(item)
     def runs(self): return self.run_records
@@ -169,9 +170,12 @@ def test_retention_stale_protection(machine,change):
 def test_retention_protects_runs_restores_and_tagged_points(machine):
     tm,repo,store=machine
     linked=tm.create('p',run_id='old_archived_run')
+    (repo/'code.py').write_text('restored snapshot\n')
     restored=tm.create('p'); preview=tm.preview('p',restored['id'])
     tm.restore('p',restored['id'],preview['preview_token'],True)
+    (repo/'code.py').write_text('tagged snapshot\n')
     tagged=tm.create('p'); git(repo,'tag','keep',tagged['data']['sha'])
+    (repo/'code.py').write_text('latest snapshot\n')
     tm.create('p')
     tm.set_retention_policy('p',{'enabled':True,'keep_latest':1})
     assert tm.retention_preview('p')['candidates']==[]

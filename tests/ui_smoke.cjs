@@ -106,4 +106,75 @@ idMap['run-access-level'].value='full-access';sandbox.window.confirm=()=>false;l
 await idMap['run-form'].dispatchEvent({type:'submit',preventDefault(){}});assert.equal(commands.filter(c=>c.url==='/api/runs'&&c.method==='POST').length,countAccessCreates,'full access created without consent');
 sandbox.window.confirm=()=>true;await idMap['run-form'].dispatchEvent({type:'submit',preventDefault(){}});const accessCreate=JSON.parse(commands.filter(c=>c.url==='/api/runs'&&c.method==='POST').at(-1).body);assert.equal(accessCreate.access_level,'full-access');assert.equal(accessCreate.confirmed_full_access,true);
 const priorAccessFetch=sandbox.fetch;sandbox.fetch=async(url,opts)=>{if(url==='/api/runs/'+run.id+'/control'){const payload=JSON.parse(opts.body);if(payload.action==='set_access')run.access_level=payload.access_level;}return priorAccessFetch(url,opts);};run.state='PAUSED';await sandbox.window.CodexTeamSuite.selectRun(run.id,false);idMap['detail-access-select'].value='read-only';await idMap['detail-access-select'].dispatchEvent({type:'change'});await idMap['run-access-form'].dispatchEvent({type:'submit',preventDefault(){}});const accessControl=JSON.parse(commands.filter(c=>c.url==='/api/runs/'+run.id+'/control').at(-1).body);assert.deepEqual(accessControl,{action:'set_access',access_level:'read-only'});assert.equal(idMap['detail-access-level'].textContent,'Только чтение');assert.equal(run.state,'PAUSED','access apply unexpectedly resumed run');run.state='RUNNING';await sandbox.window.CodexTeamSuite.selectRun(run.id,false);assert.equal(idMap['run-access-form'].hidden,true);sandbox.fetch=priorAccessFetch;
-console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run']}));})().catch(e=>{console.error(e);process.exitCode=1;});
+// Failed navigation preserves the current run's draft and loaded inspector data.
+const selectionState=sandbox.window.CodexTeamSuite.state;
+selectionState.detailTab='tests';
+selectionState.events=[{id:41,type:'fixture_event'}];selectionState.eventsLoaded=true;
+selectionState.stageEvents=[{id:42,type:'agent_started',role:'developer'}];
+selectionState.diffLines=['+keep loaded diff'];selectionState.eventCursor=41;selectionState.selectedRole='developer';
+const preservedContext={events:selectionState.events,stageEvents:selectionState.stageEvents,diffLines:selectionState.diffLines};
+idMap['steer-instruction'].value='Не потерять моё указание';
+const selectedBeforeFailedOpen=selectionState.selectedRun.id;
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.selectedRun.id,selectedBeforeFailedOpen);
+assert.equal(idMap['steer-instruction'].value,'Не потерять моё указание','failed selection discarded steering draft');
+for(const [key,value]of Object.entries(preservedContext))assert.strictEqual(selectionState[key],value,`failed selection discarded ${key}`);
+assert.equal(selectionState.eventsLoaded,true);assert.equal(selectionState.eventCursor,41);assert.equal(selectionState.selectedRole,'developer');assert.equal(selectionState.selecting,false);
+// A slow older selection cannot clear a draft entered after a newer run opens.
+const beforeSelectionFetch=sandbox.fetch;let releaseSlowSelection;
+sandbox.fetch=async(url,opts)=>{if(url==='/api/runs/'+run.id)await new Promise(resolve=>releaseSlowSelection=resolve);return beforeSelectionFetch(url,opts);};
+const slowSelection=sandbox.window.CodexTeamSuite.selectRun(run.id,false);await settle();assert(releaseSlowSelection);
+await sandbox.window.CodexTeamSuite.selectRun(secondRun.id,false);
+assert.equal(selectionState.selectedRun.id,secondRun.id);assert.equal(selectionState.selecting,false);
+assert.equal(idMap['steer-instruction'].value,'','successful selection retained prior instruction');
+assert.equal(selectionState.events.length,0);assert.equal(selectionState.stageEvents.length,0);assert.equal(selectionState.diffLines.length,0);assert.equal(selectionState.eventCursor,0);
+idMap['steer-instruction'].value='Новое указание для второго запуска';
+selectionState.events=[{id:73,type:'fixture_event'}];const newerEvents=selectionState.events;
+releaseSlowSelection();await slowSelection;
+assert.equal(selectionState.selectedRun.id,secondRun.id,'older selection replaced newer run');
+assert.equal(idMap['steer-instruction'].value,'Новое указание для второго запуска','stale selection discarded newer steering draft');
+assert.strictEqual(selectionState.events,newerEvents,'stale selection discarded newer events');assert.equal(selectionState.selecting,false);
+sandbox.fetch=beforeSelectionFetch;
+// Favorites are a server query, and deleting the final item on a page clamps pagination.
+const originalHistoryFetch=sandbox.fetch,historyQueries=[];
+sandbox.fetch=async(url,opts)=>{
+  if(url.startsWith('/api/runs?')){
+    const params=new URL(url,'http://localhost').searchParams;historyQueries.push(params);
+    const offset=Number(params.get('offset'));
+    return {ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>({items:offset?[]:[run],total:20})};
+  }
+  return originalHistoryFetch(url,opts);
+};
+idMap['history-favorites'].checked=true;
+await idMap['history-favorites'].dispatchEvent({type:'change'});await settle();
+assert.equal(historyQueries.at(-1).get('favorite'),'true','favorite checkbox did not filter the whole server history');
+selectionState.historyTotal=21;
+await idMap['history-next'].click();await settle();
+assert.equal(selectionState.historyPage,0,'history did not return to last available page');
+assert.deepEqual(historyQueries.slice(-2).map(params=>params.get('offset')),['20','0']);
+assert.equal(selectionState.historyRows[0].id,run.id);
+sandbox.fetch=originalHistoryFetch;
+// Failed navigation must release the previous selection's in-flight readers.
+// Their stale finally blocks cannot own the new version's busy indicators.
+const beforeReaderFetch=sandbox.fetch;let releaseEventsRead;
+sandbox.fetch=async(url,opts)=>{if(url.includes('/events'))await new Promise(resolve=>releaseEventsRead=resolve);return beforeReaderFetch(url,opts);};
+selectionState.detailTab='overview';selectionState.eventsLoaded=false;selectionState.eventsRequest=null;
+sandbox.window.CodexTeamSuite.setPage('runs');await settle();assert(releaseEventsRead,'activity request was not held');
+assert.equal(idMap['more-events-button'].disabled,true);
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.eventsRequest,null,'failed selection stranded pending activity request');
+assert.equal(idMap['more-events-button'].disabled,false,'failed selection stranded activity loading button');
+releaseEventsRead();await settle();assert.equal(selectionState.eventsRequest,null,'stale activity response reclaimed a request');
+sandbox.fetch=beforeReaderFetch;sandbox.window.CodexTeamSuite.setPage('runs');await settle();assert.equal(selectionState.eventsLoaded,true,'activity could not load after failed navigation');
+let releaseDiffRead;
+sandbox.fetch=async(url,opts)=>{if(url.includes('/diff'))await new Promise(resolve=>releaseDiffRead=resolve);return beforeReaderFetch(url,opts);};
+selectionState.diffRun=null;selectionState.diffLines=['+preserved loaded diff'];selectionState.diffHasMore=true;
+await idMap['open-diff-button'].click();await settle();assert(releaseDiffRead,'diff request was not held');
+assert.equal(selectionState.diffLoading,true);assert.equal(idMap['more-diff-button'].disabled,true);
+await sandbox.window.CodexTeamSuite.selectRun('missing_run',false);
+assert.equal(selectionState.diffLoading,false,'failed selection stranded diff loading state');
+assert.equal(idMap['more-diff-button'].disabled,false,'failed selection stranded diff loading button');
+assert.deepEqual(selectionState.diffLines,['+preserved loaded diff']);
+releaseDiffRead();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+preserved loaded diff'],'stale diff response replaced preserved content');
+sandbox.fetch=beforeReaderFetch;await idMap['open-diff-button'].click();await settle();assert.equal(selectionState.diffLoading,false);assert.deepEqual(selectionState.diffLines,['+safe line'],'diff could not reload after failed navigation');
+console.log(JSON.stringify({result:'PASS',ids:Object.keys(idMap).length,fetches:commands.filter(c=>c.url).length,evidence:['startup no POST','provider test explicit only','unsupported grants hidden','USER_DECISION_REQUIRED amber','full task available','diff lazy fetch','unique DOM IDs','API key missing actionable','no automatic provider select','budget save preserves provider','key cleared and absent localStorage','key save does not test API','budget opt in only','resume exact total budget','stop excludes budget','unfinished worktree removal hidden','canonical role model defaults','role effort retained after save','agent search reacts to input','duplicate control suppressed','duplicate creation suppressed','unrelated action preserves draft','stale action response preserves selected run','failed selection preserves current context','latest successful selection owns draft and events','favorites server filter and page clamp']}));})().catch(e=>{console.error(e);process.exitCode=1;});

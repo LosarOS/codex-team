@@ -39,7 +39,11 @@ def test_smoke_installs_and_checks_only_its_own_temporary_backend():
     assert 'installed_backend_verified = $false' in SMOKE
     assert '$report.installed_backend_verified = $true' in SMOKE
     assert 'native_gui_verified = $false' in SMOKE and 'model_calls = 0' in SMOKE
-    assert '/api/runs' not in SMOKE and '/api/login' not in SMOKE
+    assert '/api/login' not in SMOKE
+    assert not re.search(r"/api/runs(?:['\"]|\?)[^\r\n]*-Method\s+Post", SMOKE, re.I)
+    assert '$report.synthetic_run_fixture = $true' in SMOKE
+    assert '$report.notebook_restart_verified = $true' in SMOKE
+    assert '$report.run_report_verified = $true' in SMOKE
     assert '& $installedGit --version' in SMOKE
     assert '$report.installed_git_version = $gitVersion' in SMOKE
     assert 'unins000.exe' in SMOKE and '$report.uninstall_verified = $true' in SMOKE
@@ -63,10 +67,10 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
 
 
 def test_release_uses_russian_notes_from_the_same_verified_source():
-    assert 'docs/releases/v1.0.0-rc7.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'docs/releases/v1.0.0-rc8.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
-    notes = (ROOT / 'docs/releases/v1.0.0-rc7.md').read_text(encoding='utf-8')
+    notes = (ROOT / 'docs/releases/v1.0.0-rc8.md').read_text(encoding='utf-8')
     for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
         assert label in notes
 

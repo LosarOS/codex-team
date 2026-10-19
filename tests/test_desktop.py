@@ -464,14 +464,14 @@ def test_current_local_ui_fragment_can_use_fixed_native_actions(tmp_path, resour
     assert not bridge.trusted()
 
 
-def test_native_api_exposes_only_nine_fixed_actions():
+def test_native_api_exposes_only_ten_fixed_actions():
     calls = []
     controller = SimpleNamespace(**{name: (lambda name=name: calls.append(name) or name)
                                     for name in ("choose_project", "open_logs", "retry", "exit")})
     api = desktop.NativeApi(controller)
     assert {name for name in dir(api) if not name.startswith("_")} == {
         "choose_project", "open_logs", "retry", "exit", "open_project", "open_worktree",
-        "export_diagnostics", "recovery_status", "dismiss_recovery"}
+        "export_diagnostics", "export_run_report", "recovery_status", "dismiss_recovery"}
     assert api.choose_project() == "choose_project"
     assert api.open_logs() == "open_logs"
     assert api.retry() == "retry"

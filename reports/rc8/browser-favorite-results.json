@@ -1,0 +1,84 @@
+{
+  "fixtureOnly": true,
+  "windowsDpi": false,
+  "checks": [
+    {
+      "phase": "rc8-final-favorite-layout",
+      "language": "ru",
+      "theme": "obsidian-violet",
+      "name": "history",
+      "width": 1600,
+      "scroll": 1600,
+      "lang": "ru"
+    }
+  ],
+  "contrast": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--text",
+      "bg": "--panel",
+      "ratio": 16.8
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--muted",
+      "bg": "--panel",
+      "ratio": 9.23
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--red",
+      "bg": "--panel",
+      "ratio": 9.15
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--yellow",
+      "bg": "--panel",
+      "ratio": 12.31
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--green",
+      "bg": "--panel",
+      "ratio": 11.33
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "--accent-ink",
+      "bg": "--accent",
+      "ratio": 6.73
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "fg": "favorite badge text",
+      "bg": "composited ancestor surfaces",
+      "foreground": [
+        190,
+        166,
+        255
+      ],
+      "background": [
+        19,
+        15,
+        47
+      ],
+      "ratio": 8.87
+    }
+  ],
+  "untranslated": [],
+  "errors": [],
+  "unknown": [],
+  "productivityChecks": [
+    "run notebook saved once; real Markdown download includes saved literal note; History marks and persisted favorites filter; 409 keeps input; discard cancellation and late export are safe"
+  ],
+  "overflows": [],
+  "writes": 3
+}
