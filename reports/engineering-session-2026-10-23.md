@@ -56,3 +56,15 @@ Next: full regression, native Windows workflow on PR, live official SDK availabi
 - Native RC11 build: https://github.com/LosarOS/codex-team/actions/runs/39951850503 (publication disabled).
 - Source PR CI: https://github.com/LosarOS/codex-team/actions/runs/39951853858 passed.
 - Production-backend asset regression caught missing Doctor CSS/JS allowlist; fixed and included both assets in frozen/installed checks. Focused regression **65 passed** after fix.
+
+## Checkpoint — 12:39 UTC, combined source 93736d0
+
+- Full local regression before final UX/packaging additions: **859 passed, 4 skipped**, 64.52s. Skips: Windows child presentation, two NTFS junction cases, opt-in pre-existing Docker image. Docker is not a product requirement and no image was installed for this session.
+- Independent provider/Engine/queue/permission review: **174 passed, 1 skipped**; refresh-auth classification does not retry, switch provider or expand access.
+- Final UI fixture matrices: **144 queue/preflight + 72 Doctor combinations**; keyboard Tab/Enter, stale reports, delayed replies, current-card focus restoration and per-card bounds verified. Linux Chromium fixtures, not Windows/DPI evidence.
+- Pinned desktop dependency audit originally found 36 advisories across certifi/Pillow. Updated certifi2026.10.23 and Pillow13.0.0, verified Windows wheels and regenerated icons in a disposable directory. Repeat audit: **40 packages, zero known advisories**. Details: [packaging validation](rc11-packaging-validation.md).
+- Native baseline [39951850503](https://github.com/LosarOS/codex-team/actions/runs/39951850503) **SUCCESS** at source1364c38; real frozen Windows package and prior installed/backend/uninstall smoke. This does not validate later fixes.
+- New final native gates add installed Doctor/preflight endpoints, explicit disposable-CI/existing-install guards, same-version repair, uninstall profile preservation, reinstall/restart/history/settings/queue preservation. Native JUnit counts and exact source SHA are staged with final artifacts.
+- Release publication now verifies GitHub-downloaded asset hashes while a draft, then publishes. Artifact-only workflow rejects missing RC11 evidence and skipped source suite.
+
+Next: final combined source regression and Windows build, PR review/merge if green, then GitHub prerelease with actual downloaded asset hashes. Live SDK development remains authentication-blocked pending owner’s official re-login; the attempted run and absent metrics remain disclosed.
