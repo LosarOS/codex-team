@@ -74,6 +74,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     auth = CodexProvider(root)
     providers = ProviderSettings(db,secrets,auth)
     projects = Projects(root,db)
+    from .project_doctor import ProjectDoctor
+    project_doctor = ProjectDoctor(root, db)
     @asynccontextmanager
     async def lifespan(app):
         engine.acquire_session()
@@ -367,6 +369,10 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     @app.get("/api/projects/{project_id}/diff")
     def project_diff(project_id: str):
         return sanitize(projects.diff(project_id))
+
+    @app.get("/api/projects/{project_id}/doctor")
+    def inspect_project_doctor(project_id: str):
+        return project_doctor.inspect(project_id)
 
     @app.delete("/api/projects/{project_id}")
     def remove_project(project_id: str):
