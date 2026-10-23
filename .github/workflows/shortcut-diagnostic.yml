@@ -1,6 +1,9 @@
 name: Disposable shortcut path diagnostic
 on:
   workflow_dispatch:
+  push:
+    branches: [engineering/double-shift-rc11]
+    paths: [packaging/Test-ShortcutPath.ps1, .github/workflows/shortcut-diagnostic.yml]
 permissions:
   contents: read
 jobs:
