@@ -91,6 +91,11 @@ jobs:
           assert manifest['sensitive_paths_found'] == 0 and manifest['required_files_checked'] >= 26
           smoke = json.loads((root / 'installed-smoke.json').read_text(encoding='utf-8-sig'))
           assert smoke['platform'] == 'Windows'
+          portable = json.loads((root / 'portable-smoke.json').read_text(encoding='utf-8-sig'))
+          assert portable['platform'] == 'Windows' and portable['source_commit'] == os.environ['SOURCE_COMMIT']
+          for gate in ('archive_crc_verified', 'startup_verified', 'restart_verified', 'settings_history_queue_preserved', 'portable_backend_verified'):
+              assert portable.get(gate) is True, 'Missing portable release gate: ' + gate
+          assert portable['model_calls'] == 0 and portable['sdk_account_calls'] == 0
           assert smoke['installed_backend_verified'] is True and smoke['uninstall_verified'] is True
           for gate in ('project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
                        'uninstall_data_preservation_verified', 'reinstall_restart_verified',

@@ -26,6 +26,8 @@ def test_native_smoke_and_build_are_required_before_publication():
     assert "$env:SKIP_SOURCE_TESTS -eq 'true' -and $env:PUBLISH_REQUESTED -eq 'true'" in WORKFLOW
     assert 'Publication requires the complete source suite' in WORKFLOW
     assert WORKFLOW.index('./packaging/smoke-installed.ps1') < WORKFLOW.index('Stage verified downloadable files')
+    assert WORKFLOW.index('packaging/smoke_portable.py') < WORKFLOW.index('Stage verified downloadable files')
+    assert 'packaging/portable-smoke.json' in WORKFLOW
     for asset in ['CodexTeam-Setup-x64.exe', 'CodexTeam-Setup-x64.zip', 'CodexTeam-Portable-x64.zip', 'SHA256SUMS.txt', 'installed-smoke.json']:
         assert asset in WORKFLOW
     assert '--prerelease' in WORKFLOW and '--clobber' not in WORKFLOW

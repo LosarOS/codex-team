@@ -33,13 +33,15 @@ The native smoke adds these required assertions:
 
 This is a **same-version repair/upgrade test**, not a claim that every earlier-version migration was exercised. Only test-owned temporary data is inspected; the owner's profile is not opened or removed.
 
+A separate portable smoke now verifies ZIP entry boundaries and CRC, extracts the actual archive into a unique Unicode temporary directory, starts the frozen backend with only system PATH plus its bundled Git, saves local settings/history/pending work, restarts it, and checks preservation without dispatch. It records `portable-smoke.json`. The backend child protocol requires an explicit data root: GUI selection of the portable marker remains unverified, and the synthetic saved run is labeled as a fixture. Portable archive rejection tests cover traversal, alternate separators, Windows streams, links and pre-shipped user data.
+
 Both release workflows keep uploads as a draft until they re-download the GitHub binary assets, match the uploaded checksum manifest, verify every SHA256 and check nonzero file sizes. They do not replace existing releases or assets. Publication rejects a skipped source suite, and the artifact-only publishing workflow requires the expanded RC11 native smoke gates. Its validation script was executed against synthetic contract fixtures: missing/false gates and skipped-suite evidence were rejected, while complete evidence passed.
 
 ## Executed checks and pending gates
 
-- Linux static packaging/workflow/archive contract suite: **17 passed**.
+- Linux static packaging/workflow/archive contract suite: **25 passed**.
 - Dependency advisory lookup and Pillow generation: passed as described above.
 - Initial native candidate: [Windows run 39951850503](https://github.com/LosarOS/codex-team/actions/runs/39951850503), source `1364c38`; in progress at this checkpoint, and predates these hardening changes.
 - Native builds now retain full-suite JUnit evidence and stage `source-test-results.json` with exact passed/skipped counts, duration and source commit. Build failures preserve JUnit diagnostics; pytest exit checks remain mandatory.
-- Final native packaging, new installed smoke, published-asset verification: **pending** on the final source commit.
+- Final native packaging, extracted-portable and expanded installed smoke, published-asset verification: **pending** on the final source commit.
 - Interactive WebView2, real Windows DPI, physical-PC user acceptance and code signing: **not verified** here. Binaries remain unsigned.

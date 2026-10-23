@@ -79,6 +79,10 @@ jobs:
           } else {
             ./build-desktop.ps1 -PythonPath (Get-Command python).Source
           }
+      - name: Extracted portable backend and restart smoke
+        run: |
+          ./.venv/Scripts/python.exe packaging/smoke_portable.py
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted portable runtime smoke failed.' }
       - name: Silent per-user installation and installed backend smoke
         env:
           CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}
@@ -87,7 +91,7 @@ jobs:
       - name: Stage verified downloadable files
         run: |
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json')
+          $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json', 'packaging/portable-smoke.json')
           foreach ($file in $required) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
@@ -111,7 +115,7 @@ jobs:
             $sourceTests += " Native pytest: $($testResults.passed) passed, $skipped skipped, $seconds seconds."
           }
           $testResults | ConvertTo-Json | Set-Content -LiteralPath release-assets/source-test-results.json -Encoding utf8
-          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
+          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, extracted portable backend/restart/preservation, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: codex-team-windows-x64
@@ -127,6 +131,8 @@ jobs:
             .build-tools/source-tests.xml
             packaging/build-verification.json
             packaging/installed-smoke.json
+            packaging/portable-smoke.json
+            .build-tools/portable-smoke/*.log
             .build-tools/installed-smoke/*.log
           if-no-files-found: ignore
           retention-days: 7
