@@ -40,3 +40,19 @@ Queue now exposes structured blocking categories and linked state, performs expl
 - Browser logs/screenshots are local fixture evidence in the session scratch directory; no generated screenshots are presented as a real model run.
 
 Next: full regression, native Windows workflow on PR, live official SDK availability, then final release gates. Release remains BLOCKED pending these checks.
+
+## Live SDK experiment — authentication boundary
+
+- Source: SHIFT `a8bfe05b7c5ede8c465a269e4c19285339dd69e1`, cloned separately; Engine created its own worktree.
+- Actual run `run_77db24332f14`, Implement, standard permissions, isolated=true, auto_commit=false, 4-call / 1200-second / 80000-token ceiling. Task: regression tests for FileLog HRESULT, safe method frames and graceful I/O failures.
+- Official SDK account-read reported `CONNECTED`, ChatGPT account, API key not required. The first actual coordinator turn failed because the access token could not be refreshed after logout/account change.
+- Observed wall time 3.44 seconds; recorded Engine elapsed 3.383 seconds; 1 attempted agent call. Token usage unavailable (not zero). No developer/QA/reviewer execution, no changed files, no integration diff accepted.
+- Live development result: **NOT VERIFIED — authentication blocked**. No paid API fallback attempted.
+- Confirmed product defect: this exact SDK error was categorized `AGENT_FAILED`/`FAILED` rather than `AUTH_REQUIRED`. Added exact refresh-failure classifications and regression cases; provider suite **66 passed**.
+
+## GitHub checkpoint
+
+- PR: https://github.com/LosarOS/codex-team/pull/16 (draft).
+- Native RC11 build: https://github.com/LosarOS/codex-team/actions/runs/39951850503 (publication disabled).
+- Source PR CI: https://github.com/LosarOS/codex-team/actions/runs/39951853858 passed.
+- Production-backend asset regression caught missing Doctor CSS/JS allowlist; fixed and included both assets in frozen/installed checks. Focused regression **65 passed** after fix.

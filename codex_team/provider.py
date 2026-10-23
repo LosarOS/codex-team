@@ -427,7 +427,7 @@ class CodexProvider:
                         message = error.get("message", f"Turn {status}")
                         if any(x in message.lower() for x in ("usage limit", "rate limit", "quota")):
                             code = "USAGE_LIMIT"
-                        elif any(x in message.lower() for x in ("unauthorized", "authentication", "401")):
+                        elif any(x in message.lower() for x in ("unauthorized", "authentication", "401", "access token could not be refreshed", "refresh token has already been used", "please sign in again")):
                             code = "AUTH_REQUIRED"
                         raise ProviderError(code, message)
                     break

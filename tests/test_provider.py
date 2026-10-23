@@ -151,6 +151,8 @@ def test_execute_streams_usage_resumes_and_excludes_hidden_reasoning(tmp_path, s
 
 @pytest.mark.parametrize("status,message,code", [("failed", "usage limit exceeded", "USAGE_LIMIT"),
                                                ("failed", "401 unauthorized", "AUTH_REQUIRED"),
+                                               ("failed", "Your access token could not be refreshed because you have since logged out or signed in to another account. Please sign in again.", "AUTH_REQUIRED"),
+                                               ("failed", "Your refresh token has already been used to generate a new access token. Please try signing in again.", "AUTH_REQUIRED"),
                                                ("interrupted", "cancelled", "INTERRUPTED"),
                                                ("failed", "unexpected error", "AGENT_FAILED")])
 def test_terminal_sdk_errors_keep_specific_state(tmp_path, sdk, status, message, code):
