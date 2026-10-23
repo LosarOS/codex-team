@@ -25,8 +25,11 @@ import zipfile
 def extract_portable(archive: Path, destination: Path) -> Path:
     with zipfile.ZipFile(archive) as bundle:
         for member in bundle.infolist():
-            path = PurePosixPath(member.filename)
-            if ("\\" in member.filename or path.is_absolute() or ".." in path.parts
+            # ZipInfo.filename normalizes OS separators on Windows; validate the
+            # original central-directory spelling before extraction normalization.
+            raw_name = member.orig_filename
+            path = PurePosixPath(raw_name)
+            if ("\\" in raw_name or path.is_absolute() or ".." in path.parts
                     or not path.parts or path.parts[0] != "CodexTeam"
                     or any(":" in part for part in path.parts)
                     or stat.S_ISLNK(member.external_attr >> 16)):

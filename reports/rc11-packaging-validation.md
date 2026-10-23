@@ -39,9 +39,15 @@ Both release workflows keep uploads as a draft until they re-download the GitHub
 
 ## Executed checks and pending gates
 
-- Linux static packaging/workflow/archive contract suite: **25 passed**.
+- Linux static packaging/workflow/archive contract suite: **26 passed**.
 - Dependency advisory lookup and Pillow generation: passed as described above.
 - Initial native candidate: [Windows run 39951850503](https://github.com/LosarOS/codex-team/actions/runs/39951850503), source `1364c38`; in progress at this checkpoint, and predates these hardening changes.
 - Native builds now retain full-suite JUnit evidence and stage `source-test-results.json` with exact passed/skipped counts, duration and source commit. Build failures preserve JUnit diagnostics; pytest exit checks remain mandatory.
 - Final native packaging, extracted-portable and expanded installed smoke, published-asset verification: **pending** on the final source commit.
 - Interactive WebView2, real Windows DPI, physical-PC user acceptance and code signing: **not verified** here. Binaries remain unsigned.
+
+## Windows archive-normalization regression (18:43 UTC)
+
+Native candidate `d5cd18a`, [run 40004056526](https://github.com/LosarOS/codex-team/actions/runs/40004056526), stopped correctly before packaging: **874 passed, 1 failed, 1 skipped**, 641.34 seconds. The new malformed-backslash archive fixture was normalized by Windows `ZipInfo`, so it did not contain the intended malformed entry. Investigation also confirmed the reader normalizes `ZipInfo.filename`; validation now checks `orig_filename` before extraction. The fixture explicitly writes the raw name and asserts it survives in the central directory. A Linux test simulates the Windows normalization and proves the raw name is still rejected before any extraction. No test was skipped or relaxed.
+
+The known-ineligible queued candidate at `ced1aec` was canceled to avoid repeating the same failure. Native build preflight now includes archive/publication checks before the full suite; a fresh complete Windows build is required for the corrected source.

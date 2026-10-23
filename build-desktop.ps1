@@ -35,9 +35,9 @@ if (-not $SkipTests) {
     $desktopSourceTestTemp = Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-' + [guid]::NewGuid().ToString('N'))
     try {
         New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp | Out-Null
-        # Fail fast on the platform-specific cache regression before the long suite.
-        & $python -m pytest -q tests/test_intelligence.py --basetemp (Join-Path $desktopSourceTestTemp 'cache-preflight')
-        if ($LASTEXITCODE -ne 0) { throw 'Cache regression preflight failed; desktop artifacts were not built' }
+        # Fail fast on platform-specific cache/archive and publication guards before the long suite.
+        & $python -m pytest -q tests/test_intelligence.py tests/test_portable_smoke.py tests/test_publish_windows_artifact.py --basetemp (Join-Path $desktopSourceTestTemp 'cache-preflight')
+        if ($LASTEXITCODE -ne 0) { throw 'Native regression preflight failed; desktop artifacts were not built' }
         & $python -m pytest -q --basetemp $desktopSourceTestTemp --junitxml (Join-Path $PSScriptRoot ".build-tools/source-tests.xml")
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed; desktop artifacts were not built' }
     } finally {

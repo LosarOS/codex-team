@@ -98,7 +98,7 @@ def test_source_git_tests_use_original_external_temporary_directory():
     assert '.build-tools/source-tests.xml' in script
     assert 'Native pytest report is empty or failed.' in WORKFLOW
     assert 'release-assets/source-test-results.json' in WORKFLOW
-    assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py --basetemp')
+    assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py tests/test_portable_smoke.py tests/test_publish_windows_artifact.py --basetemp')
     # Never loosen production Git discovery or the nested-repository safety rule.
     assert 'GIT_CEILING_DIRECTORIES' not in script
     assert '[guid]::NewGuid()' in script
