@@ -97,7 +97,7 @@ jobs:
               assert portable.get(gate) is True, 'Missing portable release gate: ' + gate
           assert portable['model_calls'] == 0 and portable['sdk_account_calls'] == 0
           assert smoke['installed_backend_verified'] is True and smoke['uninstall_verified'] is True
-          for gate in ('project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
+          for gate in ('start_menu_shortcut_verified', 'project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
                        'uninstall_data_preservation_verified', 'reinstall_restart_verified',
                        'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified'):
               assert smoke.get(gate) is True, 'Missing native release gate: ' + gate

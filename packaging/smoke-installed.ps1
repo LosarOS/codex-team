@@ -11,6 +11,8 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Instal
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Installed smoke requires a disposable GitHub Actions runner.' }
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{A8024F47-5105-41CC-91F4-AD0786CD418F}_is1'
 if (Test-Path -LiteralPath $uninstallKey) { throw 'Refusing to replace an existing Codex Team installation.' }
+$startMenuShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex Team/Codex Team.lnk'
+if (Test-Path -LiteralPath $startMenuShortcut) { throw 'Refusing to replace an existing Codex Team shortcut.' }
 $repository = Split-Path $PSScriptRoot -Parent
 $diagnostics = Join-Path $repository '.build-tools/installed-smoke'
 New-Item -ItemType Directory -Force -Path $diagnostics | Out-Null
@@ -42,6 +44,16 @@ try {
     if ($setup.ExitCode -ne 0) { throw "Installer failed with exit code $($setup.ExitCode)." }
     $exe = Join-Path $installation 'CodexTeam.exe'
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Installed executable is missing.' }
+    if (-not (Test-Path -LiteralPath $startMenuShortcut -PathType Leaf)) { throw 'Installed Start Menu shortcut is missing.' }
+    $shortcutShell = New-Object -ComObject WScript.Shell
+    try {
+        $shortcut = $shortcutShell.CreateShortcut($startMenuShortcut)
+        if ($shortcut.TargetPath -ne $exe -or $shortcut.WorkingDirectory -ne $installation) { throw 'Installed Start Menu shortcut points to the wrong application.' }
+        $report.start_menu_shortcut_verified = $true
+    } finally {
+        if ($shortcut) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut) }
+        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shortcutShell)
+    }
     $installedGit = Join-Path $installation '_internal/runtime/git/cmd/git.exe'
     if (-not (Test-Path -LiteralPath $installedGit -PathType Leaf)) { throw 'Installed bundled Git is missing.' }
     $gitVersion = (& $installedGit --version 2>&1 | Out-String).Trim()
@@ -192,7 +204,7 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Per-user uninstaller missing.' }
     $profileBeforeUninstall = Get-ProfileFingerprint
     $remove = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/LOG="' + (Join-Path $diagnostics 'uninstall.log') + '"')) -Wait -PassThru
-    if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe)) { throw 'Test installation was not removed successfully.' }
+    if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe) -or (Test-Path -LiteralPath $startMenuShortcut)) { throw 'Test installation was not removed successfully.' }
     if ((Get-ProfileFingerprint) -cne $profileBeforeUninstall -or (Test-Path -LiteralPath $uninstallKey)) { throw 'Uninstall changed the isolated user profile or left its registry registration.' }
     $report.uninstall_data_preservation_verified = $true
     $report.uninstall_verified = $true
@@ -217,7 +229,7 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $report.reinstall_restart_verified = $true
     $profileBeforeUninstall = Get-ProfileFingerprint
     $remove = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
-    if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe) -or (Test-Path -LiteralPath $uninstallKey) -or (Get-ProfileFingerprint) -cne $profileBeforeUninstall) { throw 'Reinstalled test copy failed uninstall/preservation checks.' }
+    if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe) -or (Test-Path -LiteralPath $startMenuShortcut) -or (Test-Path -LiteralPath $uninstallKey) -or (Get-ProfileFingerprint) -cne $profileBeforeUninstall) { throw 'Reinstalled test copy failed uninstall/preservation checks.' }
 } catch {
     $report.error = $_.Exception.Message
     throw

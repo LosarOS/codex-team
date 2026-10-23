@@ -28,7 +28,7 @@ The native smoke adds these required assertions:
 - Actual installed Project Doctor and queue preflight endpoints remain read-only and do not claim provider/GUI validation.
 - Reinstalling the same version over itself preserves an exact hash listing of the isolated profile before backend restart.
 - History, queue, language/theme and local notes survive the restart.
-- Uninstall preserves profile bytes and removes the test executable and registration.
+- Start Menu shortcut points to the actual test executable and working directory. Uninstall preserves profile bytes and removes the shortcut, test executable and registration. Existing shortcut replacement is refused.
 - Reinstallation starts the real frozen backend with the preserved profile and does not auto-dispatch pending work.
 
 This is a **same-version repair/upgrade test**, not a claim that every earlier-version migration was exercised. Only test-owned temporary data is inspected; the owner's profile is not opened or removed.

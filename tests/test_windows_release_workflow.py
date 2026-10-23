@@ -109,7 +109,7 @@ def test_installer_smoke_refuses_owner_install_and_checks_preservation():
     launch = SMOKE.index('Start-Process -FilePath $installer')
     assert SMOKE.index("$env:GITHUB_ACTIONS -ne 'true'") < launch
     assert SMOKE.index('Refusing to replace an existing Codex Team installation.') < launch
-    for gate in ('same_version_upgrade_verified', 'uninstall_data_preservation_verified', 'reinstall_restart_verified', 'project_doctor_verified', 'queue_preflight_verified'):
+    for gate in ('start_menu_shortcut_verified', 'same_version_upgrade_verified', 'uninstall_data_preservation_verified', 'reinstall_restart_verified', 'project_doctor_verified', 'queue_preflight_verified'):
         assert f'$report.{gate} = $true' in SMOKE
     assert 'Get-ProfileFingerprint' in SMOKE
     assert "'/api/mission-queue/preflight'" in SMOKE

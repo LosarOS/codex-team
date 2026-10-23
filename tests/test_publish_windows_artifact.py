@@ -63,7 +63,7 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
     path.write_text(json.dumps(smoke))
     with pytest.raises(AssertionError, match='Missing native release gate'):
         exec(script, {})
-    gates = ('project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
+    gates = ('start_menu_shortcut_verified', 'project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
              'uninstall_data_preservation_verified', 'reinstall_restart_verified',
              'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified')
     smoke.update({gate: True for gate in gates})
