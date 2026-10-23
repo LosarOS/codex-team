@@ -8,6 +8,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Installed smoke requires native Windows.' }
+if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Installed smoke requires a disposable GitHub Actions runner.' }
+$uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{A8024F47-5105-41CC-91F4-AD0786CD418F}_is1'
+if (Test-Path -LiteralPath $uninstallKey) { throw 'Refusing to replace an existing Codex Team installation.' }
 $repository = Split-Path $PSScriptRoot -Parent
 $diagnostics = Join-Path $repository '.build-tools/installed-smoke'
 New-Item -ItemType Directory -Force -Path $diagnostics | Out-Null
@@ -24,6 +27,13 @@ $backend = $null
 $token = [guid]::NewGuid().ToString('N')
 $baseUrl = $null
 $originalPath = $env:PATH
+function Get-ProfileFingerprint {
+    # The profile was created by this invocation. Never hash or alter the real owner profile.
+    $rows = @(Get-ChildItem -LiteralPath $profile -File -Recurse | Sort-Object FullName | ForEach-Object {
+        $_.FullName.Substring($profile.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+    })
+    return ($rows -join "`n")
+}
 try {
     $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
     $installLog = Join-Path $diagnostics 'install.log'
@@ -95,6 +105,9 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $created = Invoke-RestMethod -Uri ($baseUrl + '/api/projects/create') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($newProject)) -TimeoutSec 60
     if (-not $created.id -or -not $created.head -or -not $created.ready) { throw 'Installed app could not create a ready Git project without external Git or GitHub.' }
     $report.project_creation_verified = $true
+    $doctor = Invoke-RestMethod -Uri ($baseUrl + '/api/projects/' + $created.id + '/doctor') -TimeoutSec 30
+    if ($doctor.schema_version -ne 1 -or $doctor.project_id -ne $created.id -or $doctor.project_type -ne 'other' -or @($doctor.checks | Where-Object { $_.id -eq 'interactive_gui' -and $_.status -eq 'not_verified' }).Count -ne 1) { throw 'Installed Project Doctor did not preserve static-discovery provenance.' }
+    $report.project_doctor_verified = $true
     # Local unsubmitted text must survive a frozen backend restart without any model call.
     $draftText = 'Черновик проверки: локальный текст'
     $draftBody = @{ expected_revision = 0; data = @{ task = $draftText; workspace = (Join-Path $temporary 'Новый проект') } } | ConvertTo-Json -Depth 5
@@ -109,6 +122,10 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $queueBody = @{ client_id = $queueKey; request = @{ workspace = (Join-Path $temporary 'Новый проект'); task = $draftText; max_agent_calls = 2; access_level = 'standard'; isolated = $true } } | ConvertTo-Json -Depth 5
     $savedMission = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue') -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($queueBody)) -TimeoutSec 30
     if (-not $savedMission.id -or $savedMission.status -ne 'pending' -or $savedMission.run_id) { throw 'Installed queue entry is invalid or was started implicitly.' }
+    $preflightBody = @{ item_ids = @($savedMission.id) } | ConvertTo-Json
+    $preflight = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue/preflight') -Method Post -ContentType 'application/json' -Body $preflightBody -TimeoutSec 30
+    if ($preflight.schema_version -ne 1 -or -not $preflight.ready -or $preflight.models_called -ne $false -or $preflight.provider_verified -ne $false -or $preflight.queue_revision -notmatch '^[a-f0-9]{64}$') { throw 'Installed local queue preflight failed or claimed provider validation.' }
+    $report.queue_preflight_verified = $true
     $notebookText = 'Личная заметка проверки перезапуска'
     $notebookBody = @{ expected_revision = 0; favorite = $true; note = $notebookText } | ConvertTo-Json
     $savedNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($notebookBody)) -TimeoutSec 10
@@ -117,6 +134,14 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
     if (-not $backend.WaitForExit(20000)) { throw 'Installed backend did not shut down cleanly.' }
     if ($backend.ExitCode -ne 0) { throw "Installed backend exited with $($backend.ExitCode)." }
+    # Reinstall over the same version while the backend is stopped; this is a
+    # repair/upgrade path test, not evidence of every previous-version migration.
+    $profileBeforeUpgrade = Get-ProfileFingerprint
+    $upgradeArgs = $arguments | Where-Object { $_ -notlike '/LOG=*' }
+    $upgradeArgs += ('/LOG="' + (Join-Path $diagnostics 'upgrade.log') + '"')
+    $upgrade = Start-Process -FilePath $installer -ArgumentList $upgradeArgs -Wait -PassThru
+    if ($upgrade.ExitCode -ne 0 -or (Get-ProfileFingerprint) -cne $profileBeforeUpgrade) { throw 'Same-version upgrade changed the isolated profile or failed.' }
+    $report.same_version_upgrade_verified = $true
     $backend = Start-Process -FilePath $exe -ArgumentList $backendArgs -WorkingDirectory $profile -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $diagnostics 'restart.stdout.log') -RedirectStandardError (Join-Path $diagnostics 'restart.stderr.log')
     $healthy = $null
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
@@ -165,9 +190,34 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $report.updater_check_verified = $true
     $uninstaller = Join-Path $installation 'unins000.exe'
     if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Per-user uninstaller missing.' }
+    $profileBeforeUninstall = Get-ProfileFingerprint
     $remove = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/LOG="' + (Join-Path $diagnostics 'uninstall.log') + '"')) -Wait -PassThru
     if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe)) { throw 'Test installation was not removed successfully.' }
+    if ((Get-ProfileFingerprint) -cne $profileBeforeUninstall -or (Test-Path -LiteralPath $uninstallKey)) { throw 'Uninstall changed the isolated user profile or left its registry registration.' }
+    $report.uninstall_data_preservation_verified = $true
     $report.uninstall_verified = $true
+    # Reinstall, then actually restart the frozen backend against the preserved profile.
+    $reinstall = Start-Process -FilePath $installer -ArgumentList $upgradeArgs -Wait -PassThru
+    if ($reinstall.ExitCode -ne 0 -or (Get-ProfileFingerprint) -cne $profileBeforeUninstall) { throw 'Reinstall changed the isolated user profile or failed.' }
+    $backend = Start-Process -FilePath $exe -ArgumentList $backendArgs -WorkingDirectory $profile -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $diagnostics 'reinstall.stdout.log') -RedirectStandardError (Join-Path $diagnostics 'reinstall.stderr.log')
+    $healthy = $null
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
+    do {
+        $backend.Refresh()
+        if ($backend.HasExited) { throw 'Reinstalled backend exited before health check.' }
+        try { $healthy = Invoke-RestMethod -Uri ($baseUrl + '/health') -TimeoutSec 2 } catch { Start-Sleep -Milliseconds 200 }
+    } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
+    if (-not $healthy -or $healthy.status -ne 'ok') { throw 'Reinstalled backend did not become healthy.' }
+    $reinstalledQueue = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue') -TimeoutSec 10
+    $reinstalledNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -TimeoutSec 10
+    $reinstalledSettings = Invoke-RestMethod -Uri ($baseUrl + '/api/settings') -TimeoutSec 10
+    if ($reinstalledQueue.summary.state -eq 'running' -or $reinstalledQueue.items.Count -ne 1 -or $reinstalledQueue.items[0].id -ne $savedMission.id -or $reinstalledQueue.items[0].status -ne 'pending' -or $reinstalledQueue.items[0].run_id -or $reinstalledNotebook.note -ne $notebookText -or $reinstalledSettings.language -ne 'en' -or $reinstalledSettings.theme -ne 'neon-blue') { throw 'Reinstall lost saved history/settings or restarted a queued mission.' }
+    Invoke-RestMethod -Uri ($baseUrl + '/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}' -TimeoutSec 10 | Out-Null
+    if (-not $backend.WaitForExit(20000) -or $backend.ExitCode -ne 0) { throw 'Reinstalled backend did not shut down cleanly.' }
+    $report.reinstall_restart_verified = $true
+    $profileBeforeUninstall = Get-ProfileFingerprint
+    $remove = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
+    if ($remove.ExitCode -ne 0 -or (Test-Path -LiteralPath $exe) -or (Test-Path -LiteralPath $uninstallKey) -or (Get-ProfileFingerprint) -cne $profileBeforeUninstall) { throw 'Reinstalled test copy failed uninstall/preservation checks.' }
 } catch {
     $report.error = $_.Exception.Message
     throw

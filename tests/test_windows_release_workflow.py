@@ -95,3 +95,25 @@ def test_source_git_tests_use_original_external_temporary_directory():
     # Never loosen production Git discovery or the nested-repository safety rule.
     assert 'GIT_CEILING_DIRECTORIES' not in script
     assert '[guid]::NewGuid()' in script
+
+
+def test_installer_smoke_refuses_owner_install_and_checks_preservation():
+    # A custom /DIR does not isolate Inno's AppId or per-user shortcuts.
+    launch = SMOKE.index('Start-Process -FilePath $installer')
+    assert SMOKE.index("$env:GITHUB_ACTIONS -ne 'true'") < launch
+    assert SMOKE.index('Refusing to replace an existing Codex Team installation.') < launch
+    for gate in ('same_version_upgrade_verified', 'uninstall_data_preservation_verified', 'reinstall_restart_verified', 'project_doctor_verified', 'queue_preflight_verified'):
+        assert f'$report.{gate} = $true' in SMOKE
+    assert 'Get-ProfileFingerprint' in SMOKE
+    assert "'/api/mission-queue/preflight'" in SMOKE
+    assert '/api/mission-queue/start' not in SMOKE
+
+
+def test_release_verifies_downloaded_assets_before_making_draft_public():
+    create = WORKFLOW.index('gh release create')
+    download = WORKFLOW.index('gh release download', create)
+    verify = WORKFLOW.index('(cd published-assets && sha256sum -c SHA256SUMS.txt)', download)
+    publish = WORKFLOW.index('gh release edit', verify)
+    assert '--prerelease --draft' in WORKFLOW[create:download]
+    assert create < download < verify < publish
+    assert 'cmp release-assets/SHA256SUMS.txt published-assets/SHA256SUMS.txt' in WORKFLOW

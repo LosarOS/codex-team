@@ -120,4 +120,14 @@ jobs:
           Нативная Windows CI успешно завершена; точные результаты тестов доступны по ссылке ниже. Проверены замороженный пакет, тихая установка в Unicode-путь, установленный Git, локальный backend, ресурсы интерфейса и удаление. Отчёты и SHA256 приложены. Интерактивный WebView2 GUI, настоящий Windows DPI и live Codex не проверялись. Приложение не подписано; Windows SmartScreen может показать предупреждение.
           NOTES
           printf '\nПроверенная сборка: https://github.com/%s/actions/runs/%s\nИсходный commit: %s\n' "$GH_REPO" "$RUN_ID" "$SOURCE_COMMIT" >> release-notes.md
-          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease
+          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease --draft
+          mkdir -p published-assets
+          gh release download "$RELEASE_TAG" --dir published-assets --pattern 'CodexTeam-Setup-x64.exe' --pattern 'CodexTeam-Setup-x64.zip' --pattern 'CodexTeam-Portable-x64.zip' --pattern 'SHA256SUMS.txt'
+          cmp release-assets/SHA256SUMS.txt published-assets/SHA256SUMS.txt
+          (cd published-assets && sha256sum -c SHA256SUMS.txt)
+          for asset in CodexTeam-Setup-x64.exe CodexTeam-Setup-x64.zip CodexTeam-Portable-x64.zip; do
+            test -s "published-assets/$asset"
+          done
+          # Assets stay draft until the downloaded GitHub bytes pass checksum verification.
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease
+          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" --jq '{tag_name,draft,prerelease,assets:[.assets[]|{name,size,digest,browser_download_url}]}'
