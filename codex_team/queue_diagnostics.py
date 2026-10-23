@@ -5,6 +5,7 @@ import shutil
 
 from .models import RunRequest
 from .storage import sanitize, now
+from .runtimes import discover
 
 REASONS = {
     'AUTH_REQUIRED': 'authentication_required', 'USAGE_LIMIT': 'usage_limit',
@@ -43,7 +44,7 @@ def inspect(queue, item_ids, which=shutil.which):
     checks = []
     def check(code, ok, detail, item_id=None):
         checks.append({'code': code, 'status': 'ready' if ok else 'error',
-                       'detail': sanitize(detail), 'item_id': item_id, 'provenance': 'discovered'})
+                       'detail': sanitize(detail)[:2000], 'item_id': item_id, 'provenance': 'discovered'})
     check('stale_batch', item_ids == expected, 'Queue IDs and ordering match the inspected batch.' if item_ids == expected else 'Queue changed. Refresh and inspect the current batch.')
     check('git_available', bool(which('git')), 'Git availability on local PATH; not an execution test.')
     check('blocked_mission', not any(row['status'] == 'blocked' for row in items), 'Resolve or explicitly skip blocked missions before starting.')
@@ -66,6 +67,8 @@ def inspect(queue, item_ids, which=shutil.which):
             projects.append({'item_id': identity, 'head': snapshot['head'], 'dirty': snapshot['dirty'], 'provenance': 'discovered'})
             check('workspace', bool(snapshot['head']) and not snapshot['dirty'],
                   'Committed clean Git workspace required for isolation.', identity)
+            runtime = discover(request.workspace)
+            check('local_tools', runtime['ready'], 'Required local runtimes missing: ' + ', '.join(runtime['missing']) if runtime['missing'] else 'Declared project runtimes found locally; no tool execution test.', identity)
             permissions.append({'item_id': identity, 'access_level': request.access_level,
                                 'full_access_confirmed': request.confirmed_full_access,
                                 'runtime_approvals': 'Provider may request additional permissions during execution.'})

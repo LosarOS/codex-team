@@ -79,7 +79,8 @@ class ProjectDoctor:
             try:
                 if suffix in {".sln", ".slnx"}:
                     if suffix == ".slnx":
-                        xml(name)
+                        if xml(name).tag.rsplit("}", 1)[-1] != "Solution":
+                            raise ValueError("Expected Solution XML root")
                     solutions.append({"path": name, "format": suffix[1:], "provenance": "discovered"})
                 elif base == "global.json":
                     config = json.loads(read(name))
@@ -92,6 +93,8 @@ class ProjectDoctor:
                                  "roll_forward": str(sdk.get("rollForward", ""))[:100], "provenance": "discovered"})
                 elif suffix == ".csproj":
                     doc = xml(name)
+                    if doc.tag.rsplit("}", 1)[-1] != "Project":
+                        raise ValueError("Expected Project XML root")
                     values = {}
                     packages = []
                     for element in doc.iter():

@@ -155,3 +155,12 @@ def test_api_is_readonly_and_validates_registered_project(doctor, tmp_path):
         assert response.json()['schema_version'] == 1
         assert client.get('/api/projects/unknown/doctor').status_code == 404
         assert client.post('/api/projects/shift/doctor', json={}).status_code == 405
+
+
+@pytest.mark.parametrize('name,content', [('SHIFT.slnx', '<NotASolution/>'), ('src/App.csproj', '<NotAProject/>')])
+def test_wrong_xml_document_kind_is_not_reported_as_a_solution_or_project(doctor, name, content):
+    service, repo, _ = doctor
+    (repo / name).write_text(content, encoding='utf-8')
+    report = service.inspect('shift')
+    assert any(w['source'] == name and w['code'] == 'source_unreadable' for w in report['warnings'])
+    assert name not in {p['path'] for p in report['solutions'] + report['projects']}

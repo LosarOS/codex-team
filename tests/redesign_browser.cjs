@@ -255,6 +255,20 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   }
   if(process.env.QA_DOCTOR_ONLY==='1'){
    await visit('project-doctor');assert.equal(await page.locator('#project-doctor-panel pre script').count(),0);
+   await page.getByRole('button',{name:/^(Закрыть диагностику|Close diagnostics)$/}).click();
+   let releaseOld,enteredOld;const startedOld=new Promise(resolve=>enteredOld=resolve);let requests=0;
+   await page.route('**/api/projects/*/doctor',async route=>{
+    const index=++requests,report=fixture(new URL(route.request().url()),'GET',{});
+    if(index===1){enteredOld();await new Promise(resolve=>releaseOld=resolve);report.projects=[{path:'STALE-DOCTOR-RESPONSE.csproj',frameworks:['net10.0']}];}
+    await route.fulfill({contentType:'application/json',body:JSON.stringify(report)});
+   });
+   await page.locator('#projects-list .project-actions button').filter({hasText:/^(Диагностика проекта|Project Doctor)$/}).first().click();await startedOld;
+   await page.getByRole('button',{name:/^(Закрыть диагностику|Close diagnostics)$/}).click();
+   await page.locator('#projects-list .project-actions button').filter({hasText:/^(Диагностика проекта|Project Doctor)$/}).first().click();
+   await page.locator('#project-doctor-panel[aria-busy="false"] .doctor-grid').first().waitFor();releaseOld();await page.waitForTimeout(100);
+   assert(!await page.locator('#project-doctor-panel').textContent().then(text=>text.includes('STALE-DOCTOR-RESPONSE')),'Old diagnostics must not replace a reopened panel');
+   await page.unroute('**/api/projects/*/doctor');
+
    await page.getByRole('button',{name:/^(Закрыть диагностику|Close diagnostics)$/}).click();await page.locator('#project-doctor-panel').waitFor({state:'hidden'});
    await page.route('**/api/projects/*/doctor',route=>route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({detail:'TEST: denied'})}));
    await visit('project-doctor');await page.locator('#project-doctor-panel [role="alert"]').waitFor();await page.unroute('**/api/projects/*/doctor');
@@ -274,6 +288,10 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
    await visit('workbench');assert.equal(await page.locator('#task').inputValue(),task);await page.locator('#task').fill('ТЕСТОВЫЕ ДАННЫЕ: вторая независимая задача');await page.locator('#mission-queue-add').click();await page.locator('#confirm-accept').click();await page.locator('.mq-card').nth(1).waitFor();assert.equal(queueItems.length,2);
    await page.locator('.mq-card').nth(1).getByRole('button',{name:'Выше',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.mq-card h2')?.textContent.includes('вторая'));assert(queueItems[0].task.includes('вторая'));
    await page.waitForFunction(()=>!document.querySelector('.toast-region .toast'));await captureCurated('mission-queue');
+   await page.getByRole('button',{name:'Проверить пакет',exact:true}).click();await page.locator('.mq-preflight').getByText('Можно подтвердить запуск',{exact:true}).waitFor();
+   await page.locator('.mq-card').first().getByRole('button',{name:'Ниже',exact:true}).click();await page.locator('.mq-preflight').getByText('Проверка устарела. Проверьте пакет снова.',{exact:true}).waitFor();
+   assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,0,'Inspecting and invalidating a report must not dispatch');
+
    await page.getByRole('button',{name:'Запустить очередь',exact:true}).click();await page.locator('#confirm-dialog[open]').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,0);await captureCurated('mission-queue-confirmation','#confirm-dialog');await page.locator('#confirm-accept').click();await page.locator('.mq-running').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,1);assert.deepEqual(writes.find(w=>w.path==='/api/mission-queue/start').body.item_ids,queueItems.map(i=>i.id));
    await page.getByRole('button',{name:'После текущей задачи',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.mq-status')?.textContent==='Очередь приостановлена');assert.equal(queueItems[0].status,'running');assert.equal(writes.filter(w=>w.path.includes('/control')).length,0);
    queueItems[0].status='blocked';queueItems[0].run_state='AUTH_REQUIRED';queueItems[0].diagnostic={code:'authentication_required'};queueItems[0].reason='ТЕСТОВЫЕ ДАННЫЕ: нужен вход, следующая задача не запущена.';queueState='blocked';await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('.mq-blocked').waitFor();assert(await page.getByRole('button',{name:'Запустить очередь',exact:true}).isDisabled());await captureCurated('mission-queue-blocked');

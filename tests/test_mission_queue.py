@@ -49,7 +49,8 @@ class FakeEngine:
 
 
 @pytest.fixture
-def queue(tmp_path):
+def queue(tmp_path, monkeypatch):
+    monkeypatch.setattr("codex_team.queue_diagnostics.discover", lambda _: {"ready": True, "missing": []})
     store = Store(tmp_path / "queue.db")
     engine = FakeEngine(store)
     service = MissionQueue(engine, store, poll_interval=0.01)
@@ -446,3 +447,14 @@ def test_move_is_atomic_when_second_database_update_fails(queue):
     with pytest.raises(sqlite3.IntegrityError, match='test injected failure'):
         service.move(second['id'], 'up')
     assert [(i['id'], i['position']) for i in service.list()['items']] == before
+
+
+def test_preflight_reports_missing_declared_runtime(queue, monkeypatch):
+    service, engine, _ = queue
+    item = add(service)
+    engine.workspace.snapshot = lambda _: {'head': 'a' * 40, 'dirty': False}
+    monkeypatch.setattr('codex_team.queue_diagnostics.discover', lambda _: {'ready': False, 'missing': ['dotnet']})
+    report = service.preflight([item['id']])
+    assert not report['ready']
+    assert any(c['code'] == 'local_tools' and 'dotnet' in c['detail'] for c in report['checks'])
+    assert not engine.created
