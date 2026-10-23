@@ -2,6 +2,7 @@
 ((root) => {
   'use strict';
   const labels = {
+    'Проект Windows / .NET': 'Windows / .NET project', 'Проект .NET': '.NET project', 'Другой тип проекта': 'Other project type',
     'Диагностика проекта': 'Project Doctor', 'Обновить диагностику': 'Refresh diagnostics',
     'Закрыть диагностику': 'Close diagnostics', 'Читаем декларации проекта…': 'Reading project declarations…',
     'Проверка не удалась. Повторите попытку.': 'Inspection failed. Try again.',
@@ -31,16 +32,16 @@
   function mount({anchor,api}){
     const t=s=>I.t(s),el=(tag,cls,text)=>{const n=root.document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
     const panel=el('section','panel editor-panel project-doctor');panel.id='project-doctor-panel';panel.hidden=true;
-    const header=el('div','panel-heading'),title=el('h2','',t('Диагностика проекта')),actions=el('div','button-row'),body=el('div','doctor-body');title.tabIndex=-1;
+    const header=el('div','panel-heading'),title=el('h2','',t('Диагностика проекта')),actions=el('div','button-row'),body=el('div','doctor-body');title.tabIndex=-1;title.id='project-doctor-title';panel.setAttribute('aria-labelledby',title.id);
     let epoch=0,selected=null,opener=null;
     const button=(text,fn)=>{const b=el('button','button secondary',t(text));b.type='button';b.addEventListener('click',fn);return b;};
-    const refresh=button('Обновить диагностику',()=>load()),close=button('Закрыть диагностику',()=>{++epoch;selected=null;panel.hidden=true;panel.setAttribute('aria-busy','false');opener?.focus?.();});
+    const refresh=button('Обновить диагностику',()=>load()),close=button('Закрыть диагностику',()=>{const id=selected?.id;++epoch;selected=null;panel.hidden=true;panel.setAttribute('aria-busy','false');const current=[...anchor.querySelectorAll('[data-doctor-project]')].find(button=>button.dataset.doctorProject===id);(opener?.isConnected?opener:current)?.focus?.();});
     actions.append(refresh,close);header.append(title,actions);panel.append(header,body);anchor.after(panel);
     function render(report){
       body.replaceChildren(el('p','field-note',t('Статический анализ не подтверждает сборку, установку или запуск приложения.')),el('p','muted',t('Происхождение: декларации и локальная среда')));
       body.append(el('p','mono',t('Исходная ревизия')+': '+(report.head||'—')));
       const facts=el('div','doctor-grid');
-      for(const [label,value] of [['Тип проекта',report.project_type],['Среда проверки',report.environment.os+' · '+report.environment.architecture],['SDK .NET',(report.environment.dotnet_sdks||[]).join(', ')||t('Не обнаружено')],['Версия SDK из исходников',(report.sdk_requirements||[]).map(s=>s.version+' ('+s.source+')').join(', ')||'—']]){const f=el('div','doctor-fact');f.append(el('span','muted',t(label)),el('strong','',String(value)));facts.append(f);}body.append(facts);
+      for(const [label,value] of [['Тип проекта',t({windows_dotnet:'Проект Windows / .NET',dotnet:'Проект .NET',other:'Другой тип проекта'}[report.project_type]||'Другой тип проекта')],['Среда проверки',report.environment.os+' · '+report.environment.architecture],['SDK .NET',(report.environment.dotnet_sdks||[]).join(', ')||t('Не обнаружено')],['Версия SDK из исходников',(report.sdk_requirements||[]).map(s=>s.version+' ('+s.source+')').join(', ')||'—']]){const f=el('div','doctor-fact');f.append(el('span','muted',t(label)),el('strong','',String(value)));facts.append(f);}body.append(facts);
       body.append(el('h3','',t('Раздельные этапы проверки')));const checks=el('div','doctor-grid');
       for(const check of report.checks){const line=el('div','doctor-fact');line.append(el('span','',t(gates[check.id])),el('strong',check.status==='unsupported'?'state-warning':'muted',t(check.status==='discovered'?'Обнаружено локально':check.status==='not_discovered'?'Не обнаружено':check.status==='unsupported'?'Среда не поддерживает Windows runtime':'Не проверено')));checks.append(line);}body.append(checks);
       body.append(el('h3','',t('Решения и проекты')));const projects=el('ul','doctor-projects');

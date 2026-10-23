@@ -1215,7 +1215,7 @@
       if(project.error)card.append(node("p","project-runtime",I.t("Не удалось проверить папку. Убедитесь, что проект доступен, затем обновите данные.")));else if(project.ready===false&&!project.dirty)card.append(node("p","project-runtime",I.t("Для изолированного запуска нужен первый Git commit в проекте.")));
       if(runtime?.missing?.length)card.append(node("p","field-note",I.t("Приложение обнаруживает доступные среды автоматически. После настройки среды обновите проект. Если доступный runtime не найден, экспортируйте диагностику из настроек.")));
       const row=node("div","project-actions");row.append(actionButton(I.t("Выбрать проект"),()=>useProject(project),"primary"),actionButton(I.t("Настроить команды"),()=>openProjectEditor(project)));
-      row.append(actionButton(I.t("Диагностика проекта"),()=>openProjectDoctor(project)));
+      const doctorAction=actionButton(I.t("Диагностика проекта"),()=>openProjectDoctor(project));doctorAction.dataset.doctorProject=project.id;row.append(doctorAction);
       if(project.dirty)row.append(actionButton(I.t("Посмотреть изменения"),()=>openProjectDiff(project)));
       if(project.last_run)row.append(actionButton(I.t("Последний запуск"),()=>selectRun(typeof project.last_run==="string"?project.last_run:project.last_run.id)));
       if(typeof desktopBridge()?.open_project==="function")row.append(actionButton(I.t("Открыть папку ↗"),()=>nativeOperation("open_project",project.id)));

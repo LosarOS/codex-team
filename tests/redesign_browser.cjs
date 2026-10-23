@@ -38,13 +38,13 @@ if(process.env.QA_SHOWCASE==='1'){
 
 let queueItems=[];let queueState='paused';let queueSequence=0;
 const queueView=()=>({items:queueItems,summary:{state:queueState,pending:queueItems.filter(i=>['pending','running','blocked'].includes(i.status)).length,active_id:queueItems.find(i=>i.status==='running')?.id||null,max_pending:20,total_pending_call_limit:queueItems.filter(i=>['pending','running','blocked'].includes(i.status)).reduce((n,i)=>n+i.max_agent_calls,0)}});
-if(process.env.QA_QUEUE_ONLY==='1')queueItems=[0,1,2].map(index=>({id:'fixture-overview-'+index,client_id:'fixture-id-'+index,position:index,status:index===1?'blocked':'pending',task:'ТЕСТОВЫЕ ДАННЫЕ: '+['Проверить авторизацию и добавить тесты','Обновить интерфейс — требуется решение','Подготовить документацию'][index],workspace:project.path+'\\Очень длинный путь проекта',mode:'quick',run_id:index===1?run.id:null,run_state:index===1?'USER_DECISION_REQUIRED':null,reason:index===1?'ТЕСТОВЫЕ ДАННЫЕ: нужен ответ пользователя.':null,access_level:index===2?'full-access':'standard',isolated:true,max_agent_calls:5,max_run_duration:600,max_total_tokens:5000,request:{task:'ТЕСТОВЫЕ ДАННЫЕ: полная постановка'}}));
+if(process.env.QA_QUEUE_ONLY==='1'){queueState='blocked';queueItems=[0,1,2].map(index=>({id:'fixture-overview-'+index,client_id:'fixture-id-'+index,position:index,status:index===1?'blocked':'pending',task:'ТЕСТОВЫЕ ДАННЫЕ: '+['Проверить авторизацию и добавить тесты','Обновить интерфейс — требуется решение','Подготовить документацию'][index],workspace:project.path+'\\Очень длинный путь проекта',mode:'quick',run_id:index===1?run.id:null,run_state:index===1?'USER_DECISION_REQUIRED':null,diagnostic:index===1?{code:'user_decision'}:null,reason:index===1?'ТЕСТОВЫЕ ДАННЫЕ: нужен ответ пользователя.':null,access_level:index===2?'full-access':'standard',isolated:true,max_agent_calls:5,max_run_duration:600,max_total_tokens:5000,request:{task:'ТЕСТОВЫЕ ДАННЫЕ: полная постановка'}}));}
 function fixture(url,method,body){const p=url.pathname;
  if(method!=='GET')writes.push({path:p,method,body});
  if(p==='/api/mission-queue'){
   if(method==='POST'){const old=queueItems.find(i=>i.client_id===body.client_id);if(old)return old;const item={id:'fixture-mission-'+(++queueSequence),client_id:body.client_id,position:queueItems.length,status:'pending',task:body.request.task.slice(0,400),workspace:body.request.workspace,mode:body.request.mode,run_id:null,run_state:null,reason:null,access_level:body.request.access_level,isolated:true,auto_commit:body.request.auto_commit,max_agent_calls:body.request.max_agent_calls,max_run_duration:body.request.max_run_duration,max_total_tokens:null,request:body.request};queueItems.push(item);return item;}return queueView();
  }
- if(p==='/api/mission-queue/preflight')return {schema_version:1,ready:!queueItems.some(i=>i.status==='blocked'),queue_revision:'a'.repeat(64),item_ids:queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id),checks:[{code:'workspace',status:'ready',detail:'TEST FIXTURE: local workspace declared clean',provenance:'discovered'}],provider_verified:false,models_called:false};
+ if(p==='/api/mission-queue/preflight')return {schema_version:1,ready:!queueItems.some(i=>i.status==='blocked'),queue_revision:'a'.repeat(64),item_ids:queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id),checks:[{code:'workspace',status:'ready',detail:'TEST FIXTURE: local workspace declared clean',provenance:'discovered'},...(queueItems.some(i=>i.status==='blocked')?[{code:'blocked_mission',status:'error',detail:'TEST FIXTURE: resolve the linked run or explicitly skip the blocked mission.',provenance:'discovered'}]:[])],provider_verified:false,models_called:false};
  if(p==='/api/mission-queue/start'){if(body.confirmed!==true)return {__status:400,detail:'TEST: explicit confirmation required'};if(JSON.stringify(body.item_ids)!==JSON.stringify(queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id)))return {__status:409,detail:'TEST: stale queue snapshot'};queueState='running';const first=queueItems.find(i=>i.status==='pending');if(first){first.status='running';first.run_id=run.id;first.run_state='RUNNING';}return queueView();}
  if(p==='/api/mission-queue/pause'){queueState='paused';return queueView();}
  if(p.startsWith('/api/mission-queue/')){const [id,action]=p.slice('/api/mission-queue/'.length).split('/');const item=queueItems.find(i=>i.id===id);if(!item)return {__status:404,detail:'TEST: missing mission'};if(action==='skip')item.status='skipped';if(action==='move'){const index=queueItems.indexOf(item),target=index+(body.direction==='up'?-1:1);if(target>=0&&target<queueItems.length){[queueItems[index],queueItems[target]]=[queueItems[target],queueItems[index]];queueItems.forEach((i,n)=>i.position=n);}}return action?queueView():item;}
@@ -149,6 +149,10 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,run-notebook,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
   const visit=async name=>{
    if(process.env.QA_VERBOSE)console.log('visit',name);
+   if(name==='queue-preflight'){
+    await visit('mission-queue');const check=page.getByRole('button',{name:/^(Проверить пакет|Inspect batch)$/});await check.click();
+    await page.locator('.mq-preflight-check').first().waitFor();return;
+   }
    if(name==='project-doctor'){
     await visit('projects');await page.locator('#projects-list .project-actions button').filter({hasText:/^(Диагностика проекта|Project Doctor)$/}).first().click();
     await page.locator('#project-doctor-panel[aria-busy="false"]').waitFor();return;
@@ -234,6 +238,13 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
       if(name==='replay-confirmation'){await auditDialog('#confirm-dialog',name,language,theme);continue;}
       const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,lang:document.documentElement.lang,theme:document.documentElement.dataset.theme}));
       checks.push({phase,language,theme,name,...dims});
+      if(['mission-queue','queue-preflight','project-doctor'].includes(name)){
+       const overflow=await page.evaluate(()=>[...document.querySelectorAll('.project-card .button,.project-doctor .doctor-fact,.mq-card .button,.mq-preflight-check')].filter(node=>node.getClientRects().length).flatMap(node=>{
+        const panel=node.closest('.project-card,.project-doctor,.mq-card,.mq-preflight'),r=node.getBoundingClientRect(),p=panel.getBoundingClientRect();
+        return r.left<p.left-1||r.right>p.right+1||node.scrollWidth>node.clientWidth+1?[{text:node.textContent.slice(0,90),left:r.left,right:r.right,panelLeft:p.left,panelRight:p.right,scroll:node.scrollWidth,client:node.clientWidth}]:[];
+       }));assert.deepEqual(overflow,[],`${name} card content overflow at ${width}px ${language} ${theme}`);
+      }
+
       if(language==='en'&&theme==='obsidian-violet'&&width===1366){const labels=await page.evaluate(()=>[...document.querySelectorAll('button,label,legend,summary,option,h1,h2,h3,th')].filter(n=>n.getClientRects().length&&!n.closest('pre,code')).map(n=>n.textContent.trim()).filter(text=>/[А-Яа-яЁё]/.test(text)&&!/(?:ТЕСТ|Тестов|тестов|Русский)/.test(text)));for(const text of labels)untranslated.push({name,text});}
 
       if(width===1366&&((theme==='obsidian-violet')||(name==='intelligence'))){
@@ -255,6 +266,16 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   }
   if(process.env.QA_DOCTOR_ONLY==='1'){
    await visit('project-doctor');assert.equal(await page.locator('#project-doctor-panel pre script').count(),0);
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'project-doctor-title');
+   await page.keyboard.press('Tab');assert(/Refresh diagnostics|Обновить диагностику/.test(await page.evaluate(()=>document.activeElement.textContent)));
+   await page.keyboard.press('Tab');assert(/Close diagnostics|Закрыть диагностику/.test(await page.evaluate(()=>document.activeElement.textContent)));
+   // Simulate replacement of the project-card DOM by polling while the panel owns focus.
+   await page.locator('[data-doctor-project]').first().evaluate(button=>button.replaceWith(button.cloneNode(true)));
+   await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>document.activeElement.dataset.doctorProject),project.id);
+   // Restore event-bound cards through normal project refresh before the next scenario.
+   await page.locator('#refresh-button').click();await page.waitForTimeout(100);
+   await visit('project-doctor');
+
    await page.getByRole('button',{name:/^(Закрыть диагностику|Close diagnostics)$/}).click();
    let releaseOld,enteredOld;const startedOld=new Promise(resolve=>enteredOld=resolve);let requests=0;
    await page.route('**/api/projects/*/doctor',async route=>{
