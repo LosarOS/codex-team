@@ -68,3 +68,15 @@ Next: full regression, native Windows workflow on PR, live official SDK availabi
 - Release publication now verifies GitHub-downloaded asset hashes while a draft, then publishes. Artifact-only workflow rejects missing RC11 evidence and skipped source suite.
 
 Next: final combined source regression and Windows build, PR review/merge if green, then GitHub prerelease with actual downloaded asset hashes. Live SDK development remains authentication-blocked pending owner’s official re-login; the attempted run and absent metrics remain disclosed.
+
+## Checkpoint — final source regression, ced1aec
+
+Final Linux Python3.12 regression at frozen source `ced1aecac1569150cb0d9f1dfabf5979eaaac246`: **873 passed,4 skipped,1 deprecation warning,62.14s**. Skips remain the Windows child presentation, two junction cases and explicitly opt-in Docker image test. Node/UI fixture results above remain applicable. During an earlier overlapping edit/test run, the test process retained an older fixture while reading the newly edited workflow; the mixed verification failed. Re-running the unchanged focused test and full suite after freezing source passed; no test was disabled or weakened.
+
+Confirmed release-version defect: `desktop_runtime.VERSION` still hardcoded RC10 while package metadata was RC11. It now imports the package version; regression checks bind desktop/session/backend version to that source. Installed and portable smoke plus fallback publication also reject mismatched runtime version.
+
+The final branch native run is [40004337154](https://github.com/LosarOS/codex-team/actions/runs/40004337154), full source suite enabled and publication disabled. It includes extracted-portable backend/start/restart, Unicode temporary paths, bundled Git discovery, history/settings/queue preservation, Start Menu target, installed repair/uninstall/reinstall and runtime-version gates. Outcomes must be taken from the completed run and staged evidence; queued checks are not PASS.
+
+## Cross-project auth regression after the fix
+
+Actual Engine run `run_3f8712c9e45e` against SHIFT `e054cd00e3d73cf815bae2b1280b98d8d45f01ea` used Implement, standard, isolated=true, auto_commit=false,4-call/1200-second/80000-token limits. The task was bounded uppercase EXE/LNK Doctor regression tests. Engine created a real worktree; the first official SDK turn again encountered the stale refresh token. This time the final state is correctly **AUTH_REQUIRED**. One attempted coordinator call, elapsed1.684s, wall1.74s. Usage and changed-files metrics unavailable, no developer/QA/reviewer output or accepted diff. No paid API fallback. Live AI development remains **NOT VERIFIED** until official ChatGPT/Codex re-authentication and a successful bounded mission.
