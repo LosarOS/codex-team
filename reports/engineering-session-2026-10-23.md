@@ -80,3 +80,15 @@ The final branch native run is [40004337154](https://github.com/LosarOS/codex-te
 ## Cross-project auth regression after the fix
 
 Actual Engine run `run_3f8712c9e45e` against SHIFT `e054cd00e3d73cf815bae2b1280b98d8d45f01ea` used Implement, standard, isolated=true, auto_commit=false,4-call/1200-second/80000-token limits. The task was bounded uppercase EXE/LNK Doctor regression tests. Engine created a real worktree; the first official SDK turn again encountered the stale refresh token. This time the final state is correctly **AUTH_REQUIRED**. One attempted coordinator call, elapsed1.684s, wall1.74s. Usage and changed-files metrics unavailable, no developer/QA/reviewer output or accepted diff. No paid API fallback. Live AI development remains **NOT VERIFIED** until official ChatGPT/Codex re-authentication and a successful bounded mission.
+
+## Checkpoint — Windows archive boundary and real backend UI
+
+Windows native run40004056526 correctly blocked packaging:874passed,1failed,1skipped,641.34s. The new archive test expected a literal backslash, but Python's Windows ZipInfo normalizes names; the test fixture and reader needed to preserve/check the original central-directory name. Fixed in `57e1aa6`: inspect `orig_filename`, construct/assert a real raw-backslash archive and simulate Windows normalization in an additional regression. Focused26passed; no test disabled. Archive/publication guards now run early before the full suite. Superseded known-ineligible native run40004337154 was canceled; corrected [40005922301](https://github.com/LosarOS/codex-team/actions/runs/40005922301) is authoritative when complete.
+
+[Source CI40005929916](https://github.com/LosarOS/codex-team/actions/runs/40005929916), source57e1aa6: **874passed,4skipped,1warning,82.05s**, Node UI smoke and Doctor/preflight contracts passed.
+
+Additional real-backend product review used actual FastAPI/SQLite/Engine and Linux system Chromium, with no mocked HTTP routes or provider substitution. Seven functional assertions passed: registered SHIFT Doctor found six projects and correct provenance/unverified gates; closing returned keyboard focus; explicit UI enqueue saved one pending mission; actual preflight reported models_called=false/provider_verified=false; reload did not start it; RU/EN and Obsidian/Neon settings persisted.173actualbrowserrequests,0JSerrors,0missionstart/runcreationrequests, actualrunslistempty.
+
+Four real `/api/providers` HTTP400 responses were preserved and reproduced: Windows Credential Manager is unavailable on Linux. A visible refresh warning is therefore expected in these Linux screenshots; they are not Windows/WebView2 acceptance. The server PATH also lacks dotnet even though a separate SDK exists outside PATH, and preflight correctly requires attention. No tools were installed silently. The isolated server was shut down normally.
+
+P2 product follow-up: compact the long preflight check list and repeated mission text while retaining raw technical evidence. Do not hide the local-tool/auth limits or imply that preflight predicts provider success.
