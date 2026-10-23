@@ -2,6 +2,18 @@
 ((root) => {
   'use strict';
   const labels = {
+    'Проверить пакет':'Inspect batch', 'Локальная проверка пакета':'Local batch preflight',
+    'Можно подтвердить запуск':'Ready for start confirmation', 'Пакет требует внимания':'Batch needs attention',
+    'Проверка не вызывает модель и не подтверждает вход, лимиты или успешное выполнение.':'Preflight makes no model calls and does not verify authentication, quota or successful execution.',
+    'Вход в аккаунт':'Authentication required', 'Лимит использования':'Usage limit', 'Решение пользователя':'User decision required',
+    'Ошибка запуска':'Failed run', 'Прерванный запуск':'Interrupted run', 'Недопустимый проект':'Invalid workspace',
+    'Доступ запрещён':'Permission denied', 'Пакет изменился':'Stale batch', 'Исход неизвестен':'Unknown outcome',
+    'Связанный запуск':'Linked run', 'Нет подтверждённого запуска':'No confirmed linked run',
+    'После решения проблемы явно запустите оставшиеся задачи. Автоматического повтора нет.':'After resolving the issue, explicitly start the remaining tasks. There is no automatic retry.',
+    'Осталось невыполненных задач':'Unfinished tasks',
+    'Проверка устарела. Проверьте пакет снова.':'Inspection is stale. Inspect the batch again.',
+    'Проверка доступных локальных сведений…':'Inspecting available local facts…',
+
     'Очередь миссий':'Mission queue','ПОДГОТОВИТЬ · ЗАПУСТИТЬ · ПРОВЕРИТЬ':'PREPARE · RUN · REVIEW',
     'Несколько задач. Один управляемый запуск очереди.':'Several tasks. One controlled queue.',
     'Добавьте задания из формы на странице «Обзор». Для каждого сохраняются проект, доступ и лимиты.':'Add tasks from Overview. Each keeps its project, access level and limits.',
@@ -44,15 +56,18 @@
     let snapshot=null,busy=false,loading=false,epoch=0,timer=null,destroyed=false,lastRender='',pendingKey=null,historyExpanded=false;
     const full=new Map(),expanded=new Set();
     const heading=el('div','page-heading');const title=el('div');title.append(el('div','eyebrow',t('ПОДГОТОВИТЬ · ЗАПУСТИТЬ · ПРОВЕРИТЬ')),el('h1','',t('Очередь миссий')),el('p','muted',t('Несколько задач. Один управляемый запуск очереди.')));heading.append(title);
+    let preflightBusy=false;
+    const preflightPanel=el('section','panel mq-preflight');preflightPanel.hidden=true;preflightPanel.setAttribute('aria-live','polite');
+    const preflightButton=button('Проверить пакет',()=>inspectBatch());
     const controls=el('div','button-row');const start=button('Запустить очередь',startQueue,'primary'),pause=button('После текущей задачи',()=>mutate('/pause')),refresh=button('Обновить очередь',()=>load()),compose=button('Подготовить задачу',()=>navigate('workbench'));
-    controls.append(start,pause,refresh,compose);const overview=el('section','panel mq-overview');overview.append(controls);
+    controls.append(preflightButton,start,pause,refresh,compose);const overview=el('section','panel mq-overview');overview.append(controls);
     const badge=el('p','mq-status');badge.setAttribute('role','status');const metrics=el('div','mq-metrics');overview.append(badge,metrics);
     const info=el('div','banner inset mq-guidance');info.append(el('strong','',t('Добавьте задания из формы на странице «Обзор». Для каждого сохраняются проект, доступ и лимиты.')),el('p','',t('Каждая задача выполняется в отдельной изолированной копии Git. Изменения предыдущих задач не переносятся и не сливаются автоматически.')),el('p','',t('При ошибке, запросе решения, паузе или нехватке лимита очередь останавливается. После перезапуска приложения нужно запустить её заново.')));
     info.append(el('p','',t('Лимиты фиксируются при добавлении задачи. Применяется исполнитель, выбранный в настройках на момент запуска.')));
-    const error=el('div','form-error');error.setAttribute('role','alert');error.hidden=true;const list=el('div','mq-list');page.append(heading,overview,info,error,list);
+    const error=el('div','form-error');error.setAttribute('role','alert');error.hidden=true;const list=el('div','mq-list');page.append(heading,overview,preflightPanel,info,error,list);
     const add=button('В очередь',enqueue);add.id='mission-queue-add';anchor.append(add);
     function failure(err){error.hidden=false;error.replaceChildren(el('span','',t(err?.status===0||err?.kind==='network'||err?.kind==='offline'?'Нет связи с сервером. Сохранённые задачи не удалены.':'Не удалось выполнить действие. Обновите очередь и повторите попытку.')));if(err?.message){const details=el('details','raw-details');details.append(el('summary','',t('Технические подробности')),el('pre','code-block',err.message));error.append(details);}lastRender='';}
-    function updateButtons(){add.disabled=busy;start.disabled=busy||!snapshot||['running','blocked'].includes(snapshot.summary.state)||(!snapshot.summary.pending&&!snapshot.summary.active_id);pause.disabled=busy||snapshot?.summary.state!=='running';refresh.disabled=busy||loading;list.querySelectorAll('button').forEach(b=>b.disabled=busy||b.dataset.queueDisabled==='true');page.setAttribute('aria-busy',String(busy||loading));}
+    function updateButtons(){preflightButton.disabled=busy||preflightBusy||!snapshot;add.disabled=busy||preflightBusy;start.disabled=busy||preflightBusy||!snapshot||['running','blocked'].includes(snapshot.summary.state)||(!snapshot.summary.pending&&!snapshot.summary.active_id);pause.disabled=busy||snapshot?.summary.state!=='running';refresh.disabled=busy||loading;list.querySelectorAll('button').forEach(b=>b.disabled=busy||b.dataset.queueDisabled==='true');page.setAttribute('aria-busy',String(busy||loading));}
     function render(){if(!snapshot)return;badge.textContent=t(states[snapshot.summary.state]);const values=[['Ожидают',snapshot.items.filter(i=>i.status==='pending').length],['Выполняется',snapshot.items.filter(i=>i.status==='running'||i.status==='dispatching').length],['Завершены',snapshot.items.filter(i=>i.status==='done').length],['Лимит вызовов очереди',snapshot.summary.total_pending_call_limit??'—']];metrics.replaceChildren(...values.map(([label,value])=>{const m=el('div','mq-metric');m.append(el('span','muted',t(label)),el('strong','',String(value)));return m;}));
       const key=JSON.stringify(snapshot);if(key===lastRender){updateButtons();return;}lastRender=key;
       const focused=root.document.activeElement,focusId=focused?.dataset?.queueItem,focusAction=focused?.dataset?.queueAction;
@@ -60,7 +75,10 @@
       const history=el('details','mq-history');history.open=historyExpanded;history.append(el('summary','',t('История очереди')));const historyList=el('div','mq-list');history.append(historyList);history.addEventListener('toggle',()=>{historyExpanded=history.open;});
       for(const item of snapshot.items){const card=el('article','panel mq-card mq-'+item.status);card.dataset.queueItem=item.id;card.dataset.access=item.access_level;const line=el('div','mq-card-heading');line.append(el('span','mq-position',String(item.position+1)),el('h2','',item.task.split(/\r?\n/)[0].slice(0,160)+(item.task.split(/\r?\n/)[0].length>160?'…':'')),el('span','tiny-badge',t(statusLabels[item.status])));card.append(line,el('p','mq-path',item.workspace));
         const facts=el('div','mq-facts');facts.append(el('span','tiny-badge',t({'standard':'Рабочая папка','read-only':'Только чтение','full-access':'Полный доступ'}[item.access_level]||'Рабочая папка')),el('span','',`${item.max_agent_calls??'—'} ${t('вызовов')}`),el('span','',`${item.max_run_duration!==undefined?Math.round(item.max_run_duration/60*100)/100:'—'} ${t('мин')}`));facts.append(el('span','tiny-badge',t({quick:'Быстрый',standard:'Стандартный',deep:'Глубокий',audit:'Аудит',plan:'Планирование',implement:'Реализация'}[item.mode]||item.mode)),el('span','',`${t('Автокоммит')}: ${t(item.auto_commit?'Да':'Нет')}`),el('span','',`${t('Токеновый бюджет')}: ${item.max_total_tokens??t('не задан')}`));card.append(facts);
-        if(item.status==='blocked')card.append(el('p','mq-warning',t('Продолжите связанный запуск или пропустите задачу.')));
+        if(item.status==='blocked'){
+          const reasons={authentication_required:'Вход в аккаунт',usage_limit:'Лимит использования',user_decision:'Решение пользователя',failed_run:'Ошибка запуска',interrupted_run:'Прерванный запуск',invalid_workspace:'Недопустимый проект',permission_denied:'Доступ запрещён',stale_batch:'Пакет изменился',unknown_outcome:'Исход неизвестен'};
+          card.append(el('strong','mq-warning',t(reasons[item.diagnostic?.code]||'Исход неизвестен')),el('p','mono',t('Связанный запуск')+': '+(item.run_state||t('Нет подтверждённого запуска'))),el('p','',t('Продолжите связанный запуск или пропустите задачу.')),el('p','muted',t('После решения проблемы явно запустите оставшиеся задачи. Автоматического повтора нет.')),el('p','muted',t('Осталось невыполненных задач')+': '+snapshot.items.filter(i=>['pending','blocked','running'].includes(i.status)).length));
+        }
         if(item.reason){const details=el('details','raw-details');details.append(el('summary','',t('Технические подробности')),el('pre','code-block',String(item.reason)));card.append(details);}
         const row=el('div','button-row');const action=(label,fn)=>{const b=button(label,fn);b.dataset.queueItem=item.id;b.dataset.queueAction=label;row.append(b);return b;};
         if(item.run_id)action('Открыть запуск',()=>openRun(item.run_id));
@@ -73,7 +91,26 @@
     function accept(value){if(!valid(value))throw Error(t('Данные очереди недоступны. Обновите приложение.'));snapshot=value;render();}
     async function load(){if(destroyed||busy||loading)return;const version=++epoch;loading=true;if(!snapshot)badge.textContent=t('Загрузка очереди…');updateButtons();try{const value=await api('/api/mission-queue');if(!destroyed&&version===epoch){accept(value);error.hidden=true;}}catch(err){if(!destroyed&&version===epoch)failure(err);}finally{if(version===epoch){loading=false;updateButtons();}}}
     async function mutate(path,body={}){if(busy||destroyed)return false;busy=true;loading=false;++epoch;updateButtons();try{const value=await api('/api/mission-queue'+path,'POST',body);if(!destroyed){accept(value);error.hidden=true;}return true;}catch(err){if(!destroyed)failure(err);return false;}finally{busy=false;if(!destroyed){updateButtons();schedule();}}}
-    async function startQueue(){if(busy||!snapshot)return;const current=JSON.stringify(snapshot);if(!await confirm(t('Запустить сохранённые задачи?'),t('Задачи выполняются последовательно через выбранного исполнителя и могут расходовать его лимит. Проверьте доступ и лимиты карточек. Полный доступ действует для задач, где вы уже подтвердили его.'),t('Продолжить только после успеха'),t('Запустить очередь')))return;if(JSON.stringify(snapshot)!==current){await load();return;}await mutate('/start',{confirmed:true,item_ids:snapshot.items.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id)});}
+    async function inspectBatch(){
+      if(busy||preflightBusy||!snapshot||destroyed)return null;
+      const captured=JSON.stringify(snapshot),ids=snapshot.items.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id);
+      preflightBusy=true;updateButtons();preflightPanel.hidden=false;preflightPanel.replaceChildren(el('h2','',t('Локальная проверка пакета')),el('p','',t('Проверка доступных локальных сведений…')));
+      try{
+        const report=await api('/api/mission-queue/preflight','POST',{item_ids:ids});
+        if(destroyed)return null;
+        if(JSON.stringify(snapshot)!==captured){preflightPanel.replaceChildren(el('p','mq-warning',t('Проверка устарела. Проверьте пакет снова.')));return null;}
+        if(!report||report.schema_version!==1||typeof report.ready!=='boolean'||!Array.isArray(report.checks)||!/^[a-f0-9]{64}$/.test(report.queue_revision)||JSON.stringify(report.item_ids)!==JSON.stringify(ids))throw Error(t('Данные очереди недоступны. Обновите приложение.'));
+        preflightPanel.replaceChildren(el('h2','',t('Локальная проверка пакета')),el('strong',report.ready?'':'mq-warning',t(report.ready?'Можно подтвердить запуск':'Пакет требует внимания')),el('p','muted',t('Проверка не вызывает модель и не подтверждает вход, лимиты или успешное выполнение.')));
+        for(const c of report.checks){const row=el('p',c.status==='error'?'mq-warning':'muted');row.textContent=(c.status==='error'?'! ':'✓ ')+c.code+(c.item_id?' · '+c.item_id:'')+' — '+c.detail;preflightPanel.append(row);}
+        return {report,captured};
+      }catch(err){if(!destroyed)failure(err);return null;}
+      finally{preflightBusy=false;if(!destroyed)updateButtons();}
+    }
+    async function startQueue(){if(busy||preflightBusy||!snapshot)return;const inspected=await inspectBatch();if(!inspected?.report.ready)return;
+      if(!await confirm(t('Запустить сохранённые задачи?'),t('Задачи выполняются последовательно через выбранного исполнителя и могут расходовать его лимит. Проверьте доступ и лимиты карточек. Полный доступ действует для задач, где вы уже подтвердили его.'),t('Продолжить только после успеха'),t('Запустить очередь')))return;
+      if(JSON.stringify(snapshot)!==inspected.captured){preflightPanel.replaceChildren(el('p','mq-warning',t('Проверка устарела. Проверьте пакет снова.')));await load();return;}
+      await mutate('/start',{confirmed:true,item_ids:inspected.report.item_ids,expected_revision:inspected.report.queue_revision});
+    }
     async function enqueue(){if(busy||destroyed||!canAdd())return;let data;try{data=read();if(!data)return;if(data.isolated!==true){notify(t('Для очереди включите изолированную рабочую копию Git.'),true);return;}}catch(err){notify(err.message,true);return;}const original=JSON.stringify(data);busy=true;loading=false;++epoch;updateButtons();try{if(!await confirmAccess(data.access_level))return;if(!await confirm(t('Добавить задачу в очередь?'),t('Задача сохранится локально. Выполнение начнётся только после отдельного запуска очереди. Текущий черновик останется в форме.'),data.task,t('В очередь')))return;if(!canAdd()||JSON.stringify(read())!==original){notify(t('Форма изменилась во время подтверждения. Добавьте задачу ещё раз.'),true);return;}
         if(!pendingKey||pendingKey.fingerprint!==original)pendingKey={fingerprint:original,id:root.crypto.randomUUID()};
         const request={...data,...(data.access_level==='full-access'?{confirmed_full_access:true}:{})};await api('/api/mission-queue','POST',{request,client_id:pendingKey.id});pendingKey=null;notify(t('Задача добавлена в очередь.'));navigate('mission-queue');

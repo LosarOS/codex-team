@@ -44,6 +44,7 @@ function fixture(url,method,body){const p=url.pathname;
  if(p==='/api/mission-queue'){
   if(method==='POST'){const old=queueItems.find(i=>i.client_id===body.client_id);if(old)return old;const item={id:'fixture-mission-'+(++queueSequence),client_id:body.client_id,position:queueItems.length,status:'pending',task:body.request.task.slice(0,400),workspace:body.request.workspace,mode:body.request.mode,run_id:null,run_state:null,reason:null,access_level:body.request.access_level,isolated:true,auto_commit:body.request.auto_commit,max_agent_calls:body.request.max_agent_calls,max_run_duration:body.request.max_run_duration,max_total_tokens:null,request:body.request};queueItems.push(item);return item;}return queueView();
  }
+ if(p==='/api/mission-queue/preflight')return {schema_version:1,ready:!queueItems.some(i=>i.status==='blocked'),queue_revision:'a'.repeat(64),item_ids:queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id),checks:[{code:'workspace',status:'ready',detail:'TEST FIXTURE: local workspace declared clean',provenance:'discovered'}],provider_verified:false,models_called:false};
  if(p==='/api/mission-queue/start'){if(body.confirmed!==true)return {__status:400,detail:'TEST: explicit confirmation required'};if(JSON.stringify(body.item_ids)!==JSON.stringify(queueItems.filter(i=>['pending','running'].includes(i.status)).map(i=>i.id)))return {__status:409,detail:'TEST: stale queue snapshot'};queueState='running';const first=queueItems.find(i=>i.status==='pending');if(first){first.status='running';first.run_id=run.id;first.run_state='RUNNING';}return queueView();}
  if(p==='/api/mission-queue/pause'){queueState='paused';return queueView();}
  if(p.startsWith('/api/mission-queue/')){const [id,action]=p.slice('/api/mission-queue/'.length).split('/');const item=queueItems.find(i=>i.id===id);if(!item)return {__status:404,detail:'TEST: missing mission'};if(action==='skip')item.status='skipped';if(action==='move'){const index=queueItems.indexOf(item),target=index+(body.direction==='up'?-1:1);if(target>=0&&target<queueItems.length){[queueItems[index],queueItems[target]]=[queueItems[target],queueItems[index]];queueItems.forEach((i,n)=>i.position=n);}}return action?queueView():item;}
@@ -99,6 +100,7 @@ function fixture(url,method,body){const p=url.pathname;
  if(p==='/health')return {status:'ok',version:'fixture-only',checks:{backend:true}};
  if(p==='/api/providers')return {active:'codex_chatgpt',codex:{status:'CONNECTED'},openai_api:{configured:false}};
  if(p==='/api/projects')return [project];
+ if(p==='/api/projects/'+project.id+'/doctor')return {schema_version:1,project_id:project.id,head:'a'.repeat(40),project_type:'windows_dotnet',environment:{os:'Linux',architecture:'x86_64',dotnet_sdks:['10.0.402']},sdk_requirements:[{version:'10.0.402',source:'global.json'}],projects:[{path:'src/ТЕСТОВЫЕ ДАННЫЕ.csproj',frameworks:['net10.0-windows10.0.19041.0']}],solutions:[{path:'SHIFT.sln'}],checks:['source_compilation','tests','windows_publish','installer_smoke','interactive_gui','release_artifacts'].map(id=>({id,status:'not_verified',provenance:'discovered'})),recommendations:[{argv:['dotnet','build','./src/ТЕСТОВЫЕ ДАННЫЕ.csproj']}],warnings:[]};
  if(p==='/api/runs'){const items=fixtureRuns.map(runMetadata).filter(item=>url.searchParams.get('favorite')!=='true'||item.notebook.favorite);return {items,total:items.length};}if(p==='/api/runs/fixture-run')return run;if(p==='/api/runs/fixture-run-2')return secondRun;if(p.endsWith('/events'))return {items:[{id:1,type:'agent_started',role:'developer',created_at:'2026-10-15T10:00:00Z',payload:{iteration:1,call:2}},{id:2,type:'item/completed',role:'developer',created_at:'2026-10-15T10:00:01Z',payload:{item:{type:'commandExecution',command:'git status',status:'completed',exitCode:0}}}],next_cursor:2,has_more:false};if(p.endsWith('/diff'))return {diff:'+ Тестовое изменение\n',diff_stat:'1 file changed',has_more:false,total_lines:1};
  if(p==='/api/actions')return [{id:'fixture-action',run_id:run.id,role:'developer',kind:'permission',reason:'ТЕСТ: разрешение команды',command:'git status',cwd:run.workspace,risk:'low',allowed_decisions:['deny'],questions:[]}];if(p==='/api/agents')return defaultAgents;if(p==='/api/packs')return defaultPacks;
  if(p==='/api/models')return {data:[]};if(p==='/api/usage')return {available:false};
@@ -147,6 +149,10 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
   const screens=(process.env.QA_SCREENS||'workbench,projects,runs-list,runs,run-notebook,agents,packs,history,actions,usage,settings,intelligence,architect,budget,git,qa').split(',');
   const visit=async name=>{
    if(process.env.QA_VERBOSE)console.log('visit',name);
+   if(name==='project-doctor'){
+    await visit('projects');await page.locator('#projects-list .project-actions button').filter({hasText:/^(Диагностика проекта|Project Doctor)$/}).first().click();
+    await page.locator('#project-doctor-panel[aria-busy="false"]').waitFor();return;
+   }
    if(await page.locator('#confirm-dialog[open]').count()){
     if(name==='replay-composer'){await page.locator('#confirm-accept').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});await page.locator('#compose-replay-note').waitFor();return;}
     await page.locator('#confirm-cancel').click();await page.locator('#confirm-dialog').waitFor({state:'hidden'});
@@ -235,7 +241,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
       }
      }
     // Optional focused matrix avoids unrelated rc7 dialogs while testing rc8 integrations.
-    if(process.env.QA_NOTEBOOK_ONLY==='1'||process.env.QA_REPLAY_ONLY==='1'||process.env.QA_QUEUE_ONLY==='1')continue;
+    if(process.env.QA_NOTEBOOK_ONLY==='1'||process.env.QA_REPLAY_ONLY==='1'||process.env.QA_QUEUE_ONLY==='1'||process.env.QA_DOCTOR_ONLY==='1')continue;
     // rc7 dialogs receive the same requested RU/EN, theme and viewport coverage as pages.
     await visit('workbench');
     await page.locator('#task-templates-open').click();await page.locator('[data-template-id="fixture-template-1"]').click();await page.locator('#task-template-save').waitFor();await page.waitForFunction(()=>!document.querySelector('#task-template-name').disabled);
@@ -246,6 +252,16 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
     await auditDialog('#run-comparison','run-comparison',language,theme);await page.locator('.run-comparison-close').click();
     }
    }
+  }
+  if(process.env.QA_DOCTOR_ONLY==='1'){
+   await visit('project-doctor');assert.equal(await page.locator('#project-doctor-panel pre script').count(),0);
+   await page.getByRole('button',{name:/^(Закрыть диагностику|Close diagnostics)$/}).click();await page.locator('#project-doctor-panel').waitFor({state:'hidden'});
+   await page.route('**/api/projects/*/doctor',route=>route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({detail:'TEST: denied'})}));
+   await visit('project-doctor');await page.locator('#project-doctor-panel [role="alert"]').waitFor();await page.unroute('**/api/projects/*/doctor');
+   await page.getByRole('button',{name:/^(Обновить диагностику|Refresh diagnostics)$/}).click();await page.locator('#project-doctor-panel[aria-busy="false"] .doctor-grid').first().waitFor();
+   assert(!writes.some(w=>w.path.includes('/doctor')||w.path==='/api/runs'||w.path.includes('/test')));
+   assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);assert(contrast.every(c=>c.ratio>=4.5));
+   console.log(JSON.stringify({checks:checks.length,errors,unknown,untranslated,fixtureOnly:true,windowsDpi:false,doctor:'read-only panel, close, denied error, retry, separate validation gates'}));return;
   }
   if(process.env.QA_QUEUE_ONLY==='1'){
    queueItems=[];queueState='paused';
@@ -260,7 +276,7 @@ const server=http.createServer((req,res)=>{res.setHeader('X-Content-Type-Options
    await page.waitForFunction(()=>!document.querySelector('.toast-region .toast'));await captureCurated('mission-queue');
    await page.getByRole('button',{name:'Запустить очередь',exact:true}).click();await page.locator('#confirm-dialog[open]').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,0);await captureCurated('mission-queue-confirmation','#confirm-dialog');await page.locator('#confirm-accept').click();await page.locator('.mq-running').waitFor();assert.equal(writes.filter(w=>w.path==='/api/mission-queue/start').length,1);assert.deepEqual(writes.find(w=>w.path==='/api/mission-queue/start').body.item_ids,queueItems.map(i=>i.id));
    await page.getByRole('button',{name:'После текущей задачи',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.mq-status')?.textContent==='Очередь приостановлена');assert.equal(queueItems[0].status,'running');assert.equal(writes.filter(w=>w.path.includes('/control')).length,0);
-   queueItems[0].status='blocked';queueItems[0].run_state='AUTH_REQUIRED';queueItems[0].reason='ТЕСТОВЫЕ ДАННЫЕ: нужен вход, следующая задача не запущена.';queueState='blocked';await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('.mq-blocked').waitFor();assert(await page.getByRole('button',{name:'Запустить очередь',exact:true}).isDisabled());await captureCurated('mission-queue-blocked');
+   queueItems[0].status='blocked';queueItems[0].run_state='AUTH_REQUIRED';queueItems[0].diagnostic={code:'authentication_required'};queueItems[0].reason='ТЕСТОВЫЕ ДАННЫЕ: нужен вход, следующая задача не запущена.';queueState='blocked';await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('.mq-blocked').waitFor();assert(await page.getByRole('button',{name:'Запустить очередь',exact:true}).isDisabled());await captureCurated('mission-queue-blocked');
    await page.locator('.mq-blocked').getByRole('button',{name:'Пропустить',exact:true}).click();await page.locator('#confirm-cancel').click();assert.equal(queueItems[0].status,'blocked');await page.locator('.mq-blocked').getByRole('button',{name:'Пропустить',exact:true}).click();await page.locator('#confirm-accept').click();await page.waitForFunction(()=>document.querySelector('.mq-skipped'));assert.equal(queueItems[1].status,'pending');
    await page.route('**/api/mission-queue',r=>r.abort());await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('#page-mission-queue .form-error').waitFor();assert.equal(queueItems.length,2);await page.unroute('**/api/mission-queue');await page.getByRole('button',{name:'Обновить очередь',exact:true}).click();await page.locator('#page-mission-queue .form-error').waitFor({state:'hidden'});
    assert(!writes.some(w=>w.path==='/api/runs'||w.path.includes('/control')||w.path.includes('/login')||w.path.includes('/test')),'Queue UI must use only queue endpoints, not execute fixtures');assert.deepEqual(errors,[]);assert.deepEqual(unknown,[]);assert.deepEqual(untranslated,[]);assert.deepEqual(checks.filter(c=>c.scroll>c.width+1),[]);assert(contrast.every(c=>c.ratio>=4.5));

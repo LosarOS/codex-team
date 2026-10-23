@@ -29,3 +29,18 @@ def test_queue_api_requires_isolation_and_per_task_full_access_consent(local_app
     assert client.get('/api/mission-queue').json()['items']==[] and store.runs()==[]
     for name in ['mission-queue.js','mission-queue.css']:
         assert client.get('/'+name).status_code==200
+
+
+def test_preflight_api_checks_local_workspace_without_creating_run(local_app):
+    client, app, _, store, repo = local_app
+    response = client.post('/api/mission-queue', json={'client_id': str(uuid.uuid4()), 'request': {'workspace': str(repo), 'task': 'Inspect only'}})
+    identity = response.json()['id']
+    before = store.db.execute('SELECT data FROM mission_queue').fetchall()
+    response = client.post('/api/mission-queue/preflight', json={'item_ids': [identity]})
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert report['schema_version'] == 1 and report['provider_verified'] is False
+    assert len(report['queue_revision']) == 64
+    assert store.runs() == [] and store.db.execute('SELECT data FROM mission_queue').fetchall() == before
+    assert client.post('/api/mission-queue/preflight', json={'item_ids': [], 'execute': True}).status_code == 422
+    assert client.post('/api/mission-queue/preflight', json={'item_ids': [identity]}, headers={'origin':'https://evil.invalid'}).status_code == 403

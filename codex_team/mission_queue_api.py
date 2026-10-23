@@ -14,6 +14,11 @@ class Enqueue(BaseModel):
 class StartQueue(BaseModel):
     model_config = ConfigDict(extra='forbid')
     confirmed: StrictBool = False
+    expected_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    item_ids: list[str] = Field(max_length=20)
+
+class Preflight(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     item_ids: list[str] = Field(max_length=20)
 
 class Move(BaseModel):
@@ -34,9 +39,12 @@ def create_queue_router(queue):
     @router.post('')
     def enqueue(body: Enqueue):
         return call(queue.enqueue, body.request, body.client_id)
+    @router.post('/preflight')
+    def preflight(body: Preflight):
+        return call(queue.preflight, body.item_ids)
     @router.post('/start')
     def start(body: StartQueue):
-        return call(queue.start, body.confirmed, body.item_ids)
+        return call(queue.start, body.confirmed, body.item_ids, body.expected_revision)
     @router.post('/pause')
     def pause():
         return call(queue.pause)
