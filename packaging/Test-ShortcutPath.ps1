@@ -22,7 +22,7 @@ OutputBaseFilename=shortcut-diagnostic
 [Files]
 Source: "CodexTeam.exe"; DestDir: "{app}"
 [Icons]
-Name: "{app}\Launch"; Filename: "{app}\CodexTeam.exe"; WorkingDir: "{app}"
+Name: "{app}\links\Launch"; Filename: "{app}\CodexTeam.exe"; WorkingDir: "{app}"
 '@
 $script | Set-Content -LiteralPath (Join-Path $root 'diagnostic.iss') -Encoding utf8BOM
 & $compiler (Join-Path $root 'diagnostic.iss')
@@ -30,11 +30,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Diagnostic compiler failed.' }
 $setup = Start-Process -FilePath (Join-Path $root 'shortcut-diagnostic.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',('/DIR="' + $installation + '"')) -Wait -PassThru
 if ($setup.ExitCode -ne 0) { throw 'Diagnostic setup failed.' }
 $shell = New-Object -ComObject WScript.Shell
-$link = $shell.CreateShortcut((Join-Path $installation 'Launch.lnk'))
+$rawLinkPath = Join-Path $installation 'links/Launch.lnk'
+$normalizedLinkPath = [IO.Path]::GetFullPath($rawLinkPath)
+$link = $shell.CreateShortcut($rawLinkPath)
+$normalizedLink = $shell.CreateShortcut($normalizedLinkPath)
 try {
-    [ordered]@{ expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; target_exists = (Test-Path -LiteralPath $link.TargetPath); directory_exists = (Test-Path -LiteralPath $link.WorkingDirectory) } | ConvertTo-Json | Write-Output
+    [ordered]@{ expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (Test-Path -LiteralPath $link.TargetPath); directory_exists = (Test-Path -LiteralPath $link.WorkingDirectory) } | ConvertTo-Json | Write-Output
 } finally {
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($link)
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($normalizedLink)
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
     Remove-Item -LiteralPath $root -Recurse -Force
 }
