@@ -92,3 +92,37 @@ Additional real-backend product review used actual FastAPI/SQLite/Engine and Lin
 Four real `/api/providers` HTTP400 responses were preserved and reproduced: Windows Credential Manager is unavailable on Linux. A visible refresh warning is therefore expected in these Linux screenshots; they are not Windows/WebView2 acceptance. The server PATH also lacks dotnet even though a separate SDK exists outside PATH, and preflight correctly requires attention. No tools were installed silently. The isolated server was shut down normally.
 
 P2 product follow-up: compact the long preflight check list and repeated mission text while retaining raw technical evidence. Do not hide the local-tool/auth limits or imply that preflight predicts provider success.
+
+## Final review and merge — 19:31 UTC
+
+PR16 merged as `4c3c91eb6f6e682745569b8fd7d2ffdf39fbe595` after source CI at `ad550494608db072008166aa357df86429d5cd0f` passed **874 tests / 4 skipped** and native Unicode shortcut positive/negative checks passed. Independent packaging review found no remaining blocker in source binding, hash/size checks, native smoke flags, skipped-suite rejection or draft-first publication.
+
+[Diagnostic native40010564404](https://github.com/LosarOS/codex-team/actions/runs/40010564404) passed actual frozen packaging, extracted portable/restart and expanded installed/shortcut/repair/uninstall/preservation/reinstall checks. Its full source suite was explicitly skipped to isolate the corrected shortcut reader. Its artifacts are **ineligible for release**. The final full master push build is [40011993846](https://github.com/LosarOS/codex-team/actions/runs/40011993846); publication remains blocked until that complete run succeeds.
+
+The diagnostic bundle checked49 required files out of3218; official CLI0.162.1, bundled Git2.56.0.windows.2, Python3.12.10. This is Windows backend/packaging evidence, not interactive WebView2 acceptance. No inference was performed by native smoke.
+
+Documentation review found stale RC1 installation/history/updater statements in the current user guide. Updated guide, limitations and release checklist distinguish current evidence, historical reports, manual updater and remaining GUI gates. Raw cross-project summaries and real-backend browser results are retained in `reports/rc11/`; no credentials, private data roots, invented diffs or zero-filled token metrics are published.
+
+P2 follow-up: compact long preflight cards, then conduct physical Windows10/11 WebView2, DPI/text/keyboard/screen-reader and GUI portable-profile acceptance. P3 visual experimentation remains deferred. No schema migration, permission expansion, automatic retry/merge or paid API fallback was introduced.
+
+## Public RC11 release — final checkpoint
+
+Status: **VERIFIED PRERELEASE WITH DISCLOSED LIMITATIONS**. [Public release](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11), binary/tag source `4c3c91eb6f6e682745569b8fd7d2ffdf39fbe595`. PR16 merged; no source schema migration or permission expansion.
+
+- [Final full Windows master build40011993846](https://github.com/LosarOS/codex-team/actions/runs/40011993846): SUCCESS, Windows Server2025 x64 / Python3.12.10. **877 passed,1 skipped,1 deprecation warning**, pytest957.85s (JUnit957.749s). The22 early packaging tests are a subset, not an additional total. Only the opt-in Docker case skipped.
+- [Publication40015374294](https://github.com/LosarOS/codex-team/actions/runs/40015374294): SUCCESS. Downloaded the successful push artifact, enforced native gates, uploaded draft, re-downloaded GitHub binary assets and verified SHA256 before publication.
+- Independently downloaded all three public binaries without a GitHub credential: HTTP200, exact nonzero sizes, SHA256 matched published SHA256SUMS and GitHub asset digests. Tag resolved to the same binary source. [Machine-readable proof](rc11/public-release-verification.json).
+
+| Asset | Bytes | SHA256 |
+|---|---:|---|
+| CodexTeam-Portable-x64.zip | 249646520 | 027644b7edf053d282536a74c1385938a531a0644dab68d8d565594ea2534006 |
+| CodexTeam-Setup-x64.exe | 155639105 | 7ae495f8aefa402205496b8a83a10159561528e1a42c7d7c52b06480ed1ed82f |
+| CodexTeam-Setup-x64.zip | 155173867 | 40e22d858ae887e7badfc1d697d6f0e7975699b3a583ff2b81259688de20e2f7 |
+
+Public `installed-smoke.json` independently inspected: real installed backend, Start Menu Unicode target/directory, Doctor, queue preflight, same-version repair, settings/history/notes/drafts/templates and pending queue restart, updater check, uninstall/profile preservation and reinstall/restart are true. Public portable proof confirms archive CRC, extracted frozen startup/restart and settings/history/pending queue preservation. Both record zero model/account calls. The saved history fixture is explicitly synthetic.
+
+`native_gui_verified=false` and `gui_portable_marker_selection_verified=false` remain explicit. No interactive WebView2/physical Windows10/11/DPI/Narrator acceptance or successful live SDK development is claimed. Same-version repair is not exhaustive older-release migration. Unsigned binaries may trigger SmartScreen. [Manual release checklist](../docs/RELEASE_CHECKLIST.md).
+
+Final source CI remains874passed/4skipped on Linux Python3.12.14; Node/UI contracts passed. Browser fixture matrix216 combinations and seven real-backend functional checks retain the environment limits above. Advisory lookup:40 exact desktop pins, zero known findings after the two dependency updates; not an exhaustive native/OS security audit.
+
+The final documentation-only follow-up updates the current user guide, limitations/checklist, historical-report notice and sanitized evidence. It does not rebuild/replace any published asset, move the release tag or change application code.

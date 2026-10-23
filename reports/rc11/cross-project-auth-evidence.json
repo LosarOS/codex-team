@@ -1,0 +1,63 @@
+{
+  "status": "NOT VERIFIED — authentication blocked",
+  "backend": "official Codex SDK / ChatGPT",
+  "paid_api_fallback": false,
+  "runs": [
+    {
+      "run_id": "run_77db24332f14",
+      "shift_source_commit": "a8bfe05b7c5ede8c465a269e4c19285339dd69e1",
+      "mode": "implement",
+      "permission_profile": "standard",
+      "isolated": true,
+      "auto_commit": false,
+      "limits": {
+        "max_agent_calls": 4,
+        "max_total_tokens": 80000,
+        "max_run_duration": 1200
+      },
+      "worktree_created": true,
+      "final_state": "FAILED",
+      "error": "Your access token could not be refreshed because you have since logged out or signed in to another account. Please sign in again.",
+      "attempted_agent_calls": 1,
+      "current_role": "coordinator",
+      "engine_elapsed_seconds": 3.3829017750003914,
+      "observed_wall_seconds": 3.44,
+      "usage_total": null,
+      "changed_files": null,
+      "developer_qa_review_executed": false,
+      "accepted_diff": null,
+      "codex_team_source_commit": null,
+      "source_limit": "Codex Team HEAD was not captured atomically for the first attempt; no exact source claim is made."
+    },
+    {
+      "run_id": "run_3f8712c9e45e",
+      "shift_source_commit": "e054cd00e3d73cf815bae2b1280b98d8d45f01ea",
+      "mode": "implement",
+      "permission_profile": "standard",
+      "isolated": true,
+      "auto_commit": false,
+      "limits": {
+        "max_agent_calls": 4,
+        "max_total_tokens": 80000,
+        "max_run_duration": 1200
+      },
+      "worktree_created": true,
+      "final_state": "AUTH_REQUIRED",
+      "error": "Your access token could not be refreshed because you have since logged out or signed in to another account. Please sign in again.",
+      "attempted_agent_calls": 1,
+      "current_role": "coordinator",
+      "engine_elapsed_seconds": 1.6843881979984872,
+      "observed_wall_seconds": 1.74,
+      "usage_total": null,
+      "changed_files": null,
+      "developer_qa_review_executed": false,
+      "accepted_diff": null,
+      "codex_team_source_commit": "ced1aecac1569150cb0d9f1dfabf5979eaaac246"
+    }
+  ],
+  "limitations": [
+    "An account-read CONNECTED result did not prove a successful agent turn.",
+    "The second real attempt verified AUTH_REQUIRED classification only.",
+    "No token count or completed development/QA/review result was available."
+  ]
+}

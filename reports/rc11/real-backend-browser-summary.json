@@ -1,0 +1,42 @@
+{
+  "status": "FUNCTIONAL_CHECKS_PASSED_WITH_ENVIRONMENT_LIMITATIONS",
+  "source_commit": "57e1aa6cb8419a7df3f33d15fafff33b6eed55a8",
+  "timestamp_utc": "2026-10-23T18:52:22.609097+00:00",
+  "environment": "Linux x86_64, system Chromium, actual FastAPI/SQLite/Engine; no HTTP fixture routes, provider substitutions or mock responses",
+  "checks": [
+    "Actual UI opened registered SHIFT Doctor, six .NET projects, WinUI detection, correct source SHA, separate unverified Windows gates",
+    "Closing Doctor restored current project button focus",
+    "Actual UI enqueue required explicit confirmation and saved exactly one pending mission without a run",
+    "Actual UI rendered read-only preflight with provider_verified=false and models_called=false",
+    "Page reload retained pending mission without starting it",
+    "Actual settings persisted Obsidian Violet/Russian then Neon Blue/English; Doctor/preflight labels checked in both languages",
+    "No page JavaScript errors; no mission start or run creation request; actual run list remains empty"
+  ],
+  "original_strict_zero_http_assertion": "FAILED on four real /api/providers400 responses; preserved as environment evidence",
+  "js_errors": [],
+  "http_failures": [
+    {
+      "path": "/api/providers",
+      "status": 400
+    },
+    {
+      "path": "/api/providers",
+      "status": 400
+    },
+    {
+      "path": "/api/providers",
+      "status": 400
+    },
+    {
+      "path": "/api/providers",
+      "status": 400
+    }
+  ],
+  "environment_limitations": [
+    "Production WindowsSecretStore requires Windows Credential Manager. /api/providers returns400 on Linux and the UI shows its refresh warning. This is not Windows GUI acceptance.",
+    "The server PATH lacks dotnet, so local tools preflight requires attention although an SDK exists in a separate directory outside PATH. No tool was installed or PATH changed silently.",
+    "Official account discovery may occur during UI status; no inference/start request was made. No usage/token metrics are claimed."
+  ],
+  "actual_request_count": 173,
+  "windows_webview2_acceptance": false
+}
