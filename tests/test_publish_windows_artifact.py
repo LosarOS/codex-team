@@ -76,6 +76,11 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
             exec(script, {})
         smoke[gate] = True
     path.write_text(json.dumps(smoke))
+    portable['runtime_version'] = '1.0.0-rc10'
+    (root / 'portable-smoke.json').write_text(json.dumps(portable))
+    with pytest.raises(AssertionError):
+        exec(script, {})
+    portable['runtime_version'] = '1.0.0-rc11'
     portable['portable_backend_verified'] = False
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     with pytest.raises(AssertionError, match='Missing portable release gate'):
