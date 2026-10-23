@@ -35,7 +35,7 @@ $normalizedLinkPath = [IO.Path]::GetFullPath($rawLinkPath)
 $link = $shell.CreateShortcut($rawLinkPath)
 $normalizedLink = $shell.CreateShortcut($normalizedLinkPath)
 try {
-    [ordered]@{ expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (Test-Path -LiteralPath $link.TargetPath); directory_exists = (Test-Path -LiteralPath $link.WorkingDirectory) } | ConvertTo-Json | Write-Output
+    [ordered]@{ expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (-not [string]::IsNullOrWhiteSpace($link.TargetPath) -and (Test-Path -LiteralPath $link.TargetPath)); directory_exists = (-not [string]::IsNullOrWhiteSpace($link.WorkingDirectory) -and (Test-Path -LiteralPath $link.WorkingDirectory)) } | ConvertTo-Json | Write-Output
 } finally {
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($link)
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($normalizedLink)
