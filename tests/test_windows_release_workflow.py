@@ -70,10 +70,10 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
 
 
 def test_release_uses_russian_notes_from_the_same_verified_source():
-    assert 'docs/releases/v1.0.0-rc10.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
-    notes = (ROOT / 'docs/releases/v1.0.0-rc10.md').read_text(encoding='utf-8')
+    notes = (ROOT / 'docs/releases/v1.0.0-rc11.md').read_text(encoding='utf-8')
     for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
         assert label in notes
 

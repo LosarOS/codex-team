@@ -1,0 +1,24 @@
+name: Source validation
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test]' psutil==7.2.2 pillow==12.3.0 pydantic==2.14.0 pydantic-core==2.50.0 starlette==1.7.0
+      - run: python -m pytest -q --junitxml=test-results.xml
+      - run: |
+          node tests/ui_smoke.cjs codex_team/static
+          node tests/mission_queue.cjs
+          node tests/project_doctor.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: source-test-results
+          path: test-results.xml

@@ -505,7 +505,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"mission-queue.js": "text/javascript", "mission-queue.css": "text/css", "run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
+        assets = {"project-doctor.js": "text/javascript", "project-doctor.css": "text/css", "mission-queue.js": "text/javascript", "mission-queue.css": "text/css", "run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
                   "task-templates.js": "text/javascript", "task-templates.css": "text/css",
                   "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
                   "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",
