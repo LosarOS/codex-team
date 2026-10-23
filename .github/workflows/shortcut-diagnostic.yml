@@ -1,0 +1,19 @@
+name: Disposable shortcut path diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: [engineering/double-shift-rc11]
+    paths: [packaging/Read-ShortcutDetails.ps1, packaging/Test-ShortcutPath.ps1, .github/workflows/shortcut-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  shortcut:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Reproduce Unicode shortcut paths without launching targets
+        shell: pwsh
+        run: ./packaging/Test-ShortcutPath.ps1

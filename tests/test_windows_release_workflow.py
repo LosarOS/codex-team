@@ -23,7 +23,11 @@ def test_native_smoke_and_build_are_required_before_publication():
     assert "github.event_name == 'workflow_dispatch' && inputs.skip_source_tests" in WORKFLOW
     assert "if ($env:SKIP_SOURCE_TESTS -eq 'true')" in WORKFLOW
     assert 'Full source suite: skipped by explicit manual request.' in WORKFLOW
+    assert "$env:SKIP_SOURCE_TESTS -eq 'true' -and $env:PUBLISH_REQUESTED -eq 'true'" in WORKFLOW
+    assert 'Publication requires the complete source suite' in WORKFLOW
     assert WORKFLOW.index('./packaging/smoke-installed.ps1') < WORKFLOW.index('Stage verified downloadable files')
+    assert WORKFLOW.index('packaging/smoke_portable.py') < WORKFLOW.index('Stage verified downloadable files')
+    assert 'packaging/portable-smoke.json' in WORKFLOW
     for asset in ['CodexTeam-Setup-x64.exe', 'CodexTeam-Setup-x64.zip', 'CodexTeam-Portable-x64.zip', 'SHA256SUMS.txt', 'installed-smoke.json']:
         assert asset in WORKFLOW
     assert '--prerelease' in WORKFLOW and '--clobber' not in WORKFLOW
@@ -70,10 +74,10 @@ def test_existing_release_tag_cannot_label_another_commits_binary():
 
 
 def test_release_uses_russian_notes_from_the_same_verified_source():
-    assert 'docs/releases/v1.0.0-rc10.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
+    assert 'docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert '--notes-file release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
     assert 'test -s release-assets/RELEASE-NOTES-RU.md' in WORKFLOW
-    notes = (ROOT / 'docs/releases/v1.0.0-rc10.md').read_text(encoding='utf-8')
+    notes = (ROOT / 'docs/releases/v1.0.0-rc11.md').read_text(encoding='utf-8')
     for label in ['Русский / English', 'Obsidian Violet', 'Neon Blue', 'Emerald Tech', 'Crimson Night', 'WebView2']:
         assert label in notes
 
@@ -90,8 +94,33 @@ def test_source_git_tests_use_original_external_temporary_directory():
     script = (ROOT / 'build-desktop.ps1').read_text(encoding='utf-8-sig')
     assert script.index('$desktopBuildOriginalTemp = [IO.Path]::GetTempPath()') < script.index('$env:TEMP =')
     assert "Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-'" in script
-    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp' in script
-    assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py --basetemp')
+    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp --junitxml' in script
+    assert '.build-tools/source-tests.xml' in script
+    assert 'Native pytest report is empty or failed.' in WORKFLOW
+    assert 'release-assets/source-test-results.json' in WORKFLOW
+    assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py tests/test_portable_smoke.py tests/test_publish_windows_artifact.py --basetemp')
     # Never loosen production Git discovery or the nested-repository safety rule.
     assert 'GIT_CEILING_DIRECTORIES' not in script
     assert '[guid]::NewGuid()' in script
+
+
+def test_installer_smoke_refuses_owner_install_and_checks_preservation():
+    # A custom /DIR does not isolate Inno's AppId or per-user shortcuts.
+    launch = SMOKE.index('Start-Process -FilePath $installer')
+    assert SMOKE.index("$env:GITHUB_ACTIONS -ne 'true'") < launch
+    assert SMOKE.index('Refusing to replace an existing Codex Team installation.') < launch
+    for gate in ('start_menu_shortcut_verified', 'same_version_upgrade_verified', 'uninstall_data_preservation_verified', 'reinstall_restart_verified', 'project_doctor_verified', 'queue_preflight_verified'):
+        assert f'$report.{gate} = $true' in SMOKE
+    assert 'Get-ProfileFingerprint' in SMOKE
+    assert "'/api/mission-queue/preflight'" in SMOKE
+    assert '/api/mission-queue/start' not in SMOKE
+
+
+def test_release_verifies_downloaded_assets_before_making_draft_public():
+    create = WORKFLOW.index('gh release create')
+    download = WORKFLOW.index('gh release download', create)
+    verify = WORKFLOW.index('(cd published-assets && sha256sum -c SHA256SUMS.txt)', download)
+    publish = WORKFLOW.index('gh release edit', verify)
+    assert '--prerelease --draft' in WORKFLOW[create:download]
+    assert create < download < verify < publish
+    assert 'cmp release-assets/SHA256SUMS.txt published-assets/SHA256SUMS.txt' in WORKFLOW

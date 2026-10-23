@@ -9,7 +9,7 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc10
+        default: v1.0.0-rc11
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
@@ -52,7 +52,9 @@ jobs:
         env:
           INPUT_TAG: ${{ inputs.release_tag }}
           REF_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
         run: |
+          if ($env:SKIP_SOURCE_TESTS -eq 'true' -and $env:PUBLISH_REQUESTED -eq 'true') { throw 'Publication requires the complete source suite; disable publish for diagnostic builds.' }
           $version = (& python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])").Trim()
           if ($LASTEXITCODE -ne 0) { throw 'Could not read source version' }
           $match = [regex]::Match($version, '^(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?$')
@@ -65,7 +67,7 @@ jobs:
           "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
       - name: Check PowerShell syntax
         run: |
-          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Update.ps1')) {
+          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Read-ShortcutDetails.ps1','packaging/Test-ShortcutPath.ps1','packaging/Update.ps1')) {
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$null, [ref]$parseErrors) | Out-Null
             if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
@@ -77,6 +79,10 @@ jobs:
           } else {
             ./build-desktop.ps1 -PythonPath (Get-Command python).Source
           }
+      - name: Extracted portable backend and restart smoke
+        run: |
+          ./.venv/Scripts/python.exe packaging/smoke_portable.py
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted portable runtime smoke failed.' }
       - name: Silent per-user installation and installed backend smoke
         env:
           CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}
@@ -85,17 +91,31 @@ jobs:
       - name: Stage verified downloadable files
         run: |
           New-Item -ItemType Directory -Force release-assets | Out-Null
-          $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json')
+          $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json', 'packaging/portable-smoke.json')
           foreach ($file in $required) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
-          Copy-Item -LiteralPath docs/releases/v1.0.0-rc10.md -Destination release-assets/RELEASE-NOTES-RU.md
-          foreach ($image in @('mission-queue','mission-queue-blocked','mission-queue-confirmation')) {
-            Copy-Item -LiteralPath ("reports/rc10/$image.png") -Destination release-assets
-          }
+          Copy-Item -LiteralPath docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
-          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
+          if ($env:SKIP_SOURCE_TESTS -eq 'true') {
+            $testResults = @{ status = 'skipped'; source_commit = $env:GITHUB_SHA; platform = 'Windows' }
+          } else {
+            [xml]$junit = Get-Content -LiteralPath '.build-tools/source-tests.xml' -Raw
+            $suites = @($junit.testsuites.testsuite)
+            if (-not $suites.Count) { throw 'Native pytest evidence is missing its test suite.' }
+            $total = 0; $skipped = 0; $failures = 0; $errors = 0; $seconds = 0.0
+            foreach ($suite in $suites) {
+              $total += [int]$suite.tests; $skipped += [int]$suite.skipped
+              $failures += [int]$suite.failures; $errors += [int]$suite.errors
+              $seconds += [double]::Parse($suite.time, [Globalization.CultureInfo]::InvariantCulture)
+            }
+            if ($total -le 0 -or $failures -ne 0 -or $errors -ne 0) { throw 'Native pytest report is empty or failed.' }
+            $testResults = @{ status = 'passed'; source_commit = $env:GITHUB_SHA; platform = 'Windows'; tests = $total; passed = $total - $skipped; skipped = $skipped; failures = $failures; errors = $errors; duration_seconds = $seconds }
+            $sourceTests += " Native pytest: $($testResults.passed) passed, $skipped skipped, $seconds seconds."
+          }
+          $testResults | ConvertTo-Json | Set-Content -LiteralPath release-assets/source-test-results.json -Encoding utf8
+          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, extracted portable backend/restart/preservation, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: codex-team-windows-x64
@@ -108,8 +128,11 @@ jobs:
         with:
           name: windows-build-diagnostics
           path: |
+            .build-tools/source-tests.xml
             packaging/build-verification.json
             packaging/installed-smoke.json
+            packaging/portable-smoke.json
+            .build-tools/portable-smoke/*.log
             .build-tools/installed-smoke/*.log
           if-no-files-found: ignore
           retention-days: 7
@@ -146,5 +169,16 @@ jobs:
               exit 1
             fi
           fi
+          (cd release-assets && sha256sum -c SHA256SUMS.txt)
           test -s release-assets/RELEASE-NOTES-RU.md
-          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-assets/RELEASE-NOTES-RU.md --prerelease
+          gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-assets/RELEASE-NOTES-RU.md --prerelease --draft
+          mkdir -p published-assets
+          gh release download "$RELEASE_TAG" --dir published-assets --pattern 'CodexTeam-Setup-x64.exe' --pattern 'CodexTeam-Setup-x64.zip' --pattern 'CodexTeam-Portable-x64.zip' --pattern 'SHA256SUMS.txt'
+          cmp release-assets/SHA256SUMS.txt published-assets/SHA256SUMS.txt
+          (cd published-assets && sha256sum -c SHA256SUMS.txt)
+          for asset in CodexTeam-Setup-x64.exe CodexTeam-Setup-x64.zip CodexTeam-Portable-x64.zip; do
+            test -s "published-assets/$asset"
+          done
+          # Assets stay draft until the downloaded GitHub bytes pass checksum verification.
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease
+          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" --jq '{tag_name,draft,prerelease,assets:[.assets[]|{name,size,digest,browser_download_url}]}'

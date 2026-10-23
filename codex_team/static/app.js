@@ -1202,6 +1202,8 @@
     return state.projectsRequest;
   }
   async function loadProjectsData() { try{const response=await api("/api/projects");state.projects=Array.isArray(response)?response:response.items||response.projects||[];state.projectsError=null;const selected=$("history-project").value,all=node("option","",I.t("Все проекты"));all.value="";$("history-project").replaceChildren(all,...state.projects.map(p=>{const o=node("option","",p.name||p.path);o.value=p.path;return o;}));$("history-project").value=selected;renderProjects();renderProjectPreflight();window.dispatchEvent?.(new Event("codex-workspace-change"));}catch(error){state.projectsError=error.status===404?I.t("Управление проектами недоступно в этой версии сервера."):error.message;renderProjects();} }
+  let projectDoctor=null;
+  function openProjectDoctor(project){projectDoctor??=window.CodexProjectDoctor.mount({anchor:$("projects-list"),api});return projectDoctor.open(project);}
   function renderProjects() {
     renderDashboard();
     const c=$("projects-list");if(state.projectsError){empty(c,I.t("Проекты временно недоступны"),state.projectsError);return;}if(!state.projects.length){empty(c,I.t("Добавьте свой первый проект"),I.t("Выберите локальный Git-репозиторий. Его файлы останутся на месте."));return;}
@@ -1213,6 +1215,7 @@
       if(project.error)card.append(node("p","project-runtime",I.t("Не удалось проверить папку. Убедитесь, что проект доступен, затем обновите данные.")));else if(project.ready===false&&!project.dirty)card.append(node("p","project-runtime",I.t("Для изолированного запуска нужен первый Git commit в проекте.")));
       if(runtime?.missing?.length)card.append(node("p","field-note",I.t("Приложение обнаруживает доступные среды автоматически. После настройки среды обновите проект. Если доступный runtime не найден, экспортируйте диагностику из настроек.")));
       const row=node("div","project-actions");row.append(actionButton(I.t("Выбрать проект"),()=>useProject(project),"primary"),actionButton(I.t("Настроить команды"),()=>openProjectEditor(project)));
+      const doctorAction=actionButton(I.t("Диагностика проекта"),()=>openProjectDoctor(project));doctorAction.dataset.doctorProject=project.id;row.append(doctorAction);
       if(project.dirty)row.append(actionButton(I.t("Посмотреть изменения"),()=>openProjectDiff(project)));
       if(project.last_run)row.append(actionButton(I.t("Последний запуск"),()=>selectRun(typeof project.last_run==="string"?project.last_run:project.last_run.id)));
       if(typeof desktopBridge()?.open_project==="function")row.append(actionButton(I.t("Открыть папку ↗"),()=>nativeOperation("open_project",project.id)));

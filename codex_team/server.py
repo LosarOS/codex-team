@@ -74,6 +74,8 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     auth = CodexProvider(root)
     providers = ProviderSettings(db,secrets,auth)
     projects = Projects(root,db)
+    from .project_doctor import ProjectDoctor
+    project_doctor = ProjectDoctor(root, db)
     @asynccontextmanager
     async def lifespan(app):
         engine.acquire_session()
@@ -368,6 +370,10 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def project_diff(project_id: str):
         return sanitize(projects.diff(project_id))
 
+    @app.get("/api/projects/{project_id}/doctor")
+    def inspect_project_doctor(project_id: str):
+        return project_doctor.inspect(project_id)
+
     @app.delete("/api/projects/{project_id}")
     def remove_project(project_id: str):
         db.project(project_id)
@@ -499,7 +505,7 @@ def create_app(root=None, store=None, provider_factory=None, static_root=None, d
     def additional_ui_asset(asset_name: str):
         # Explicit whitelist: localization and local icons must work in the frozen
         # app as well as fixture servers; never expose arbitrary workspace files.
-        assets = {"mission-queue.js": "text/javascript", "mission-queue.css": "text/css", "run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
+        assets = {"project-doctor.js": "text/javascript", "project-doctor.css": "text/css", "mission-queue.js": "text/javascript", "mission-queue.css": "text/css", "run-replay.js": "text/javascript", "run-notebook.js": "text/javascript", "run-notebook.css": "text/css",
                   "task-templates.js": "text/javascript", "task-templates.css": "text/css",
                   "run-comparison.js": "text/javascript", "run-comparison.css": "text/css",
                   "refresh-loop.js": "text/javascript", "task-draft.js": "text/javascript",

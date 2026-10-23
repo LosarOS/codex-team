@@ -49,7 +49,8 @@ class FakeEngine:
 
 
 @pytest.fixture
-def queue(tmp_path):
+def queue(tmp_path, monkeypatch):
+    monkeypatch.setattr("codex_team.queue_diagnostics.discover", lambda _: {"ready": True, "missing": []})
     store = Store(tmp_path / "queue.db")
     engine = FakeEngine(store)
     service = MissionQueue(engine, store, poll_interval=0.01)
@@ -360,3 +361,100 @@ def test_stale_start_snapshot_cannot_launch_changed_members_or_order(queue):
     with pytest.raises(QueueConflict,match='изменился'):
         service.start(True,[second['id']])
     assert engine.created==[] and engine.launched==[]
+
+
+@pytest.mark.parametrize('state,code', [
+    ('AUTH_REQUIRED', 'authentication_required'), ('USAGE_LIMIT', 'usage_limit'),
+    ('USER_DECISION_REQUIRED', 'user_decision'), ('FAILED', 'failed_run'),
+    ('INTERRUPTED', 'interrupted_run'), ('STOPPED', 'interrupted_run'),
+    ('PAUSED', 'user_decision'), ('QUEUED', 'unknown_outcome'),
+])
+def test_blocked_diagnostic_preserves_exact_run_state_and_no_retry(queue, state, code):
+    service, engine, _ = queue
+    first = add(service)
+    add(service, 'Untouched following mission')
+    service.start(True)
+    eventually(lambda: bool(engine.launched))
+    engine.finish(state)
+    item = service.get(first['id'])
+    assert item['diagnostic']['code'] == code
+    assert item['diagnostic']['run_state'] == state
+    assert item['diagnostic']['automatic_retry'] is False
+    assert item['diagnostic']['actions'] == ['open_run', 'inspect_workspace', 'skip']
+    assert service.list()['items'][1]['status'] == 'pending'
+
+
+def test_preflight_is_readonly_and_does_not_reconcile_unknown_outcome(queue):
+    service, engine, store = queue
+    first = add(service)
+    row = service._find(first['id'])
+    row.update(status='running', run_id='missing-run')
+    service._save(row)
+    engine.workspace.snapshot = lambda _: {'head': 'a' * 40, 'dirty': False}
+    before = store.db.execute('SELECT data FROM mission_queue').fetchall()
+    report = service.preflight([first['id']])
+    assert report['models_called'] is False and report['provider_verified'] is False
+    assert not report['ready']
+    assert store.db.execute('SELECT data FROM mission_queue').fetchall() == before
+    assert not engine.created and not engine.launched
+
+
+def test_preflight_reports_stale_dirty_and_missing_git(queue, monkeypatch):
+    from codex_team.queue_diagnostics import inspect
+    service, engine, _ = queue
+    first = add(service)
+    engine.workspace.snapshot = lambda _: {'head': 'a' * 40, 'dirty': True}
+    report = inspect(service, [], which=lambda _: None)
+    assert not report['ready']
+    errors = {c['code'] for c in report['checks'] if c['status'] == 'error'}
+    assert {'stale_batch', 'workspace', 'git_available'} <= errors
+    assert report['item_ids'] == [first['id']]
+
+
+@pytest.mark.parametrize('error,code', [(PermissionError('denied'), 'permission_denied'), (ValueError('missing'), 'invalid_workspace')])
+def test_preflight_handles_project_errors_without_dispatch(queue, error, code):
+    service, engine, _ = queue
+    item = add(service)
+    def fail(_):
+        raise error
+    engine.workspace.snapshot = fail
+    report = service.preflight([item['id']])
+    assert not report['ready']
+    assert any(c['code'] == code and c['item_id'] == item['id'] for c in report['checks'])
+    assert not engine.created
+
+
+def test_preflight_revision_rejects_change_between_inspection_and_start(queue):
+    service, engine, _ = queue
+    first = add(service)
+    engine.workspace.snapshot = lambda _: {'head': 'a' * 40, 'dirty': False}
+    report = service.preflight([first['id']])
+    assert report['ready']
+    second = add(service, 'Added after review')
+    with pytest.raises(QueueConflict, match='Пакет изменился'):
+        service.start(True, [first['id'], second['id']], report['queue_revision'])
+    assert not engine.created
+
+
+def test_move_is_atomic_when_second_database_update_fails(queue):
+    service, _, store = queue
+    first, second = add(service, 'First'), add(service, 'Second')
+    before = [(i['id'], i['position']) for i in service.list()['items']]
+    # Fail on the second row of the swap; SQLite must roll back the first.
+    store.db.execute("CREATE TRIGGER reject_swap BEFORE UPDATE ON mission_queue WHEN NEW.id='" + first['id'] + "' BEGIN SELECT RAISE(ABORT,'test injected failure'); END")
+    store.db.commit()
+    import sqlite3
+    with pytest.raises(sqlite3.IntegrityError, match='test injected failure'):
+        service.move(second['id'], 'up')
+    assert [(i['id'], i['position']) for i in service.list()['items']] == before
+
+
+def test_preflight_reports_missing_declared_runtime(queue, monkeypatch):
+    service, engine, _ = queue
+    item = add(service)
+    engine.workspace.snapshot = lambda _: {'head': 'a' * 40, 'dirty': False}
+    monkeypatch.setattr('codex_team.queue_diagnostics.discover', lambda _: {'ready': False, 'missing': ['dotnet']})
+    report = service.preflight([item['id']])
+    assert not report['ready']
+    assert any(c['code'] == 'local_tools' and 'dotnet' in c['detail'] for c in report['checks'])
+    assert not engine.created

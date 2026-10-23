@@ -29,3 +29,9 @@
 .mq-overview,.mq-card {padding:22px}
 .mq-guidance {background:var(--surface-highlight);border-color:var(--line);color:var(--muted)}
 .mq-guidance strong {color:var(--accent-text)}
+
+.mq-preflight{padding:22px;margin:0 0 20px;min-width:0;display:grid;gap:14px}
+.mq-preflight[hidden]{display:none}
+.mq-preflight h2,.mq-preflight h3,.mq-preflight p{margin:0;overflow-wrap:anywhere}
+.mq-preflight-check{padding:14px;border:1px solid var(--line);border-radius:10px;min-width:0;display:grid;gap:8px}
+.mq-preflight .code-block{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}

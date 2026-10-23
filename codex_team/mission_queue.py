@@ -13,6 +13,8 @@ from codex_team.budget_guardian import BudgetGuardian
 
 from codex_team.models import RunRequest
 from codex_team.storage import now, sanitize
+from codex_team.queue_diagnostics import blocked_diagnostic, revision, inspect
+from codex_team.workspace import WorkspaceError
 
 
 class QueueConflict(ValueError):
@@ -113,6 +115,7 @@ class MissionQueue:
                       max_agent_calls=request.max_agent_calls, max_run_duration=request.max_run_duration,
                       max_total_tokens=request.max_total_tokens, run_state=run_state)
         result["reason"] = sanitize(result["reason"])
+        result["diagnostic"] = blocked_diagnostic(item, run_state)
         if full:
             result["request"] = {**request.model_dump(), "confirmed_full_access": request.confirmed_full_access}
         return result
@@ -187,13 +190,18 @@ class MissionQueue:
             self._save(item)
             return self._view(item)
 
-    def start(self, confirmed=False, item_ids=None):
+    def preflight(self, item_ids):
+        return inspect(self, item_ids)
+
+    def start(self, confirmed=False, item_ids=None, expected_revision=None):
         if confirmed is not True:
             raise ValueError("Требуется явное подтверждение запуска очереди")
         with self.engine.lock, self.lock:
             self._check()
             self._reconcile()
             rows = self._rows()
+            if expected_revision is not None and expected_revision != revision(rows):
+                raise QueueConflict("Пакет изменился после проверки. Выполните проверку и подтверждение заново.")
             expected = [item["id"] for item in rows if item["status"] in {"pending", "running"}]
             if item_ids is not None and item_ids != expected:
                 raise QueueConflict("Список или порядок задач изменился. Обновите очередь и подтвердите запуск заново.")
@@ -238,8 +246,11 @@ class MissionQueue:
                 raise QueueConflict("Миссия уже находится на краю очереди ожидания")
             other = rows[target]
             item["position"], other["position"] = other["position"], item["position"]
-            self._save(item)
-            self._save(other)
+            # Persist the swap atomically: a failed second write must not leave duplicate positions.
+            with self.store.lock, self.store.db:
+                for row in (item, other):
+                    row["updated_at"] = now()
+                    self.store.db.execute("UPDATE mission_queue SET data=? WHERE id=?", (json.dumps(row, ensure_ascii=False), row["id"]))
             return self._list()
 
     def skip(self, item_id):
@@ -298,7 +309,9 @@ class MissionQueue:
             except Exception as exc:
                 with self.lock:
                     if not self._closed:
-                        item.update(status="blocked", reason=f"Не удалось запустить миссию: {str(exc)[:1000]}. Возобновите связанный запуск или пропустите миссию, затем явно запустите очередь.")
+                        code = {"AUTH_REQUIRED": "authentication_required", "USAGE_LIMIT": "usage_limit", "PERMISSION_REQUIRED": "permission_denied"}.get(getattr(exc, "code", None))
+                        code = code or ("permission_denied" if isinstance(exc, PermissionError) else "invalid_workspace" if isinstance(exc, WorkspaceError) else "unknown_outcome")
+                        item.update(status="blocked", reason_code=code, reason=f"Не удалось запустить миссию: {str(exc)[:1000]}. Возобновите связанный запуск или пропустите миссию, затем явно запустите очередь.")
                         self._save(item)
                         self._enabled = False
                         self._reason = item["reason"]
