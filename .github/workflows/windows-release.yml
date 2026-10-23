@@ -52,7 +52,9 @@ jobs:
         env:
           INPUT_TAG: ${{ inputs.release_tag }}
           REF_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
         run: |
+          if ($env:SKIP_SOURCE_TESTS -eq 'true' -and $env:PUBLISH_REQUESTED -eq 'true') { throw 'Publication requires the complete source suite; disable publish for diagnostic builds.' }
           $version = (& python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])").Trim()
           if ($LASTEXITCODE -ne 0) { throw 'Could not read source version' }
           $match = [regex]::Match($version, '^(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?$')

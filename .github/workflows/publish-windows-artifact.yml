@@ -92,9 +92,16 @@ jobs:
           smoke = json.loads((root / 'installed-smoke.json').read_text(encoding='utf-8-sig'))
           assert smoke['platform'] == 'Windows'
           assert smoke['installed_backend_verified'] is True and smoke['uninstall_verified'] is True
+          for gate in ('project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
+                       'uninstall_data_preservation_verified', 'reinstall_restart_verified',
+                       'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified'):
+              assert smoke.get(gate) is True, 'Missing native release gate: ' + gate
           assert smoke['model_calls'] == 0 and smoke['sdk_account_calls'] == 0
           assert smoke['installed_git_version'].startswith('git version ')
-          assert 'Source commit: ' + os.environ['SOURCE_COMMIT'] in (root / 'BUILD-NOTES.txt').read_text(encoding='utf-8-sig')
+          notes = (root / 'BUILD-NOTES.txt').read_text(encoding='utf-8-sig')
+          assert 'Source commit: ' + os.environ['SOURCE_COMMIT'] in notes
+          assert 'Full source suite: passed.' in notes
+          assert (root / 'RELEASE-NOTES-RU.md').is_file() and (root / 'RELEASE-NOTES-RU.md').stat().st_size > 0
           PY
       - name: Publish immutable verified prerelease
         env:
@@ -110,15 +117,7 @@ jobs:
             tagged=$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')
             test "$tagged" = "$SOURCE_COMMIT"
           fi
-          cat > release-notes.md <<'NOTES'
-          Готовая Windows x64 сборка Codex Team.
-
-          **Установка:** скачайте `CodexTeam-Setup-x64.zip`, распакуйте и запустите `CodexTeam-Setup-x64.exe`. Можно скачать установщик `.exe` напрямую. Установка выполняется для текущего пользователя.
-
-          **Без установки:** распакуйте `CodexTeam-Portable-x64.zip` целиком и запустите `CodexTeam.exe` внутри папки.
-
-          Нативная Windows CI успешно завершена; точные результаты тестов доступны по ссылке ниже. Проверены замороженный пакет, тихая установка в Unicode-путь, установленный Git, локальный backend, ресурсы интерфейса и удаление. Отчёты и SHA256 приложены. Интерактивный WebView2 GUI, настоящий Windows DPI и live Codex не проверялись. Приложение не подписано; Windows SmartScreen может показать предупреждение.
-          NOTES
+          cp release-assets/RELEASE-NOTES-RU.md release-notes.md
           printf '\nПроверенная сборка: https://github.com/%s/actions/runs/%s\nИсходный commit: %s\n' "$GH_REPO" "$RUN_ID" "$SOURCE_COMMIT" >> release-notes.md
           gh release create "$RELEASE_TAG" release-assets/* --target "$SOURCE_COMMIT" --title "Codex Team $RELEASE_TAG · Windows x64" --notes-file release-notes.md --prerelease --draft
           mkdir -p published-assets

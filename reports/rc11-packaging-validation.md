@@ -17,7 +17,7 @@ Pillow advisory IDs returned by the service: CVE-2026-112895, CVE-2026-112400, C
 
 No exploit against Codex Team was reproduced. Source search found Pillow usage in the build-time icon generator; no production image-upload decoder was found. The bundle is rebuilt with the fixed package anyway. The certificate-store advisory affects a shared trust dependency and is addressed directly.
 
-After changing the pins, the same audit reported **no known vulnerabilities in 40 packages**. This is a dated advisory lookup, not a claim that the product has no vulnerabilities. An isolated Pillow 13.0.0 check generated and decoded the icon at 16/24/32/48/64/128/256 pixels and the 256-pixel PNG successfully. No tracked image was overwritten by that check.
+After changing the pins, the same audit reported **no known vulnerabilities in 40 packages**. This is a dated advisory lookup, not a claim that the product has no vulnerabilities. An isolated Pillow 13.0.0 check generated and decoded the icon at 16/24/32/48/64/128/256 pixels and the 256-pixel PNG successfully. No tracked image was overwritten by that check. PyPI supplied the Python 3.12 Windows x64 Pillow wheel (7,272,166 bytes) and universal certifi wheel (135,082 bytes); actual bundled execution remains a native CI gate.
 
 ## Installer and publication boundaries
 
@@ -33,11 +33,11 @@ The native smoke adds these required assertions:
 
 This is a **same-version repair/upgrade test**, not a claim that every earlier-version migration was exercised. Only test-owned temporary data is inspected; the owner's profile is not opened or removed.
 
-Both release workflows keep uploads as a draft until they re-download the GitHub binary assets, match the uploaded checksum manifest, verify every SHA256 and check nonzero file sizes. They do not replace existing releases or assets.
+Both release workflows keep uploads as a draft until they re-download the GitHub binary assets, match the uploaded checksum manifest, verify every SHA256 and check nonzero file sizes. They do not replace existing releases or assets. Publication rejects a skipped source suite, and the artifact-only publishing workflow requires the expanded RC11 native smoke gates. Its validation script was executed against synthetic contract fixtures: missing/false gates and skipped-suite evidence were rejected, while complete evidence passed.
 
 ## Executed checks and pending gates
 
-- Linux static packaging/workflow/archive contract suite: **16 passed**.
+- Linux static packaging/workflow/archive contract suite: **17 passed**.
 - Dependency advisory lookup and Pillow generation: passed as described above.
 - Initial native candidate: [Windows run 39951850503](https://github.com/LosarOS/codex-team/actions/runs/39951850503), source `1364c38`; in progress at this checkpoint, and predates these hardening changes.
 - Final native packaging, new installed smoke, published-asset verification: **pending** on the final source commit.

@@ -23,6 +23,8 @@ def test_native_smoke_and_build_are_required_before_publication():
     assert "github.event_name == 'workflow_dispatch' && inputs.skip_source_tests" in WORKFLOW
     assert "if ($env:SKIP_SOURCE_TESTS -eq 'true')" in WORKFLOW
     assert 'Full source suite: skipped by explicit manual request.' in WORKFLOW
+    assert "$env:SKIP_SOURCE_TESTS -eq 'true' -and $env:PUBLISH_REQUESTED -eq 'true'" in WORKFLOW
+    assert 'Publication requires the complete source suite' in WORKFLOW
     assert WORKFLOW.index('./packaging/smoke-installed.ps1') < WORKFLOW.index('Stage verified downloadable files')
     for asset in ['CodexTeam-Setup-x64.exe', 'CodexTeam-Setup-x64.zip', 'CodexTeam-Portable-x64.zip', 'SHA256SUMS.txt', 'installed-smoke.json']:
         assert asset in WORKFLOW
