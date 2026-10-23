@@ -38,7 +38,7 @@ if (-not $SkipTests) {
         # Fail fast on the platform-specific cache regression before the long suite.
         & $python -m pytest -q tests/test_intelligence.py --basetemp (Join-Path $desktopSourceTestTemp 'cache-preflight')
         if ($LASTEXITCODE -ne 0) { throw 'Cache regression preflight failed; desktop artifacts were not built' }
-        & $python -m pytest -q --basetemp $desktopSourceTestTemp
+        & $python -m pytest -q --basetemp $desktopSourceTestTemp --junitxml (Join-Path $PSScriptRoot ".build-tools/source-tests.xml")
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed; desktop artifacts were not built' }
     } finally {
         # Only this invocation's unique pytest directory; rmtree does not follow links.

@@ -92,7 +92,10 @@ def test_source_git_tests_use_original_external_temporary_directory():
     script = (ROOT / 'build-desktop.ps1').read_text(encoding='utf-8-sig')
     assert script.index('$desktopBuildOriginalTemp = [IO.Path]::GetTempPath()') < script.index('$env:TEMP =')
     assert "Join-Path $desktopBuildOriginalTemp ('CodexTeam-source-tests-'" in script
-    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp' in script
+    assert '& $python -m pytest -q --basetemp $desktopSourceTestTemp --junitxml' in script
+    assert '.build-tools/source-tests.xml' in script
+    assert 'Native pytest report is empty or failed.' in WORKFLOW
+    assert 'release-assets/source-test-results.json' in WORKFLOW
     assert script.index('New-Item -ItemType Directory -Force -Path $desktopSourceTestTemp') < script.index('tests/test_intelligence.py --basetemp')
     # Never loosen production Git discovery or the nested-repository safety rule.
     assert 'GIT_CEILING_DIRECTORIES' not in script

@@ -94,6 +94,23 @@ jobs:
           }
           Copy-Item -LiteralPath docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
+          if ($env:SKIP_SOURCE_TESTS -eq 'true') {
+            $testResults = @{ status = 'skipped'; source_commit = $env:GITHUB_SHA; platform = 'Windows' }
+          } else {
+            [xml]$junit = Get-Content -LiteralPath '.build-tools/source-tests.xml' -Raw
+            $suites = @($junit.testsuites.testsuite)
+            if (-not $suites.Count) { throw 'Native pytest evidence is missing its test suite.' }
+            $total = 0; $skipped = 0; $failures = 0; $errors = 0; $seconds = 0.0
+            foreach ($suite in $suites) {
+              $total += [int]$suite.tests; $skipped += [int]$suite.skipped
+              $failures += [int]$suite.failures; $errors += [int]$suite.errors
+              $seconds += [double]::Parse($suite.time, [Globalization.CultureInfo]::InvariantCulture)
+            }
+            if ($total -le 0 -or $failures -ne 0 -or $errors -ne 0) { throw 'Native pytest report is empty or failed.' }
+            $testResults = @{ status = 'passed'; source_commit = $env:GITHUB_SHA; platform = 'Windows'; tests = $total; passed = $total - $skipped; skipped = $skipped; failures = $failures; errors = $errors; duration_seconds = $seconds }
+            $sourceTests += " Native pytest: $($testResults.passed) passed, $skipped skipped, $seconds seconds."
+          }
+          $testResults | ConvertTo-Json | Set-Content -LiteralPath release-assets/source-test-results.json -Encoding utf8
           @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -107,6 +124,7 @@ jobs:
         with:
           name: windows-build-diagnostics
           path: |
+            .build-tools/source-tests.xml
             packaging/build-verification.json
             packaging/installed-smoke.json
             .build-tools/installed-smoke/*.log

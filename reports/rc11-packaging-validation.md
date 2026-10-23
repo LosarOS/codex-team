@@ -40,5 +40,6 @@ Both release workflows keep uploads as a draft until they re-download the GitHub
 - Linux static packaging/workflow/archive contract suite: **17 passed**.
 - Dependency advisory lookup and Pillow generation: passed as described above.
 - Initial native candidate: [Windows run 39951850503](https://github.com/LosarOS/codex-team/actions/runs/39951850503), source `1364c38`; in progress at this checkpoint, and predates these hardening changes.
+- Native builds now retain full-suite JUnit evidence and stage `source-test-results.json` with exact passed/skipped counts, duration and source commit. Build failures preserve JUnit diagnostics; pytest exit checks remain mandatory.
 - Final native packaging, new installed smoke, published-asset verification: **pending** on the final source commit.
 - Interactive WebView2, real Windows DPI, physical-PC user acceptance and code signing: **not verified** here. Binaries remain unsigned.
