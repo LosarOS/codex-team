@@ -2,6 +2,7 @@
 # reads the actual Windows shortcut, and never launches its target.
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or [Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Disposable Windows CI only.' }
+. (Join-Path $PSScriptRoot 'Read-ShortcutDetails.ps1')
 $root = Join-Path ([IO.Path]::GetTempPath()) ('CodexTeam-проверка-' + [guid]::NewGuid().ToString('N'))
 $installation = Join-Path $root 'installed'
 New-Item -ItemType Directory -Path $root | Out-Null
@@ -35,6 +36,7 @@ $normalizedLinkPath = [IO.Path]::GetFullPath($rawLinkPath)
 $link = $shell.CreateShortcut($rawLinkPath)
 $normalizedLink = $shell.CreateShortcut($normalizedLinkPath)
 try {
+    $nativeLink = Read-ShortcutDetails $normalizedLinkPath
     $linkFile = Get-Item -LiteralPath $normalizedLinkPath
     $unicodeData = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($normalizedLinkPath))
     $env:CODEX_TEAM_DIAGNOSTIC_LINK = $normalizedLinkPath
@@ -42,7 +44,7 @@ try {
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($legacyScript))
     & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -EncodedCommand $encoded
     if ($LASTEXITCODE -ne 0) { throw 'Legacy shell diagnostic failed.' }
-    [ordered]@{ link_bytes = $linkFile.Length; unicode_directory_present = $unicodeData.Contains($installation); expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (-not [string]::IsNullOrWhiteSpace($link.TargetPath) -and (Test-Path -LiteralPath $link.TargetPath)); directory_exists = (-not [string]::IsNullOrWhiteSpace($link.WorkingDirectory) -and (Test-Path -LiteralPath $link.WorkingDirectory)) } | ConvertTo-Json | Write-Output
+    [ordered]@{ native_target = $nativeLink.TargetPath; native_directory = $nativeLink.WorkingDirectory; link_bytes = $linkFile.Length; unicode_directory_present = $unicodeData.Contains($installation); expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (-not [string]::IsNullOrWhiteSpace($link.TargetPath) -and (Test-Path -LiteralPath $link.TargetPath)); directory_exists = (-not [string]::IsNullOrWhiteSpace($link.WorkingDirectory) -and (Test-Path -LiteralPath $link.WorkingDirectory)) } | ConvertTo-Json | Write-Output
 } finally {
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($link)
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($normalizedLink)
