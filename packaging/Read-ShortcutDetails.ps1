@@ -51,3 +51,9 @@ function Read-ShortcutDetails([string]$Path) {
     $details = [CodexTeamShortcutReader]::Read($Path)
     [PSCustomObject]@{ TargetPath = $details[0]; WorkingDirectory = $details[1] }
 }
+
+function Assert-ShortcutDetails($Details, [string]$TargetPath, [string]$WorkingDirectory) {
+    if ($Details.TargetPath -ne $TargetPath -or $Details.WorkingDirectory -ne $WorkingDirectory) {
+        throw 'Installed Start Menu shortcut points to the wrong application.'
+    }
+}

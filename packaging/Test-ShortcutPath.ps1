@@ -22,8 +22,10 @@ OutputDir=.
 OutputBaseFilename=shortcut-diagnostic
 [Files]
 Source: "CodexTeam.exe"; DestDir: "{app}"
+Source: "CodexTeam.exe"; DestDir: "{app}"; DestName: "Other.exe"
 [Icons]
 Name: "{app}\links\Launch"; Filename: "{app}\CodexTeam.exe"; WorkingDir: "{app}"
+Name: "{app}\links\Wrong"; Filename: "{app}\Other.exe"; WorkingDir: "{app}"
 '@
 $script | Set-Content -LiteralPath (Join-Path $root 'diagnostic.iss') -Encoding utf8BOM
 & $compiler (Join-Path $root 'diagnostic.iss')
@@ -37,6 +39,17 @@ $link = $shell.CreateShortcut($rawLinkPath)
 $normalizedLink = $shell.CreateShortcut($normalizedLinkPath)
 try {
     $nativeLink = Read-ShortcutDetails $normalizedLinkPath
+    Assert-ShortcutDetails $nativeLink (Join-Path $installation 'CodexTeam.exe') $installation
+    $wrongLink = Read-ShortcutDetails (Join-Path $installation 'links/Wrong.lnk')
+    $wrongRejected = $false
+    try { Assert-ShortcutDetails $wrongLink (Join-Path $installation 'CodexTeam.exe') $installation } catch { $wrongRejected = $true }
+    if (-not $wrongRejected) { throw 'Wrong target was accepted.' }
+    $wrongDirectoryRejected = $false
+    try { Assert-ShortcutDetails $nativeLink (Join-Path $installation 'CodexTeam.exe') $root } catch { $wrongDirectoryRejected = $true }
+    if (-not $wrongDirectoryRejected) { throw 'Wrong working directory was accepted.' }
+    $missingRejected = $false
+    try { Read-ShortcutDetails (Join-Path $installation 'absent.lnk') | Out-Null } catch { $missingRejected = $true }
+    if (-not $missingRejected) { throw 'Missing shortcut was accepted.' }
     $linkFile = Get-Item -LiteralPath $normalizedLinkPath
     $unicodeData = [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($normalizedLinkPath))
     $env:CODEX_TEAM_DIAGNOSTIC_LINK = $normalizedLinkPath
@@ -44,7 +57,7 @@ try {
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($legacyScript))
     & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -EncodedCommand $encoded
     if ($LASTEXITCODE -ne 0) { throw 'Legacy shell diagnostic failed.' }
-    [ordered]@{ native_target = $nativeLink.TargetPath; native_directory = $nativeLink.WorkingDirectory; link_bytes = $linkFile.Length; unicode_directory_present = $unicodeData.Contains($installation); expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (-not [string]::IsNullOrWhiteSpace($link.TargetPath) -and (Test-Path -LiteralPath $link.TargetPath)); directory_exists = (-not [string]::IsNullOrWhiteSpace($link.WorkingDirectory) -and (Test-Path -LiteralPath $link.WorkingDirectory)) } | ConvertTo-Json | Write-Output
+    [ordered]@{ correct_link_verified = $true; wrong_target_rejected = $wrongRejected; wrong_directory_rejected = $wrongDirectoryRejected; missing_link_rejected = $missingRejected; native_target = $nativeLink.TargetPath; native_directory = $nativeLink.WorkingDirectory; link_bytes = $linkFile.Length; unicode_directory_present = $unicodeData.Contains($installation); expected_target = (Join-Path $installation 'CodexTeam.exe'); actual_target = $link.TargetPath; expected_directory = $installation; actual_directory = $link.WorkingDirectory; raw_link_path = $rawLinkPath; normalized_link_path = $normalizedLinkPath; normalized_target = $normalizedLink.TargetPath; normalized_directory = $normalizedLink.WorkingDirectory; target_exists = (-not [string]::IsNullOrWhiteSpace($link.TargetPath) -and (Test-Path -LiteralPath $link.TargetPath)); directory_exists = (-not [string]::IsNullOrWhiteSpace($link.WorkingDirectory) -and (Test-Path -LiteralPath $link.WorkingDirectory)) } | ConvertTo-Json | Write-Output
 } finally {
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($link)
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($normalizedLink)

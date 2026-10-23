@@ -67,7 +67,7 @@ jobs:
           "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
       - name: Check PowerShell syntax
         run: |
-          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Update.ps1')) {
+          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Read-ShortcutDetails.ps1','packaging/Test-ShortcutPath.ps1','packaging/Update.ps1')) {
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$null, [ref]$parseErrors) | Out-Null
             if ($parseErrors.Count) { throw ($parseErrors | Out-String) }

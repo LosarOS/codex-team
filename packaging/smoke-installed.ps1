@@ -13,6 +13,7 @@ $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{A802
 if (Test-Path -LiteralPath $uninstallKey) { throw 'Refusing to replace an existing Codex Team installation.' }
 $startMenuShortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex Team/Codex Team.lnk'
 if (Test-Path -LiteralPath $startMenuShortcut) { throw 'Refusing to replace an existing Codex Team shortcut.' }
+. (Join-Path $PSScriptRoot 'Read-ShortcutDetails.ps1')
 $repository = Split-Path $PSScriptRoot -Parent
 $diagnostics = Join-Path $repository '.build-tools/installed-smoke'
 New-Item -ItemType Directory -Force -Path $diagnostics | Out-Null
@@ -45,15 +46,10 @@ try {
     $exe = Join-Path $installation 'CodexTeam.exe'
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Installed executable is missing.' }
     if (-not (Test-Path -LiteralPath $startMenuShortcut -PathType Leaf)) { throw 'Installed Start Menu shortcut is missing.' }
-    $shortcutShell = New-Object -ComObject WScript.Shell
-    try {
-        $shortcut = $shortcutShell.CreateShortcut($startMenuShortcut)
-        if ($shortcut.TargetPath -ne $exe -or $shortcut.WorkingDirectory -ne $installation) { throw 'Installed Start Menu shortcut points to the wrong application.' }
-        $report.start_menu_shortcut_verified = $true
-    } finally {
-        if ($shortcut) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut) }
-        [void][Runtime.InteropServices.Marshal]::ReleaseComObject($shortcutShell)
-    }
+    $shortcut = Read-ShortcutDetails $startMenuShortcut
+    $report.start_menu_shortcut = @{ target = $shortcut.TargetPath; working_directory = $shortcut.WorkingDirectory; expected_target = $exe; expected_directory = $installation }
+    Assert-ShortcutDetails $shortcut $exe $installation
+    $report.start_menu_shortcut_verified = $true
     $installedGit = Join-Path $installation '_internal/runtime/git/cmd/git.exe'
     if (-not (Test-Path -LiteralPath $installedGit -PathType Leaf)) { throw 'Installed bundled Git is missing.' }
     $gitVersion = (& $installedGit --version 2>&1 | Out-String).Trim()
