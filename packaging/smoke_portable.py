@@ -103,6 +103,10 @@ def smoke(archive: Path, diagnostics: Path, report: dict) -> None:
                         if time.monotonic() >= deadline:
                             raise RuntimeError("Portable backend health/database/bundled Git check timed out")
                         time.sleep(0.2)
+                    from codex_team import __version__
+                    if health.get("version") != __version__:
+                        raise RuntimeError("Portable backend version does not match the source release version")
+                    report["runtime_version"] = health["version"]
                     if iteration == "startup":
                         request("/api/settings", "POST", {"theme": "neon-blue", "language": "en"})
                         project = request("/api/projects/create", "POST", {"name": "Portable проверка", "path": str(Path(directory) / "Проект")})

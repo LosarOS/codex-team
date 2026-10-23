@@ -95,6 +95,9 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
         try { $healthy = Invoke-RestMethod -Uri ($baseUrl + '/health') -TimeoutSec 2 } catch { Start-Sleep -Milliseconds 200 }
     } while (-not $healthy -and [DateTime]::UtcNow -lt $deadline)
     if (-not $healthy -or $healthy.status -ne 'ok' -or -not $healthy.checks.database -or -not $healthy.checks.git) { throw 'Installed backend health/database/bundled Git check failed.' }
+    $expectedVersion = (& python -c "import codex_team; print(codex_team.__version__)").Trim()
+    if ($LASTEXITCODE -ne 0 -or $healthy.version -ne $expectedVersion) { throw 'Installed backend version does not match the source release version.' }
+    $report.runtime_version = $healthy.version
     $report.health = $healthy
     foreach ($asset in @('/','/app.js','/style.css','/design-system.css','/suite.js','/suite.css','/api-client.js','/mission-control.js','/i18n.js','/i18n-catalog.js','/icon-project.svg','/icon-run.svg','/icon-action.svg','/icon-tokens.svg','/refresh-loop.js','/task-draft.js','/command-palette.js','/command-palette.css','/task-templates.js','/task-templates.css','/run-comparison.js','/run-comparison.css','/run-notebook.js','/run-notebook.css','/run-replay.js','/mission-queue.js','/mission-queue.css','/project-doctor.js','/project-doctor.css')) {
         $response = Invoke-WebRequest -Uri ($baseUrl + $asset) -TimeoutSec 10

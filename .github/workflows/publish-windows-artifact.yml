@@ -96,6 +96,7 @@ jobs:
           for gate in ('archive_crc_verified', 'startup_verified', 'restart_verified', 'settings_history_queue_preserved', 'portable_backend_verified'):
               assert portable.get(gate) is True, 'Missing portable release gate: ' + gate
           assert portable['model_calls'] == 0 and portable['sdk_account_calls'] == 0
+          assert smoke['runtime_version'] == portable['runtime_version'] == tag.removeprefix('v')
           assert smoke['installed_backend_verified'] is True and smoke['uninstall_verified'] is True
           for gate in ('start_menu_shortcut_verified', 'project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
                        'uninstall_data_preservation_verified', 'reinstall_restart_verified',

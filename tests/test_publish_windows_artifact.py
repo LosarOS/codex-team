@@ -55,8 +55,8 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
     (root / 'BUILD-NOTES.txt').write_text('Source commit: ' + 'a' * 40 + '\nFull source suite: passed.')
     (root / 'RELEASE-NOTES-RU.md').write_text('Synthetic release validation fixture')
     smoke = {'platform': 'Windows', 'installed_backend_verified': True, 'uninstall_verified': True,
-             'model_calls': 0, 'sdk_account_calls': 0, 'installed_git_version': 'git version fixture'}
-    portable = {'platform': 'Windows', 'source_commit': 'a' * 40, 'model_calls': 0, 'sdk_account_calls': 0}
+             'model_calls': 0, 'sdk_account_calls': 0, 'installed_git_version': 'git version fixture', 'runtime_version': '1.0.0-rc11'}
+    portable = {'platform': 'Windows', 'source_commit': 'a' * 40, 'model_calls': 0, 'sdk_account_calls': 0, 'runtime_version': '1.0.0-rc11'}
     portable.update({gate: True for gate in ('archive_crc_verified', 'startup_verified', 'restart_verified', 'settings_history_queue_preserved', 'portable_backend_verified')})
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     path = root / 'installed-smoke.json'
