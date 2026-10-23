@@ -1,0 +1,42 @@
+{
+  "status": "VERIFIED PRERELEASE WITH DISCLOSED LIMITATIONS",
+  "tag": "v1.0.0-rc11",
+  "source_commit": "4c3c91eb6f6e682745569b8fd7d2ffdf39fbe595",
+  "release_url": "https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11",
+  "assets": [
+    {
+      "asset": "CodexTeam-Portable-x64.zip",
+      "http_status": 200,
+      "bytes": 249646520,
+      "sha256": "027644b7edf053d282536a74c1385938a531a0644dab68d8d565594ea2534006",
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/CodexTeam-Portable-x64.zip"
+    },
+    {
+      "asset": "CodexTeam-Setup-x64.exe",
+      "http_status": 200,
+      "bytes": 155639105,
+      "sha256": "7ae495f8aefa402205496b8a83a10159561528e1a42c7d7c52b06480ed1ed82f",
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/CodexTeam-Setup-x64.exe"
+    },
+    {
+      "asset": "CodexTeam-Setup-x64.zip",
+      "http_status": 200,
+      "bytes": 155173867,
+      "sha256": "40e22d858ae887e7badfc1d697d6f0e7975699b3a583ff2b81259688de20e2f7",
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/CodexTeam-Setup-x64.zip"
+    }
+  ],
+  "source_tests": {
+    "tests": 878,
+    "status": "passed",
+    "errors": 0,
+    "failures": 0,
+    "skipped": 1,
+    "duration_seconds": 957.749,
+    "source_commit": "4c3c91eb6f6e682745569b8fd7d2ffdf39fbe595",
+    "platform": "Windows",
+    "passed": 877
+  },
+  "manual_gui_verified": false,
+  "live_sdk_development_verified": false
+}

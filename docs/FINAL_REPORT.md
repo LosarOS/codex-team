@@ -1,10 +1,12 @@
 # Codex Team — итоговый отчёт
 
+> Исторический отчёт от 10 октября 2026. Его результаты относятся к прежней сборке и аккаунту; актуальные проверки и ограничения RC11 находятся в [отчёте сессии 23 октября](../reports/engineering-session-2026-10-23.md).
+
 Дата: 10 октября 2026, Windows x64. Реализован локальный рабочий MVP над официальным Codex. Продвинутые возможности, отсутствующие в этой версии, перечислены явно.
 
 1. **Что реализовано.** Python backend, localhost UI, CLI, независимые роли, шесть режимов, editable prompts, пять packs и custom specialists. SQLite history/events/settings, project memory, checkpoints, bounded repair loops, Pause/Stop/Steer/Queue/Resume, worktrees, diff, usage, model list и ChatGPT connection status.
 
-2. **Архитектура.** `server.py`/`cli.py` → `engine.py` → `provider.py` → официальный `openai-codex==0.162.1` и pinned CLI runtime 0.162.1. Каждый агент получает отдельный настоящий thread, developerInstructions, permission profile и structured output schema. Native Codex выполняет свою работу; приложение передаёт задачи/артефакты и проверяет результаты. `workspace.py` отвечает за Git/границы, `storage.py` за SQLite и редактирование секретов, `context.py` за targeted context, `registry.py` за роли/packs. Подробности: [ARCHITECTURE_DRAFT](../ARCHITECTURE_DRAFT.md).
+2. **Архитектура.** `server.py`/`cli.py` → `engine.py` → `provider.py` → официальный `openai-codex==0.162.1` и pinned CLI runtime 0.162.1. Каждый агент получает отдельный настоящий thread, developerInstructions, permission profile и structured output schema. Native Codex выполняет свою работу; приложение передаёт задачи/артефакты и проверяет результаты. `workspace.py` отвечает за Git/границы, `storage.py` за SQLite и редактирование секретов, `context.py` за targeted context, `registry.py` за роли/packs. Подробности: [ARCHITECTURE](../ARCHITECTURE.md).
 
 3. **Запуск.** В PowerShell из корня: `./setup.ps1`, затем `./run.ps1`. На данном ПК `.venv` уже установлен. UI: http://127.0.0.1:8765. `./run.ps1 -NoBrowser` запускает только сервер. Python 3.11+ и Git обязательны. Node.js не нужен backend. Setup умеет использовать имеющийся bundled Python вместо сломанного WindowsApps alias. См. [INSTALL_WINDOWS](../INSTALL_WINDOWS.md).
 
