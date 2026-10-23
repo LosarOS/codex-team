@@ -15,6 +15,13 @@ import codex_team.desktop as desktop
 import codex_team.desktop_runtime as runtime
 
 
+def test_desktop_runtime_uses_package_release_version():
+    from codex_team import __version__
+    # Session markers, diagnostic bundles and backend desktop context must agree
+    # with the bundled release rather than retaining an older hardcoded RC.
+    assert runtime.VERSION == desktop.VERSION == __version__
+
+
 @pytest.fixture
 def resources(tmp_path):
     root = tmp_path / "bundle"
