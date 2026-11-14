@@ -21,6 +21,7 @@ using System.Runtime.InteropServices;
 public static class GuiProbeWin32 {
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int n);
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("kernel32.dll", SetLastError=true)] public static extern bool GetExitCodeProcess(IntPtr h,out uint code);
 }
 '@
 function Capture([string]$name) {
@@ -51,6 +52,8 @@ try {
  $token=[guid]::NewGuid().ToString('N');$base='http://127.0.0.1:'+$port
  $backendArguments=@('--desktop-backend','--data-root',('"'+$profile+'"'),'--port',$port,'--instance-token',$token,'--parent-pid',$PID)
  $backend=Start-Process -FilePath $appExe -ArgumentList $backendArguments -WorkingDirectory $profile -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $out 'seed.stdout.log') -RedirectStandardError (Join-Path $out 'seed.stderr.log')
+ # Cache the owned OS handle while alive; Windows PowerShell5.1 may otherwise expose null ExitCode after redirected children exit.
+ $fixtureHandle=$backend.Handle
  $ready=$false;$until=[DateTime]::UtcNow.AddSeconds(60)
  do {try {$health=Invoke-RestMethod ($base+'/health') -TimeoutSec 2;$ready=$health.status -eq 'ok'} catch {Start-Sleep -Milliseconds 300}} while (-not $ready -and [DateTime]::UtcNow -lt $until)
  if (-not $ready) {throw 'Frozen fixture backend unavailable.'}
@@ -58,7 +61,14 @@ try {
  $project=Invoke-RestMethod ($base+'/api/projects/create') -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 30
  if (-not $project.ready) {throw 'Owned Git project fixture not ready.'}
  $null=Invoke-RestMethod ($base+'/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}'
- if (-not $backend.WaitForExit(30000) -or $backend.ExitCode -ne 0) {throw 'Fixture backend did not exit cleanly.'}
+ $fixtureExited=$backend.WaitForExit(30000)
+ $report.fixture_wait_completed=$fixtureExited
+ $report.fixture_managed_exit_code=$backend.ExitCode
+ $fixtureCode=[uint32]259
+ if (-not [GuiProbeWin32]::GetExitCodeProcess($fixtureHandle,[ref]$fixtureCode)) {throw ('Could not read owned fixture exit code: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error())}
+ $report.fixture_native_exit_code=$fixtureCode
+ if (-not $fixtureExited -or $fixtureCode -ne 0) {throw ('Fixture backend did not exit cleanly; actual native exit code='+$fixtureCode)}
+ $report.fixture_graceful_stop_verified=$true
  $backend=$null
  # Omit --data-root and override: actual portable.json must select this owned data/.
  $env:CODEX_TEAM_DATA_ROOT=$null
