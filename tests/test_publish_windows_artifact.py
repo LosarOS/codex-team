@@ -2,6 +2,19 @@
 from pathlib import Path
 import ast
 import textwrap
+import json
+import pytest
+
+EVOLUTION_GATES = (
+    "evolution_budget_export_verified", "evolution_plan_verified",
+    "evolution_context_preview_verified", "evolution_no_dispatch_verified",
+    "evolution_plan_restart_verified",
+)
+NATIVE_GATES = (
+    "start_menu_shortcut_verified", "project_doctor_verified", "queue_preflight_verified", "same_version_upgrade_verified",
+    "uninstall_data_preservation_verified", "reinstall_restart_verified",
+    "mission_queue_restart_verified", "appearance_restart_verified", "notebook_restart_verified",
+)
 
 
 def test_release_only_workflow_guards_and_python_validation():
@@ -33,15 +46,13 @@ def _release_validation_script():
     return textwrap.dedent(workflow.split("python3 - <<'PY'\n")[2].split('\n          PY', 1)[0])
 
 
-def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
+def _valid_artifact_fixture(tmp_path, monkeypatch):
     import hashlib
-    import json
-    import pytest
 
     script = compile(_release_validation_script(), '<artifact-validation>', 'exec')
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv('SOURCE_COMMIT', 'a' * 40)
-    monkeypatch.setenv('RELEASE_TAG', 'v1.0.0-rc11')
+    monkeypatch.setenv('RELEASE_TAG', 'v1.0.0-rc12')
     root = tmp_path / 'release-assets'
     root.mkdir()
     checks = {}
@@ -51,21 +62,30 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
         checks[name] = {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
     (root / 'release-checksums.json').write_text(json.dumps(checks))
     (root / 'SHA256SUMS.txt').write_text(''.join(f"{entry['sha256']}  {name}\n" for name, entry in checks.items()))
-    (root / 'build-verification.json').write_text(json.dumps({'app_version': '1.0.0rc11', 'sensitive_paths_found': 0, 'required_files_checked': 30}))
+    (root / 'build-verification.json').write_text(json.dumps({'app_version': '1.0.0rc12', 'sensitive_paths_found': 0, 'required_files_checked': 30}))
     (root / 'BUILD-NOTES.txt').write_text('Source commit: ' + 'a' * 40 + '\nFull source suite: passed.')
     (root / 'RELEASE-NOTES-RU.md').write_text('Synthetic release validation fixture')
     smoke = {'platform': 'Windows', 'installed_backend_verified': True, 'uninstall_verified': True,
-             'model_calls': 0, 'sdk_account_calls': 0, 'installed_git_version': 'git version fixture', 'runtime_version': '1.0.0-rc11'}
-    portable = {'platform': 'Windows', 'source_commit': 'a' * 40, 'model_calls': 0, 'sdk_account_calls': 0, 'runtime_version': '1.0.0-rc11'}
+             'model_calls': 0, 'sdk_account_calls': 0, 'installed_git_version': 'git version fixture', 'runtime_version': '1.0.0-rc12'}
+    portable = {'platform': 'Windows', 'source_commit': 'a' * 40, 'model_calls': 0, 'sdk_account_calls': 0, 'runtime_version': '1.0.0-rc12'}
+    smoke.update({gate: True for gate in (*NATIVE_GATES, *EVOLUTION_GATES)})
+    portable.update({gate: True for gate in EVOLUTION_GATES})
     portable.update({gate: True for gate in ('archive_crc_verified', 'startup_verified', 'restart_verified', 'settings_history_queue_preserved', 'portable_backend_verified')})
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     path = root / 'installed-smoke.json'
     path.write_text(json.dumps(smoke))
+    return script, root, smoke, portable
+
+
+def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
+    script, root, smoke, portable = _valid_artifact_fixture(tmp_path, monkeypatch)
+    path = root / "installed-smoke.json"
+    for gate in NATIVE_GATES:
+        del smoke[gate]
+    path.write_text(json.dumps(smoke))
     with pytest.raises(AssertionError, match='Missing native release gate'):
         exec(script, {})
-    gates = ('start_menu_shortcut_verified', 'project_doctor_verified', 'queue_preflight_verified', 'same_version_upgrade_verified',
-             'uninstall_data_preservation_verified', 'reinstall_restart_verified',
-             'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified')
+    gates = NATIVE_GATES
     smoke.update({gate: True for gate in gates})
     path.write_text(json.dumps(smoke))
     exec(script, {})
@@ -80,7 +100,7 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     with pytest.raises(AssertionError):
         exec(script, {})
-    portable['runtime_version'] = '1.0.0-rc11'
+    portable['runtime_version'] = '1.0.0-rc12'
     portable['portable_backend_verified'] = False
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     with pytest.raises(AssertionError, match='Missing portable release gate'):
@@ -89,4 +109,21 @@ def test_release_validation_rejects_missing_native_gates(tmp_path, monkeypatch):
     (root / 'portable-smoke.json').write_text(json.dumps(portable))
     (root / 'BUILD-NOTES.txt').write_text('Source commit: ' + 'a' * 40 + '\nFull source suite: skipped by explicit manual request.')
     with pytest.raises(AssertionError):
+        exec(script, {})
+
+
+@pytest.mark.parametrize("filename", ["installed-smoke.json", "portable-smoke.json"])
+@pytest.mark.parametrize("gate", EVOLUTION_GATES)
+@pytest.mark.parametrize("value", [None, False])
+def test_release_validation_requires_each_rc12_gate(tmp_path, monkeypatch, filename, gate, value):
+    script, root, smoke, portable = _valid_artifact_fixture(tmp_path, monkeypatch)
+    # Establish a complete positive fixture before removing one proof only.
+    exec(script, {})
+    proof = smoke if filename == "installed-smoke.json" else portable
+    if value is None:
+        del proof[gate]
+    else:
+        proof[gate] = value
+    (root / filename).write_text(json.dumps(proof))
+    with pytest.raises(AssertionError, match="Missing RC12 frozen backend gate: " + gate):
         exec(script, {})
