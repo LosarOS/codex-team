@@ -1438,6 +1438,19 @@
   window.addEventListener("pageshow",event=>{if(event.persisted){refreshLoop?.start();refreshLoop?.wake();}});
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
   I.register?.({
+    "Не более 30 источников":"At most 30 sources are allowed",
+    "Источник изменился или недоступен; обновите запись":"The source changed or is unavailable; refresh the entry",
+    "Версия ТЗ изменилась; обновите план":"The specification version changed; refresh the plan",
+    "План должен содержать от 1 до 20 шагов":"A plan must contain 1 to 20 steps",
+    "Некорректная структура шага":"Invalid step structure",
+    "Идентификаторы шагов должны быть уникальны":"Step identifiers must be valid and unique",
+    "Заполните название и критерий приёмки шага":"Enter a step title and acceptance criterion",
+    "Укажите относительные пути файлов":"Enter relative file paths",
+    "Некорректные зависимости шага":"Invalid step dependencies",
+    "План содержит цикл или неизвестную зависимость":"The plan contains a cycle or an unknown dependency",
+    "План уже существует; обновите редактор":"The plan already exists; refresh the editor",
+    "План изменился; обновите редактор":"The plan changed; refresh the editor",
+    "Подготовка доступна только для шага без зависимостей":"Only a step without dependencies can be prepared",
     "Сначала разрешите конфликт черновика задачи.":"Resolve the task draft conflict first.",
     "Подготовить отдельную задачу?":"Prepare a separate task?",
     "Текущая форма будет заменена выбранным шагом. Доступ: рабочая папка, изоляция включена. Запуск или добавление в очередь — отдельное действие.":"The current form will be replaced with the selected step. Access: workspace, isolation enabled. Launching or adding to the queue is a separate action.",

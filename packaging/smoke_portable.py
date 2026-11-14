@@ -88,6 +88,8 @@ def smoke(archive: Path, diagnostics: Path, report: dict) -> None:
                 raise RuntimeError("Portable backend shutdown failed")
 
         saved_mission = None
+        evolution = None
+        project = None
         for iteration in ("startup", "restart"):
             with (diagnostics / f"{iteration}.stdout.log").open("wb") as stdout, (diagnostics / f"{iteration}.stderr.log").open("wb") as stderr:
                 process = subprocess.Popen(command, cwd=profile, env=environment, stdout=stdout, stderr=stderr,
@@ -136,6 +138,12 @@ def smoke(archive: Path, diagnostics: Path, report: dict) -> None:
                                 or runs.get("total") != 1 or runs["items"][0]["id"] != "portable-smoke-run"):
                             raise RuntimeError("Portable restart lost synthetic history/notebook")
                         report["settings_history_queue_preserved"] = True
+                    # Source-runner helper talks to the real frozen portable backend.
+                    from smoke_evolution import verify
+                    evolution = verify(request, project["id"], evolution["evolution_specification_id"] if evolution else None)
+                    report.update(evolution)
+                    if iteration == "restart":
+                        report["evolution_plan_restart_verified"] = True
                     stop(process)
                     report[f"{iteration}_verified"] = True
                 finally:

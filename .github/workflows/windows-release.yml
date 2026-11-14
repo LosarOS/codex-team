@@ -90,6 +90,12 @@ jobs:
           ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
       - name: Stage verified downloadable files
         run: |
+          foreach ($proofFile in @('packaging/portable-smoke.json','packaging/installed-smoke.json')) {
+            $proof = Get-Content -LiteralPath $proofFile -Raw | ConvertFrom-Json
+            foreach ($gate in @('evolution_budget_export_verified','evolution_plan_verified','evolution_context_preview_verified','evolution_no_dispatch_verified','evolution_plan_restart_verified')) {
+              if ($proof.$gate -ne $true) { throw "Missing RC12 frozen backend gate: $proofFile / $gate" }
+            }
+          }
           New-Item -ItemType Directory -Force release-assets | Out-Null
           $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json', 'packaging/portable-smoke.json')
           foreach ($file in $required) {

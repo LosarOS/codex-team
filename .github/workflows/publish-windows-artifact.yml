@@ -103,6 +103,9 @@ jobs:
                        'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified'):
               assert smoke.get(gate) is True, 'Missing native release gate: ' + gate
           assert smoke['model_calls'] == 0 and smoke['sdk_account_calls'] == 0
+          for proof in (smoke, portable):
+              for gate in ('evolution_budget_export_verified', 'evolution_plan_verified', 'evolution_context_preview_verified', 'evolution_no_dispatch_verified', 'evolution_plan_restart_verified'):
+                  assert proof.get(gate) is True, 'Missing RC12 frozen backend gate: ' + gate
           assert smoke['installed_git_version'].startswith('git version ')
           notes = (root / 'BUILD-NOTES.txt').read_text(encoding='utf-8-sig')
           assert 'Source commit: ' + os.environ['SOURCE_COMMIT'] in notes

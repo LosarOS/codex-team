@@ -137,6 +137,15 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $preflight = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue/preflight') -Method Post -ContentType 'application/json' -Body $preflightBody -TimeoutSec 30
     if ($preflight.schema_version -ne 1 -or -not $preflight.ready -or $preflight.models_called -ne $false -or $preflight.provider_verified -ne $false -or $preflight.queue_revision -notmatch '^[a-f0-9]{64}$') { throw 'Installed local queue preflight failed or claimed provider validation.' }
     $report.queue_preflight_verified = $true
+    $evolutionReport = Join-Path $diagnostics 'evolution-startup.json'
+    & python (Join-Path $PSScriptRoot 'smoke_evolution.py') --base-url $baseUrl --project-id $created.id --report $evolutionReport
+    if ($LASTEXITCODE -ne 0) { throw 'Installed RC12 planning/budget/context smoke failed.' }
+    $evolution = Get-Content -LiteralPath $evolutionReport -Raw | ConvertFrom-Json
+    foreach ($key in @('evolution_budget_export_verified','evolution_plan_verified','evolution_context_preview_verified','evolution_no_dispatch_verified')) {
+        if ($evolution.$key -ne $true) { throw "Missing installed RC12 startup gate: $key" }
+        $report[$key] = $true
+    }
+
     $notebookText = 'Личная заметка проверки перезапуска'
     $notebookBody = @{ expected_revision = 0; favorite = $true; note = $notebookText } | ConvertTo-Json
     $savedNotebook = Invoke-RestMethod -Uri ($baseUrl + '/api/runs/installed-smoke-run/notebook') -Method Put -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($notebookBody)) -TimeoutSec 10
@@ -165,6 +174,11 @@ with sqlite3.connect(folder / 'team.sqlite3') as database:
     $restoredQueue = Invoke-RestMethod -Uri ($baseUrl + '/api/mission-queue') -TimeoutSec 10
     if ($restoredQueue.summary.state -eq 'running' -or $restoredQueue.items.Count -ne 1 -or $restoredQueue.items[0].id -ne $savedMission.id -or $restoredQueue.items[0].status -ne 'pending' -or $restoredQueue.items[0].run_id) { throw 'Queue did not survive restart safely without automatic execution.' }
     $report.mission_queue_restart_verified = $true
+    $evolutionRestartReport = Join-Path $diagnostics 'evolution-restart.json'
+    & python (Join-Path $PSScriptRoot 'smoke_evolution.py') --base-url $baseUrl --project-id $created.id --specification-id $evolution.evolution_specification_id --report $evolutionRestartReport
+    if ($LASTEXITCODE -ne 0) { throw 'Installed RC12 plan persistence failed after repair/restart.' }
+    $report.evolution_plan_restart_verified = $true
+
     $restoredDraft = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft') -TimeoutSec 10
     if ($restoredDraft.revision -ne 1 -or $restoredDraft.draft.data.task -ne $draftText) { throw 'Draft was lost after installed backend restart.' }
     $null = Invoke-RestMethod -Uri ($baseUrl + '/api/task-draft?expected_revision=1') -Method Delete -ContentType 'application/json' -Body '{}' -TimeoutSec 10

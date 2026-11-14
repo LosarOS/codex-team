@@ -122,6 +122,10 @@ def test_new_planning_and_context_routes_real_http(local_app,monkeypatch):
     saved=client.put(route,json={'steps':[step(files=['main.py'])],'specification_version':spec['version']})
     assert saved.status_code==200,saved.text
     assert client.get(route).json()['data']['execution']=='plan_only_no_dispatch'
+    prepared=client.get(route+'/prepare',params={'step_id':'a','expected_version':saved.json()['version']})
+    assert prepared.status_code==200,prepared.text
+    assert prepared.json()['execution']=='composer_only_no_dispatch'
+    assert client.get(route+'/prepare',params={'step_id':'a','expected_version':99}).status_code==400
     fact=client.post(f'/api/suite/projects/{pid}/knowledge',json={'category':'verified_fact','title':'Main entry','content':'Reviewed entry point','sources':['main.py']})
     assert fact.status_code==200,fact.text
     path=f'/api/suite/projects/{pid}/context-preview'
