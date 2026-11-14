@@ -1,0 +1,1 @@
+{"cve":null,"id":"GHSA-xmj3-9gf7-h52w","severity":"low","updated":"2026-10-23T21:44:13Z","url":"https://github.com/advisories/GHSA-xmj3-9gf7-h52w","vulnerabilities":[{"first_patched_version":"84.1.0","package":{"ecosystem":"pip","name":"setuptools"},"vulnerable_functions":[],"vulnerable_version_range":"\u003e= 38.2.2, \u003c 84.1.0"}]}
