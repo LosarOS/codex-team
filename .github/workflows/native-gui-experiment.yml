@@ -1,0 +1,79 @@
+name: Actual portable WebView2 GUI experiment
+on:
+  push:
+    branches: ['ops/native-gui-experiment']
+    paths: ['.github/gui-experiment-request.json', '.github/workflows/native-gui-experiment.yml']
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows candidate build run ID
+        required: true
+        type: string
+      source_sha:
+        description: Exact candidate source commit (40 lowercase hex)
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-gui:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      CANDIDATE_RUN: ${{ inputs.run_id }}
+      CANDIDATE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify exact candidate provenance before downloading
+        id: candidate
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $request=Get-Content -LiteralPath '.github/gui-experiment-request.json' -Raw | ConvertFrom-Json -AsHashtable
+            if ($request.Count -ne 2 -or -not $request.ContainsKey('run_id') -or -not $request.ContainsKey('source_sha')) { throw 'Only run_id/source_sha request is accepted.' }
+            $env:CANDIDATE_RUN=[string]$request.run_id
+            $env:CANDIDATE_SHA=[string]$request.source_sha
+          }
+          if ($env:CANDIDATE_RUN -notmatch '^\d+$' -or $env:CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Exact run/source required.' }
+          $run = gh api "repos/$env:GH_REPO/actions/runs/$env:CANDIDATE_RUN" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $run.path -ne '.github/workflows/windows-release.yml' -or $run.conclusion -ne 'success' -or $run.head_sha -cne $env:CANDIDATE_SHA -or $run.repository.full_name -cne $env:GH_REPO -or $run.head_repository.full_name -cne $env:GH_REPO) { throw 'Unverified or foreign candidate.' }
+          "run_id=$env:CANDIDATE_RUN" >> $env:GITHUB_OUTPUT
+          "CANDIDATE_SHA=$env:CANDIDATE_SHA" >> $env:GITHUB_ENV
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: codex-team-windows-x64
+          path: candidate
+          run-id: ${{ steps.candidate.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Check actual bytes and PowerShell syntax
+        shell: pwsh
+        run: |
+          $manifest=Get-Content candidate/release-checksums.json -Raw | ConvertFrom-Json -AsHashtable
+          $keys=@($manifest.Keys | Where-Object { [IO.Path]::GetFileName($_) -ceq 'CodexTeam-Portable-x64.zip' })
+          if ($keys.Count -ne 1) { throw 'Portable checksum absent or ambiguous.' }
+          $entry=$manifest[$keys[0]]
+          $zip=Get-Item candidate/CodexTeam-Portable-x64.zip
+          if ($zip.Length -le 0 -or $zip.Length -ne $entry.bytes -or (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.sha256) { throw 'Candidate byte mismatch.' }
+          $proof=Get-Content candidate/portable-smoke.json -Raw | ConvertFrom-Json
+          if ($proof.source_commit -cne $env:CANDIDATE_SHA -or $proof.portable_backend_verified -ne $true) { throw 'Candidate backend/source proof mismatch.' }
+          $errors=$null
+          [Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'packaging/Smoke-DesktopGui.ps1'),[ref]$null,[ref]$errors) | Out-Null
+          if ($errors.Count) {throw ($errors | Out-String)}
+      - name: Run actual EXE UIA and native Save dialog experiment
+        shell: pwsh
+        run: |
+          powershell.exe -NoProfile -STA -File packaging/Smoke-DesktopGui.ps1 -ArchivePath candidate/CodexTeam-Portable-x64.zip -SourceCommit $env:CANDIDATE_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Native GUI experiment did not pass; inspect genuine evidence.' }
+      - name: Preserve genuine screenshots and experiment outcomes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: actual-native-gui-experiment
+          path: .build-tools/native-gui/**
+          if-no-files-found: warn
+          retention-days: 14
