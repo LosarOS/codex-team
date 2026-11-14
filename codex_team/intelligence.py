@@ -150,15 +150,22 @@ class IntelligenceService:
                 hashes[name] = self._source_digest(root, name) if name in allowed else None
             return hashes[name]
         for row in page["items"]:
-            data = row["data"]
+            data = row["data"] if isinstance(row["data"], dict) else {}
             binding = data.get("source_binding")
-            if not binding or current_head is None:
+            sources = data.get("sources")
+            valid = isinstance(binding, dict) and isinstance(sources, list) and len(sources) <= 30 and all(isinstance(name, str) and bool(name) for name in sources)
+            if valid:
+                head, files = binding.get("head"), binding.get("files")
+                valid = isinstance(head, str) and re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", head) is not None
+                valid = valid and isinstance(files, dict) and len(files) <= 30 and all(isinstance(name, str) and bool(name) and isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None for name, value in files.items())
+                valid = valid and all(name in files for name in sources) and not (data.get("category") == "verified_fact" and not sources)
+            if not valid or current_head is None:
                 state = "unknown"
-            elif data.get("sources"):
-                state = "current" if all(digest(name) == binding.get("files", {}).get(name) and digest(name) is not None for name in data["sources"]) else "stale"
+            elif sources:
+                state = "current" if all(digest(name) == binding["files"][name] and digest(name) is not None for name in sources) else "stale"
             else:
                 state = "current" if current_head is not None and binding.get("head") == current_head else "review_required"
-            row["freshness"] = {"state": state, "captured_head": binding.get("head") if binding else None, "current_head": current_head}
+            row["freshness"] = {"state": state, "captured_head": binding["head"] if valid else None, "current_head": current_head}
         return page
 
     def _source_digest(self, root, name):
