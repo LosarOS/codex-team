@@ -40,6 +40,51 @@ def save_run_report(destination, markdown):
             temporary.unlink(missing_ok=True)
 
 
+def budget_export_query(filters):
+    """Validate native bridge input before constructing a fixed backend request."""
+    from datetime import date as calendar_date
+    from urllib.parse import urlencode
+    if not isinstance(filters, dict) or set(filters) - {'project_id', 'date', 'limit', 'offset'}:
+        raise ValueError('Invalid budget export filters')
+    project = filters.get('project_id', '')
+    if project != '':
+        verified_identifier(project)
+    day = filters.get('date', '')
+    if not isinstance(day, str) or (day and calendar_date.fromisoformat(day).isoformat() != day):
+        raise ValueError('Invalid budget export date')
+    limit, offset = filters.get('limit', 50), filters.get('offset', 0)
+    if type(limit) is not int or not 1 <= limit <= 100 or type(offset) is not int or not 0 <= offset <= 1000000:
+        raise ValueError('Invalid budget export page')
+    return urlencode({'project_id': project, 'date': day, 'limit': limit, 'offset': offset})
+
+
+def save_budget_report(destination, report):
+    """Only backend-owned bounded JSON; destination comes from the native picker."""
+    path = Path(destination)
+    if path.suffix.lower() != '.json' or path.is_symlink():
+        raise ValueError('Choose a regular JSON file')
+    if not isinstance(report, dict) or report.get('schema_version') != 1 or report.get('models_called') is not False or report.get('aggregation_scope') != 'current_page':
+        raise ValueError('Invalid budget report')
+    if not isinstance(report.get('items'), list) or len(report['items']) > 100:
+        raise ValueError('Invalid budget report rows')
+    text = json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+    if len(text) > 2000000:
+        raise ValueError('Budget report exceeds limit')
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', newline='\n', dir=path.parent,
+                                         prefix='.codex-budget-', suffix='.tmp', delete=False) as output:
+            temporary = Path(output.name)
+            output.write(text)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+        return path
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def diagnostic_redact(text):
     text = SECRET_HEADER.sub(r"\1[REDACTED]", sanitize(text))
     home = os.environ.get("USERPROFILE")

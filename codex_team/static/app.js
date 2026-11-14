@@ -1468,7 +1468,7 @@
     applyComposeDraft({task:prepared.task,workspace:prepared.workspace,mode:"standard",specialists:[]});
     taskDraft?.changed();setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});
   }
-  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess,preparePlanTask};
+  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess,preparePlanTask,getNativeBudgetExport:()=>{const host=desktopBridge();return typeof host?.export_budget_report==="function"?filters=>host.export_budget_report(filters):null;}};
   window.CodexWorkspace = Object.freeze({
     entries: () => ({
       projects: state.projects.map(({id,name,path}) => ({id,name,path})),

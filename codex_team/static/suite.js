@@ -183,12 +183,14 @@
     const date=input(period,'date');
     overview.append(field(I.t('Период: день (пусто — всё время)'),date),button(I.t('Применить период'),async()=>{period=date.value;pages.set(active,0);await load();}));
     overview.append(button(I.t('Предпросмотр экспорта выборки'),async()=>{
+      const filters={project_id:project.value,date:period,limit:pageSize,offset:pages.get(active)||0};
       const report=await req('/budget/export?project_id='+pid()+'&date='+encodeURIComponent(period)+pageQuery());
       if(!live(mine))return;
       overview.querySelector('.budget-export-preview')?.remove();
       const preview=el('section','budget-export-preview');preview.append(el('h4','',I.t('Экспорт текущей страницы')),el('p','suite-muted',I.t('Только текущая страница и применённые фильтры. Без текста задач и путей. Неизвестные токены и стоимость остаются null.')));
+      if(bridge.getNativeBudgetExport?.())preview.append(el('p','suite-muted',planningText('Системный диалог сохранит свежий серверный снимок с этими фильтрами.','The system dialog saves a fresh server snapshot using these filters.')));
       const rendered=JSON.stringify(report,null,2);preview.append(el('pre','suite-output',rendered));
-      preview.append(button(I.t('Скачать JSON'),()=>{const blob=new Blob([rendered],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='codex-team-budget.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}));overview.append(preview);
+      preview.append(button(I.t('Скачать JSON'),async()=>{const native=bridge.getNativeBudgetExport?.();if(native){const result=await native(filters);if(result?.cancelled){message(planningText('Сохранение отменено.','Saving cancelled.'));return;}if(!result?.ok||result.error)throw Error(planningText('Не удалось сохранить JSON через системный диалог. Проверьте доступ к папке и повторите.','Could not save JSON using the system dialog. Check folder access and retry.'));message(planningText('JSON сохранён.','JSON saved.'));return;}const blob=new Blob([rendered],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='codex-team-budget.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}));overview.append(preview);
     }));
     const cfg=panel(I.t('Политика проекта'));
     const calls=input(p.max_agent_calls??100,'number'), tokens=input(p.max_total_tokens,'number');

@@ -23,3 +23,7 @@
 Повторение матрицы: после основного сценария на той же fixture `node tests/rc12_plan_matrix.cjs http://127.0.0.1:8768`. Темы/язык меняются только в disposable fixture. Это не Windows DPI, Narrator, WebView2 или реальный аккаунт Codex.
 
 После UI polish:47 targeted Python planning/intelligence tests passed; Node i18n/MC passed; diff whitespace check passed. Эти проверки не прибавляются к полному suite как дополнительные уникальные cases.
+
+## Native budget export routing
+
+`native-budget-bridge.json`: настоящая Chromium UI с реальным backend, но **MOCKED pywebview host**. Проверены success/cancel/error,3hostcalls,0Blobcalls,0pageerrors; nativefailure/cancel не переключаются на браузерную загрузку. Это не проверка настоящего SAVE dialog на Windows. Backend-owned JSON выбирается через новый host method; JavaScript передаёт только ограниченные фильтры. Запуск: `node tests/rc12_budget_native_bridge.cjs http://127.0.0.1:8768` на новой fixture.
