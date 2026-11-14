@@ -1,5 +1,6 @@
 """Observed per-run budgets. Never interprets account quota or estimates cost."""
 from collections import defaultdict
+from datetime import date as calendar_date
 
 THRESHOLDS = (50, 75, 90, 100)
 
@@ -20,6 +21,8 @@ def validate_policy(policy):
 
 
 def measured_tokens(entry):
+    if not isinstance(entry, dict):
+        return None
     last = entry.get('last')
     if not isinstance(last, dict):
         return None
@@ -65,6 +68,12 @@ class BudgetGuardian:
         return self.records.put('budget_policy', project_id, validate_policy(policy), record_id="budget_" + project_id)
 
     def dashboard(self, project_id='', date='', limit=100, offset=0):
+        if date:
+            try:
+                if calendar_date.fromisoformat(date).isoformat() != date:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                raise ValueError('Invalid date: use YYYY-MM-DD') from None
         if not 1 <= limit <= 200 or offset < 0:
             raise ValueError('Invalid page')
         project = next((p for p in self.store.projects() if p['id'] == project_id), None) if project_id else None
@@ -76,13 +85,13 @@ class BudgetGuardian:
         for row in page['items']:
             run = self.store.run(row['id'])
             items.append({'id': run['id'], 'task': run.get('task', '')[:400], 'created_at': run.get('created_at'),
-                          'state': run['state'], 'usage': [{'agent': e.get('agent'), 'completed_at': e.get('completed_at'), 'measured_tokens': measured_tokens(e)} for e in run.get('usage', [])[-100:]], **evaluate(run)})
+                          'state': run['state'], 'usage': [{'agent': e.get('agent') if isinstance(e,dict) else None, 'completed_at': e.get('completed_at') if isinstance(e,dict) else None, 'measured_tokens': measured_tokens(e)} for e in run.get('usage', [])[-100:]], **evaluate(run)})
             with self.store.lock:
                 counts = self.store.db.execute("SELECT role,count(*) FROM events WHERE run_id=? AND type='agent_started' GROUP BY role", (run['id'],)).fetchall()
             for role_name, count in counts:
                 roles[role_name or 'unknown']['calls'] += count
             for entry in run.get('usage', []):
-                role = roles[entry.get('agent', 'unknown')]
+                role = roles[entry.get('agent', 'unknown') if isinstance(entry,dict) else 'unknown']
                 token = measured_tokens(entry)
                 if token is not None:
                     role['measured_tokens'] = (role['measured_tokens'] or 0) + token
@@ -90,3 +99,20 @@ class BudgetGuardian:
                 'roles': dict(roles), 'aggregation_scope': 'current_page', 'account_quota': None,
                 'recommendations': ['Для небольших задач рассмотрите Quick.', 'Ограничивайте число повторных проверок бюджетом вызовов.'],
                 'policy': self.project_policy(project_id) if project_id else {}}
+
+    def export(self, project_id='', date='', limit=100, offset=0):
+        """Bounded, explicit page export; never includes task text, paths or secrets."""
+        page = self.dashboard(project_id, date, limit, offset)
+        from .storage import now
+        fields = ('id', 'created_at', 'state', 'calls', 'measured_tokens',
+                  'usage_complete', 'max_agent_calls', 'max_total_tokens')
+        rows = [{key: item.get(key) for key in fields} for item in page['items']]
+        measured = [r['measured_tokens'] for r in rows if r['measured_tokens'] is not None]
+        return {'schema_version': 1, 'generated_at': now(),
+                'filters': {'project_id': project_id, 'date_utc': date or None},
+                'aggregation_scope': 'current_page', 'total_matching': page['total'],
+                'offset': offset, 'limit': limit, 'exported_runs': len(rows),
+                'measured_tokens': sum(measured) if measured else None,
+                'usage_complete': bool(rows) and all(r['usage_complete'] and r['measured_tokens'] is not None for r in rows),
+                'account_quota': None, 'cost': None, 'models_called': False,
+                'items': rows}

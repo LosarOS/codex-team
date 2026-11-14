@@ -1137,3 +1137,19 @@ window.CodexI18nCatalog = {
   "Разработка программного обеспечения с проверкой безопасности и производительности": "Software development with security and performance review",
   "Разработка и проверка интерфейса, серверной части и безопасности": "Frontend, backend and security development and review"
 };
+
+/* RC12: read-only mission guidance and factual budget export. */
+Object.assign(window.CodexI18nCatalog, {
+  'Восстановите вход в настройках, затем явно продолжите запуск.':'Restore sign-in in Settings, then explicitly resume the run.',
+  'Проверьте сообщение сервиса о лимите; продолжение только вручную.':'Review the service limit message; resuming requires an explicit action.',
+  'Откройте Центр действий и проверьте запрос и бюджет перед решением.':'Open Action Center and review the request and budget before deciding.',
+  'Запуск приостановлен. Продолжение требует явного действия.':'The run is paused. Resuming requires an explicit action.',
+  'Проверьте сохранённые изменения и контрольную точку перед продолжением.':'Inspect saved changes and the checkpoint before resuming.',
+  'Изучите ошибку и изменения. Повторная задача создаётся отдельным действием.':'Inspect the error and changes. Replaying a task is a separate action.',
+  'Запуск остановлен. Уже внесённые изменения не откатываются автоматически.':'The run is stopped. Existing changes are not automatically reverted.',
+  'Хронология сохранённых событий. Загрузка страниц не означает прогресс выполнения.':'Persisted event timeline. Loading pages does not represent execution progress.',
+  'Предпросмотр экспорта выборки':'Preview selection export',
+  'Экспорт текущей страницы':'Export current page',
+  'Только текущая страница и применённые фильтры. Без текста задач и путей. Неизвестные токены и стоимость остаются null.':'Current page and applied filters only. No task text or paths. Unknown tokens and cost remain null.',
+  'Скачать JSON':'Download JSON'
+});

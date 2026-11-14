@@ -75,7 +75,27 @@
     if (/command/.test(type) || /command/i.test(item.type || "") || item.command) return "commands";
     return event.role || /agent|thread|turn|repair/.test(type) ? "agents" : "all";
   }
-  const api = {attempts, category};
+  function timeline(events = [], runId) {
+    // IDs order the persisted ledger. Timestamps may be missing or clocks may move.
+    const seen = new Set();
+    return events.filter(e => e && (runId == null || e.run_id == null || e.run_id === runId))
+      .filter(e => { if (e.id == null || seen.has(String(e.id))) return false; seen.add(String(e.id)); return true; })
+      .slice().sort((a,b) => Number(a.id)-Number(b.id));
+  }
+  function nextAction(run = {}) {
+    const state = String(run?.state || '').toUpperCase();
+    const map = {
+      AUTH_REQUIRED: 'Восстановите вход в настройках, затем явно продолжите запуск.',
+      USAGE_LIMIT: 'Проверьте сообщение сервиса о лимите; продолжение только вручную.',
+      USER_DECISION_REQUIRED: 'Откройте Центр действий и проверьте запрос и бюджет перед решением.',
+      PAUSED: 'Запуск приостановлен. Продолжение требует явного действия.',
+      INTERRUPTED: 'Проверьте сохранённые изменения и контрольную точку перед продолжением.',
+      FAILED: 'Изучите ошибку и изменения. Повторная задача создаётся отдельным действием.',
+      STOPPED: 'Запуск остановлен. Уже внесённые изменения не откатываются автоматически.'
+    };
+    return {state, message: map[state] || null, automaticRetry: false};
+  }
+  const api = {attempts, category, timeline, nextAction};
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.MissionControl = api;
 })(globalThis);

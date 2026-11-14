@@ -827,7 +827,12 @@
   function renderEvents() {
     $("events-count").textContent = state.events.length;
     const container=$("event-list"), filter=state.eventFilter;
-    const visible=state.events.filter(e=>filter==="all"||MissionControl.category(e)===filter);
+    const observed=MissionControl.timeline(state.events,state.selectedRun?.id);
+    const visible=observed.filter(e=>filter==="all"||MissionControl.category(e)===filter);
+    let guidance=document.getElementById("mission-event-guidance");
+    if(!guidance){guidance=node("p","field-note");guidance.id="mission-event-guidance";guidance.setAttribute("role","status");container.before(guidance);}
+    const next=MissionControl.nextAction(state.selectedRun);
+    guidance.textContent=next.message?I.t(next.message):I.t("Хронология сохранённых событий. Загрузка страниц не означает прогресс выполнения.");
     const context=`${state.selectedRun?.id}:${filter}`;
     const same=container.dataset.context===context;
     const wasAtBottom=container.scrollHeight-container.scrollTop-container.clientHeight<70;
@@ -838,7 +843,7 @@
     for(const [id,el] of existing)if(!wanted.has(id))el.remove();
     if(visible.length){
       if(!existing.size)container.replaceChildren();
-      for(const event of visible){
+      for(const [index,event] of visible.entries()){
         if(existing.has(String(event.id)))continue;
         const row=node("article","event-item");row.dataset.eventId=String(event.id);
         row.append(node("time","event-time",prettyDate(event.created_at,true)));
@@ -847,7 +852,7 @@
         title.append(document.createTextNode(eventLabels[event.type]||event.type));content.append(title);
         const summary=eventSummary(event.payload);if(summary)content.append(node("p","event-summary",summary));
         if(event.payload&&Object.keys(event.payload).length){const details=node("details","event-details");details.append(node("summary","",I.t("Данные события")),node("pre","code-block",text(event.payload)));content.append(details);}
-        row.append(content);container.append(row);
+        row.append(content);container.insertBefore(row,container.children[index]||null);
       }
     } else empty(container,I.t("Нет событий"),state.eventsLoaded?I.t("Для выбранного фильтра пока нет событий."):I.t("Загружаем сохранённые события запуска…"));
     if($("follow-events").checked&&(wasAtBottom||!same))container.scrollTop=container.scrollHeight;
@@ -1432,7 +1437,25 @@
   window.addEventListener("pagehide",()=>refreshLoop?.stop());
   window.addEventListener("pageshow",event=>{if(event.persisted){refreshLoop?.start();refreshLoop?.wake();}});
   try { $("workspace").value = localStorage.getItem("codex-team-workspace") || ""; } catch (_) { /* storage may be disabled */ }
-  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess};
+  I.register?.({
+    "Сначала разрешите конфликт черновика задачи.":"Resolve the task draft conflict first.",
+    "Подготовить отдельную задачу?":"Prepare a separate task?",
+    "Текущая форма будет заменена выбранным шагом. Доступ: рабочая папка, изоляция включена. Запуск или добавление в очередь — отдельное действие.":"The current form will be replaced with the selected step. Access: workspace, isolation enabled. Launching or adding to the queue is a separate action.",
+    "Форма изменилась. Повторите подготовку шага.":"The form changed. Prepare the step again."
+  });
+  async function preparePlanTask(prepared, recheck) {
+    const canReplace=()=>!state.creatingRun&&(!taskDraft||taskDraft.canReplace===true);
+    if(!canReplace())throw Error(I.t("Сначала разрешите конфликт черновика задачи."));
+    const snapshot=JSON.stringify(readComposeDraft());
+    if(!await confirmOperation(I.t("Подготовить отдельную задачу?"),I.t("Текущая форма будет заменена выбранным шагом. Доступ: рабочая папка, изоляция включена. Запуск или добавление в очередь — отдельное действие.")))return;
+    if(typeof recheck!=="function")throw Error(I.t("Форма изменилась. Повторите подготовку шага."));
+    prepared=await recheck();
+    if(!canReplace()||JSON.stringify(readComposeDraft())!==snapshot)throw Error(I.t("Форма изменилась. Повторите подготовку шага."));
+    $("run-access-level").value="standard";$("isolated").checked=true;$("auto-commit").checked=false;
+    applyComposeDraft({task:prepared.task,workspace:prepared.workspace,mode:"standard",specialists:[]});
+    taskDraft?.changed();setPage("workbench",true);$("task-composer").scrollIntoView({block:"start"});$("task").focus({preventScroll:true});
+  }
+  window.CodexTeamSuite={api,setPage,selectRun,toast,confirmOperation,state,node,runReady,confirmRunAccess,preparePlanTask};
   window.CodexWorkspace = Object.freeze({
     entries: () => ({
       projects: state.projects.map(({id,name,path}) => ({id,name,path})),

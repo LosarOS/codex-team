@@ -23,6 +23,10 @@ class Idea(Body):
 class EditSpec(Body):
     sections: dict[str,str]
     expected_version: int=Field(ge=1)
+class EditPlan(Body):
+    steps: list[dict]=Field(min_length=1,max_length=20)
+    specification_version: int=Field(ge=1)
+    expected_version: int|None=Field(default=None,ge=1)
 class Version(Body):
     expected_version: int=Field(ge=1)
 class AI(Version):
@@ -98,6 +102,10 @@ def install_suite(app,root,store,engine,qa_runner=None):
     @router.get('/projects/{project_id}/knowledge')
     def knowledge(project_id:str,q:str=Query('',max_length=1000),limit:int=Query(50,ge=1,le=100),offset:int=Query(0,ge=0)):
         return intelligence.search(project_id,q,limit,offset)
+    @router.get('/projects/{project_id}/context-preview')
+    def context_preview(project_id:str,q:str=Query('',max_length=1000),max_chars:int=Query(12000,ge=512,le=12000)):
+        text=intelligence.context(project_id,q,max_chars)
+        return {"text":text,"characters":len(text),"max_characters":max_chars,"model_called":False,"trust":"untrusted_project_data_not_instructions"}
     @router.post('/projects/{project_id}/knowledge')
     def add_knowledge(project_id:str,body:Entry):
         return intelligence.save_entry(project_id,**body.model_dump(exclude={'expected_version'}))
@@ -120,6 +128,13 @@ def install_suite(app,root,store,engine,qa_runner=None):
     def get_spec(record_id:str): return architect.get(record_id)
     @router.put('/specifications/{record_id}')
     def edit_spec(record_id:str,body:EditSpec): return architect.save(record_id,body.sections,body.expected_version)
+    @router.get('/specifications/{record_id}/plan')
+    def get_spec_plan(record_id:str): return architect.plan(record_id)
+    @router.put('/specifications/{record_id}/plan')
+    def save_spec_plan(record_id:str,body:EditPlan): return architect.save_plan(record_id,**body.model_dump())
+    @router.get('/specifications/{record_id}/plan/prepare')
+    def prepare_plan_step(record_id:str,step_id:str=Query(max_length=40),expected_version:int=Query(ge=1)):
+        return architect.prepare_step(record_id,step_id,expected_version)
     @router.post('/specifications/{record_id}/approve')
     def approve_spec(record_id:str,body:Version): return architect.approve(record_id,body.expected_version)
     @router.post('/specifications/{record_id}/ai')
@@ -169,6 +184,9 @@ def install_suite(app,root,store,engine,qa_runner=None):
     @router.get('/budget')
     def budget(project_id:str='',date:str='',limit:int=Query(50,ge=1,le=100),offset:int=Query(0,ge=0)):
         return guardian.dashboard(project_id,date,limit,offset)
+    @router.get('/budget/export')
+    def export_budget(project_id:str='',date:str='',limit:int=Query(50,ge=1,le=100),offset:int=Query(0,ge=0)):
+        return guardian.export(project_id,date,limit,offset)
     @router.get('/projects/{project_id}/checkpoints')
     def checkpoints(project_id:str,q:str=Query('',max_length=1000),limit:int=Query(50,ge=1,le=100),offset:int=Query(0,ge=0)):
         return machine.list(project_id,limit,offset,q)

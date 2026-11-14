@@ -64,6 +64,79 @@ class TaskArchitectService:
             raise ValueError("Запуск разрешён только для текущей утверждённой версии ТЗ")
         return "\n\n".join(f"## {name}\n{row['data']['sections'][name]}" for name in SECTIONS)
 
+    def plan(self, record_id):
+        with self.store.lock:
+            spec = self.get(record_id)
+            try:
+                row = self.suite.get("specification_plan", "plan_" + record_id)
+            except KeyError:
+                return {"version": None, "data": {"steps": [], "specification_version": spec["version"]}, "stale": False}
+            row["stale"] = row["data"].get("specification_version") != spec["version"]
+            return row
+
+    def prepare_step(self, record_id, step_id, expected_version):
+        with self.store.lock:
+            plan = self.plan(record_id)
+            if plan["stale"] or plan["version"] != expected_version:
+                raise ValueError("План изменился; обновите редактор")
+            step = next((s for s in plan["data"]["steps"] if s["id"] == step_id), None)
+            if step is None or step["depends_on"]:
+                raise ValueError("Подготовка доступна только для шага без зависимостей")
+            spec = self.get(record_id)
+            task = "\n\n".join([step["title"], "Acceptance criteria:\n" + step["acceptance"],
+                                  "Declared relative files (review scope):\n" + "\n".join(step["files"]),
+                                  "Review this independent candidate before execution. Do not execute dependent plan steps."])
+            return {"task": task, "workspace": str(self.intelligence.project_root(spec["project_id"])),
+                    "plan_version": plan["version"], "step_id": step_id, "execution": "composer_only_no_dispatch"}
+
+    def save_plan(self, record_id, steps, specification_version, expected_version=None):
+        spec = self.get(record_id)
+        if spec["version"] != specification_version:
+            raise ValueError("Версия ТЗ изменилась; обновите план")
+        if not isinstance(steps, list) or not 1 <= len(steps) <= 20:
+            raise ValueError("План должен содержать от 1 до 20 шагов")
+        ids, normalized = set(), []
+        for step in steps:
+            if not isinstance(step, dict) or set(step) != {"id", "title", "acceptance", "files", "depends_on"}:
+                raise ValueError("Некорректная структура шага")
+            identity = step["id"]
+            if not isinstance(identity, str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", identity) or identity in ids:
+                raise ValueError("Идентификаторы шагов должны быть уникальны")
+            ids.add(identity)
+            if any(not isinstance(step[k], str) or not step[k].strip() or len(step[k]) > bound for k, bound in [("title", 300), ("acceptance", 3000)]):
+                raise ValueError("Заполните название и критерий приёмки шага")
+            if not isinstance(step["files"], list) or len(step["files"]) > 30 or any(not isinstance(f, str) or not f or len(f)>300 or f.startswith(("/", "\\")) or ".." in Path(f.replace("\\", "/")).parts or ":" in f or "\x00" in f for f in step["files"]):
+                raise ValueError("Укажите относительные пути файлов")
+            if not isinstance(step["depends_on"], list) or len(step["depends_on"]) > 20 or any(not isinstance(d, str) for d in step["depends_on"]):
+                raise ValueError("Некорректные зависимости шага")
+            normalized.append({k: clean(v.strip()) if isinstance(v, str) else list(dict.fromkeys(v)) for k,v in step.items()})
+        completed, order = set(), []
+        while len(order) < len(normalized):
+            ready = [s for s in normalized if s["id"] not in completed and set(s["depends_on"]) <= completed]
+            if not ready:
+                raise ValueError("План содержит цикл или неизвестную зависимость")
+            for step in ready:
+                completed.add(step["id"]); order.append(step["id"])
+        owners = {}
+        for step in normalized:
+            for name in step["files"]:
+                owners.setdefault(name.casefold().replace("\\", "/"), []).append(step["id"])
+        data = {"steps": normalized, "specification_version": specification_version, "order": order,
+                "file_overlaps": {name: values for name, values in owners.items() if len(values)>1},
+                "independent_candidates": [s["id"] for s in normalized if not s["depends_on"]],
+                "execution": "plan_only_no_dispatch"}
+        with self.store.lock:
+            if self.get(record_id)["version"] != specification_version:
+                raise ValueError("Версия ТЗ изменилась; обновите план")
+            try:
+                existing = self.suite.get("specification_plan", "plan_" + record_id)
+            except KeyError:
+                existing = None
+            if existing and expected_version is None:
+                raise ValueError("План уже существует; обновите редактор")
+            return self.suite.put("specification_plan", spec["project_id"], data,
+                                  record_id="plan_" + record_id, expected_version=expected_version)
+
     def ai_refine(self, record_id, provider, confirmed=False, expected_version=None):
         with self._job_guard:
             if self._closed:

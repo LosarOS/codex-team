@@ -9,7 +9,7 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc11
+        default: v1.0.0-rc12
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
@@ -96,7 +96,7 @@ jobs:
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
-          Copy-Item -LiteralPath docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md
+          Copy-Item -LiteralPath docs/releases/v1.0.0-rc12.md -Destination release-assets/RELEASE-NOTES-RU.md
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
           if ($env:SKIP_SOURCE_TESTS -eq 'true') {
             $testResults = @{ status = 'skipped'; source_commit = $env:GITHUB_SHA; platform = 'Windows' }
