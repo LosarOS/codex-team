@@ -1,0 +1,48 @@
+{
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "canonical_workflow": "https://github.com/LosarOS/codex-team/actions/runs/43659810614",
+  "independent_review_workflow": "https://github.com/LosarOS/codex-team/actions/runs/43661926960",
+  "original_artifact_id": 14141015071,
+  "review_artifacts": {
+    "portable": 14140063178,
+    "installers": 14140411638,
+    "evidence": 14140053435
+  },
+  "archive_sha256": "b3c43a227cb8c2bc96d06b508f6ec220959db49b46195d73e5745f7a07b6ac06",
+  "images": [
+    {
+      "file": "native-budget-preview.png",
+      "original_entry": "native-budget-preview.png",
+      "bytes": 116798,
+      "sha256": "953139b1640a4235ec00f863a5b26a6ab05fcbd248fb90e3ba56c18edb07d75e",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true
+    },
+    {
+      "file": "native-budget-save-picker.png",
+      "original_entry": "native-budget-save-picker.png",
+      "bytes": 112520,
+      "sha256": "625f2843d58683ac7a952ffeeb9ae7a577e5ea6e43135344f8d7592635438023",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true
+    }
+  ],
+  "technical_startup_frames": [
+    {
+      "file": "native-dashboard-task-form.png",
+      "original_entry": "native-dashboard-task-form.png",
+      "bytes": 226190,
+      "sha256": "67df818d927398ae0d04ffcc849bc2f5fc13ab8da3066fe804befea99748ea28",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true,
+      "repository_path": "reports/evidence/rc12-final-candidate/native-dashboard-task-form.png",
+      "marketing_use": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+name: Предложение / Feature request
+description: Опишите пользовательскую проблему и проверяемый результат
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решаем? / User problem
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Ожидаемый сценарий и критерии / Desired workflow and acceptance
+    validations:
+      required: true

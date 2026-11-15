@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "environment": "Linux Chromium / real FastAPI SQLite / MOCKED native host",
+  "actual_windows_picker_verified": false,
+  "checks": [
+    "fixed filters forwarded to host",
+    "native cancel does not download",
+    "native failure does not download",
+    "native success does not use Blob",
+    "explicit fresh-snapshot notice"
+  ],
+  "host_calls": 3,
+  "blob_calls": 0,
+  "errors": []
+}

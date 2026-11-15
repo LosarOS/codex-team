@@ -1,0 +1,28 @@
+name: Ошибка / Bug report
+description: Воспроизводимая проблема без секретов и личных данных
+title: '[Bug] '
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Версия и дистрибутив / Version and package
+      placeholder: 1.0.0-rc11, installer / portable / source
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows build, WebView2, DPI
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги, ожидаемое и фактическое поведение / Reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Обезличенные доказательства / Redacted evidence
+      description: Не прикладывайте ключи, токены, базы, приватные проекты или полный контекст миссии. Remove secrets and personal paths.

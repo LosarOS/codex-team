@@ -1,0 +1,1 @@
+{"cve":"CVE-2026-126360","id":"GHSA-mf5v-w3w3-f6cg","severity":"medium","updated":"2026-11-13T16:43:19Z","url":"https://github.com/advisories/GHSA-mf5v-w3w3-f6cg","vulnerabilities":[{"first_patched_version":"1.45.2","package":{"ecosystem":"pip","name":"opentelemetry-api"},"vulnerable_functions":[],"vulnerable_version_range":"\u003c= 1.45.1"}]}

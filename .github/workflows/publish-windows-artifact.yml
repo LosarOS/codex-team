@@ -103,6 +103,28 @@ jobs:
                        'mission_queue_restart_verified', 'appearance_restart_verified', 'notebook_restart_verified'):
               assert smoke.get(gate) is True, 'Missing native release gate: ' + gate
           assert smoke['model_calls'] == 0 and smoke['sdk_account_calls'] == 0
+          for proof in (smoke, portable):
+              for gate in ('evolution_budget_export_verified', 'evolution_plan_verified', 'evolution_context_preview_verified', 'evolution_no_dispatch_verified', 'evolution_plan_restart_verified'):
+                  assert proof.get(gate) is True, 'Missing RC12 frozen backend gate: ' + gate
+          gui = json.loads((root / 'native-gui-proof.json').read_text(encoding='utf-8-sig'))
+          assert gui.get('status') == 'OBSERVED_NATIVE_GUI_SCENARIOS_PASSED', 'Native GUI scenarios did not pass'
+          assert gui.get('source_commit') == gui.get('probe_commit') == os.environ['SOURCE_COMMIT'], 'Native GUI source mismatch'
+          for gate in ('window_verified', 'task_form_verified', 'backend_connection_verified', 'portable_marker_profile_verified', 'budget_picker_verified', 'budget_saved_verified', 'graceful_quit_verified'):
+              assert gui.get(gate) is True, 'Missing native GUI release gate: ' + gate
+          assert gui.get('backend_connection_observed_label') in ('Сервер доступен · проверяем Codex…', 'Сервер доступен · Codex не проверен', 'Нужен вход', 'Codex подключён'), 'Native GUI backend connection observation invalid'
+          assert gui.get('owned_process_force_cleanup') is False, 'Native GUI force cleanup was required'
+          assert type(gui.get('owned_gui_backend_processes_remaining')) is int and gui['owned_gui_backend_processes_remaining'] == 0, 'Native GUI owned processes remained'
+          assert gui.get('login_requested') is False and gui.get('model_execution_requested') is False, 'Native GUI provider execution scope invalid'
+          assert 'sdk_account_calls' in gui and gui['sdk_account_calls'] is None, 'Native GUI account calls must remain unknown'
+          import zipfile
+          with zipfile.ZipFile(root / 'CodexTeam-Native-GUI-Evidence.zip') as evidence:
+              names = {'native-gui-proof.json', 'native-dashboard-task-form.png', 'native-budget-preview.png', 'native-budget-save-picker.png'}
+              assert set(evidence.namelist()) == names and len(evidence.namelist()) == len(names), 'Unexpected or missing native GUI evidence files'
+              assert evidence.testzip() is None
+              assert json.loads(evidence.read('native-gui-proof.json').decode('utf-8-sig')) == gui, 'Archived native GUI proof mismatch'
+              for name in names - {'native-gui-proof.json'}:
+                  data = evidence.read(name)
+                  assert len(data) > 8 and data.startswith(b'\x89PNG\r\n\x1a\n'), 'Invalid native GUI screenshot: ' + name
           assert smoke['installed_git_version'].startswith('git version ')
           notes = (root / 'BUILD-NOTES.txt').read_text(encoding='utf-8-sig')
           assert 'Source commit: ' + os.environ['SOURCE_COMMIT'] in notes

@@ -68,6 +68,8 @@ class NativeApi:
         return self._controller.export_diagnostics()
     def export_run_report(self, run_id, language="ru"):
         return self._controller.export_run_report(run_id, language)
+    def export_budget_report(self, filters):
+        return self._controller.export_budget_report(filters)
     def recovery_status(self):
         return self._controller.recovery_status()
     def dismiss_recovery(self):
@@ -146,6 +148,26 @@ class DesktopBridge:
             return {"ok": True, "path": str(path)}
         except (OSError, ValueError):
             return {"error": "Не удалось сохранить отчёт. Проверьте запуск и выберите Markdown-файл в доступной папке."}
+
+    def export_budget_report(self, filters):
+        if not self.trusted() or not self.ready:
+            return {"error": "Сохранение отчёта доступно только в локальном приложении."}
+        try:
+            from .desktop_services import budget_export_query, save_budget_report
+            query = budget_export_query(filters)
+            report = self.runtime.request('/api/suite/budget/export?' + query)
+            if not isinstance(report, dict) or report.get('schema_version') != 1 or report.get('models_called') is not False:
+                raise ValueError('Invalid backend budget report')
+            import webview
+            chosen = self.services.invoke(lambda: self.window.create_file_dialog(
+                webview.FileDialog.SAVE, directory=str(self.root), save_filename='codex-team-budget.json',
+                file_types=('JSON (*.json)',)), wait=True, timeout=None)
+            if not chosen:
+                return {'cancelled': True}
+            path = save_budget_report(chosen[0], report)
+            return {'ok': True, 'path': str(path)}
+        except (OSError, ValueError, TypeError):
+            return {'error': 'Не удалось сохранить бюджет. Проверьте фильтры и выберите JSON-файл в доступной папке.'}
 
     def recovery_status(self):
         if not self.trusted():

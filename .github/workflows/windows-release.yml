@@ -9,7 +9,7 @@ on:
       release_tag:
         description: 'Release tag (for example v1.0.0-rc2)'
         required: true
-        default: v1.0.0-rc11
+        default: v1.0.0-rc12
         type: string
       publish:
         description: Publish verified binaries as a GitHub prerelease
@@ -67,7 +67,7 @@ jobs:
           "commit=$(git rev-parse HEAD)" >> $env:GITHUB_OUTPUT
       - name: Check PowerShell syntax
         run: |
-          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Read-ShortcutDetails.ps1','packaging/Test-ShortcutPath.ps1','packaging/Update.ps1')) {
+          foreach ($file in @('build-desktop.ps1','packaging/smoke-installed.ps1','packaging/Read-ShortcutDetails.ps1','packaging/Test-ShortcutPath.ps1','packaging/Update.ps1','packaging/Smoke-DesktopGui.ps1')) {
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $file), [ref]$null, [ref]$parseErrors) | Out-Null
             if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
@@ -88,15 +88,43 @@ jobs:
           CODEX_TEAM_UPDATE_GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./packaging/smoke-installed.ps1 -ReportPath packaging/installed-smoke.json
+      - name: Actual portable WebView2 GUI and native Save smoke
+        run: |
+          & "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -STA -ExecutionPolicy Bypass -File ./packaging/Smoke-DesktopGui.ps1 -ArchivePath (Resolve-Path 'dist/CodexTeam-Portable-x64.zip').Path -SourceCommit $env:GITHUB_SHA -OutputDirectory '.build-tools/native-gui'
+          if ($LASTEXITCODE -ne 0) { throw 'Actual WebView2 GUI/native Save smoke failed.' }
       - name: Stage verified downloadable files
         run: |
+          foreach ($proofFile in @('packaging/portable-smoke.json','packaging/installed-smoke.json')) {
+            $proof = Get-Content -LiteralPath $proofFile -Raw | ConvertFrom-Json
+            foreach ($gate in @('evolution_budget_export_verified','evolution_plan_verified','evolution_context_preview_verified','evolution_no_dispatch_verified','evolution_plan_restart_verified')) {
+              if ($proof.$gate -ne $true) { throw "Missing RC12 frozen backend gate: $proofFile / $gate" }
+            }
+          }
+          $guiProofPath = '.build-tools/native-gui/native-gui-proof.json'
+          $gui = Get-Content -LiteralPath $guiProofPath -Raw | ConvertFrom-Json
+          if ($gui.status -cne 'OBSERVED_NATIVE_GUI_SCENARIOS_PASSED' -or $gui.source_commit -cne $env:GITHUB_SHA -or $gui.probe_commit -cne $env:GITHUB_SHA) { throw 'Native GUI proof does not match the complete checked-out source.' }
+          foreach ($gate in @('window_verified','task_form_verified','backend_connection_verified','portable_marker_profile_verified','budget_picker_verified','budget_saved_verified','graceful_quit_verified')) {
+            if ($gui.$gate -isnot [bool] -or $gui.$gate -ne $true) { throw "Missing native GUI release gate: $gate" }
+          }
+          if ($gui.backend_connection_observed_label -cnotin @('Сервер доступен · проверяем Codex…','Сервер доступен · Codex не проверен','Нужен вход','Codex подключён')) { throw 'Native GUI backend connection observation is invalid.' }
+          if ($gui.owned_process_force_cleanup -isnot [bool] -or $gui.owned_process_force_cleanup -ne $false -or $gui.owned_gui_backend_processes_remaining -ne 0) { throw 'Native GUI required force cleanup or left owned processes.' }
+          if ($gui.login_requested -ne $false -or $gui.model_execution_requested -ne $false -or ($gui.PSObject.Properties.Name -notcontains 'sdk_account_calls') -or $null -ne $gui.sdk_account_calls) { throw 'Native GUI account/provider observation scope is invalid.' }
           New-Item -ItemType Directory -Force release-assets | Out-Null
           $required = @('installer/CodexTeam-Setup-x64.exe', 'dist/CodexTeam-Setup-x64.zip', 'dist/CodexTeam-Portable-x64.zip', 'dist/SHA256SUMS.txt', 'packaging/build-verification.json', 'packaging/release-checksums.json', 'packaging/installed-smoke.json', 'packaging/portable-smoke.json')
           foreach ($file in $required) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing release asset: $file" }
             Copy-Item -LiteralPath $file -Destination release-assets
           }
-          Copy-Item -LiteralPath docs/releases/v1.0.0-rc11.md -Destination release-assets/RELEASE-NOTES-RU.md
+          Copy-Item -LiteralPath $guiProofPath -Destination release-assets/native-gui-proof.json
+          $guiEvidence = @($guiProofPath)
+          foreach ($name in @('native-dashboard-task-form.png','native-budget-preview.png','native-budget-save-picker.png')) {
+            $path = Join-Path '.build-tools/native-gui' $name
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -le 8) { throw "Missing native GUI screenshot: $name" }
+            $guiEvidence += $path
+          }
+          # Explicit allowlist: never publish profile logs, arbitrary files or UIA dumps.
+          Compress-Archive -LiteralPath $guiEvidence -DestinationPath release-assets/CodexTeam-Native-GUI-Evidence.zip
+          Copy-Item -LiteralPath docs/releases/v1.0.0-rc12.md -Destination release-assets/RELEASE-NOTES-RU.md
           $sourceTests = if ($env:SKIP_SOURCE_TESTS -eq 'true') { 'Full source suite: skipped by explicit manual request.' } else { 'Full source suite: passed.' }
           if ($env:SKIP_SOURCE_TESTS -eq 'true') {
             $testResults = @{ status = 'skipped'; source_commit = $env:GITHUB_SHA; platform = 'Windows' }
@@ -115,7 +143,7 @@ jobs:
             $sourceTests += " Native pytest: $($testResults.passed) passed, $skipped skipped, $seconds seconds."
           }
           $testResults | ConvertTo-Json | Set-Content -LiteralPath release-assets/source-test-results.json -Encoding utf8
-          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, extracted portable backend/restart/preservation, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Not verified: interactive WebView2 GUI, actual Windows DPI, live Codex login or agent execution.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
+          @('Codex Team Windows x64', "Source commit: $env:GITHUB_SHA", $sourceTests, 'Automated checks: frozen bundle verification, extracted portable backend/restart/preservation, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.', 'Passed: automated actual portable WebView2 window, task form, portable marker profile, native budget Save and graceful quit. Not verified: complete interactive user acceptance, physical Windows DPI/accessibility, live Codex login or agent execution. GUI account-call count is unknown, not zero.', 'These binaries are unsigned; Windows SmartScreen may require additional confirmation.') | Set-Content -LiteralPath release-assets/BUILD-NOTES.txt -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: codex-team-windows-x64
@@ -132,6 +160,8 @@ jobs:
             packaging/build-verification.json
             packaging/installed-smoke.json
             packaging/portable-smoke.json
+            .build-tools/native-gui/native-gui-proof.json
+            .build-tools/native-gui/*.png
             .build-tools/portable-smoke/*.log
             .build-tools/installed-smoke/*.log
           if-no-files-found: ignore

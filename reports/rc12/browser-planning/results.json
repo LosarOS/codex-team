@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "environment": "Linux Chromium headless / real FastAPI and SQLite",
+  "synthetic_project": true,
+  "sdk_live_verified": false,
+  "windows_webview2_verified": false,
+  "checks": [
+    "real UI create/save two-step DAG + shared-file warning",
+    "real UI cycle rejection leaves persisted plan unchanged",
+    "real UI bounded context preview includes current sourced knowledge",
+    "real source modification marks knowledge stale and excludes it from context",
+    "real backend JSON export preview and actual Chromium download",
+    "real UI confirmed root-step handoff resets safe options; dependent step rejected",
+    "no runs created by planning/context/export"
+  ],
+  "errors": []
+}

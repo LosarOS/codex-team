@@ -1,0 +1,6 @@
+Codex Team Windows x64
+Source commit: c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333
+Full source suite: passed. Native pytest: 1025 passed, 1 skipped, 984.022 seconds.
+Automated checks: frozen bundle verification, extracted portable backend/restart/preservation, silent per-user install, installed backend/assets, same-version upgrade, reinstall/restart, profile preservation and uninstall smoke.
+Passed: automated actual portable WebView2 window, task form, portable marker profile, native budget Save and graceful quit. Not verified: complete interactive user acceptance, physical Windows DPI/accessibility, live Codex login or agent execution. GUI account-call count is unknown, not zero.
+These binaries are unsigned; Windows SmartScreen may require additional confirmation.

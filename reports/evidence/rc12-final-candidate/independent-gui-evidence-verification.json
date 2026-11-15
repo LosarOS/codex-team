@@ -1,0 +1,57 @@
+{
+  "status": "RETAINED CANONICAL NATIVE GUI PROOFS AND ORIGINAL PNGS VERIFIED",
+  "verified_at_utc": "2026-11-15T01:17:08.086473+00:00",
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "probe_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "canonical_run": "43659810614",
+  "independent_review_run": "43661926960",
+  "proof_source_matches": true,
+  "original_gui_archive_crc": "passed",
+  "archived_proof_byte_identical": true,
+  "native_gui_exit_code": 0,
+  "owned_process_force_cleanup": false,
+  "owned_gui_backend_processes_remaining": 0,
+  "sdk_account_calls": null,
+  "login_requested": false,
+  "model_execution_requested": false,
+  "physical_windows11_verified": false,
+  "dpi_matrix_verified": false,
+  "local_runtime_rerun": false,
+  "pngs": [
+    {
+      "file": "native-budget-preview.png",
+      "original_entry": "native-budget-preview.png",
+      "bytes": 116798,
+      "sha256": "953139b1640a4235ec00f863a5b26a6ab05fcbd248fb90e3ba56c18edb07d75e",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true,
+      "repository_path": "docs/screenshots/rc12-final-candidate/native-budget-preview.png"
+    },
+    {
+      "file": "native-budget-save-picker.png",
+      "original_entry": "native-budget-save-picker.png",
+      "bytes": 112520,
+      "sha256": "625f2843d58683ac7a952ffeeb9ae7a577e5ea6e43135344f8d7592635438023",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true,
+      "repository_path": "docs/screenshots/rc12-final-candidate/native-budget-save-picker.png"
+    },
+    {
+      "file": "native-dashboard-task-form.png",
+      "original_entry": "native-dashboard-task-form.png",
+      "bytes": 226190,
+      "sha256": "67df818d927398ae0d04ffcc849bc2f5fc13ab8da3066fe804befea99748ea28",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true,
+      "repository_path": "reports/evidence/rc12-final-candidate/native-dashboard-task-form.png"
+    }
+  ],
+  "limits": "Verification of retained disposable Windows native evidence; not physical Windows/DPI/SmartScreen/AV or live SDK acceptance.",
+  "startup_frame_limits": "Initial dashboard screenshot shows Server unavailable before eventual budget/backend/native Save success. Retained technical evidence only; not persistent failure proof or marketing capture."
+}

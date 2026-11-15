@@ -17,7 +17,7 @@ idna==3.20
 iniconfig==2.3.1
 openai-codex==0.162.1
 openai-codex-cli-bin==0.162.1
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 packaging==26.3
 pefile==2024.8.26
 pillow==13.0.0
@@ -34,7 +34,7 @@ pytest==9.1.1
 pythonnet==3.2.1
 pywebview==6.2.1
 pywin32-ctypes==0.2.3
-setuptools==84.0.0
+setuptools==84.1.0
 starlette==1.7.0
 typing-inspection==0.4.4
 typing-extensions==4.16.0

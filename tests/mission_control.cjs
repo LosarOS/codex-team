@@ -31,3 +31,10 @@ for(const type of ['instruction_queued','steering','approval_requested','action_
 for(const e of [{type:'command_started'},{type:'sdk',payload:{item:{type:'command_execution',command:'git status',exitCode:0}}}])assert.equal(category(e),'commands');
 assert.equal(category({type:'agent_started',role:'qa'}),'agents');assert.equal(category({type:'run_state'}),'all');
 console.log(JSON.stringify({result:'PASS',evidence:['six mode pipelines','retry history retained','actual timestamps only','terminal states','missing timestamp resilience','activity filters']}));
+const {timeline,nextAction}=require(path.join(process.argv[2],'mission-control.js'));
+const ledger=[{id:9,run_id:'other'},{id:3,run_id:'ours',created_at:'earlier-clock'},{id:1,run_id:'ours'},{id:3,run_id:'ours'},{type:'missing-id'},null];
+const original=JSON.stringify(ledger);
+assert.deepEqual(timeline(ledger,'ours').map(e=>e.id),[1,3]);assert.equal(JSON.stringify(ledger),original);
+for(const state of ['AUTH_REQUIRED','USAGE_LIMIT','USER_DECISION_REQUIRED','PAUSED','INTERRUPTED','FAILED','STOPPED']){const x=nextAction({state});assert(x.message);assert.equal(x.automaticRetry,false);}
+for(const state of ['RUNNING','DONE','UNKNOWN'])assert.equal(nextAction({state}).message,null);
+assert.equal(nextAction(null).message,null);

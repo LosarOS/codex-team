@@ -1,0 +1,47 @@
+{
+  "renderer": "Playwright / headless system Chromium, device_scale_factor=1",
+  "rendered_date": "2026-11-14",
+  "purpose": "brand illustrations only, not application screenshots",
+  "social_preview_uploaded": false,
+  "images": [
+    {
+      "repository": "codex-team",
+      "file": "social-preview.png",
+      "width": 1280,
+      "height": 640,
+      "bytes": 237603,
+      "distinct_colors": 1889,
+      "max_channel_stddev": 25.471,
+      "kind": "brand illustration, not runtime screenshot",
+      "source": "social-preview.svg",
+      "source_sha256": "4153fa9a4b07d072f1796ee2ee41ddf1c4b60b2f4935f8b69f605b180f3d010e",
+      "png_sha256": "db2f83eb46699abc2dbad857f5d1648165ee944564cea7daec98020a37c0ae39"
+    },
+    {
+      "repository": "codex-team",
+      "file": "release-visual.png",
+      "width": 1200,
+      "height": 460,
+      "bytes": 175124,
+      "distinct_colors": 2070,
+      "max_channel_stddev": 31.427,
+      "kind": "brand illustration, not runtime screenshot",
+      "source": "release-visual.svg",
+      "source_sha256": "3193743bf179444e5fa75efdd8cb64a786d214654dd9446ee2d50ad478ef95bf",
+      "png_sha256": "f7c92bc83c99b1f47c5018468b5894c0ccd0b5b8e669782aaa4766a16cde8c0c"
+    },
+    {
+      "repository": "codex-team",
+      "file": "product-mark.png",
+      "width": 256,
+      "height": 256,
+      "bytes": 3506,
+      "distinct_colors": 124,
+      "max_channel_stddev": 62.046,
+      "kind": "brand illustration, not runtime screenshot",
+      "source": "product-mark.svg",
+      "source_sha256": "a622984c84dade31cc9bb3d2a8c59ae980e0b6852e406b7a559f50338995d695",
+      "png_sha256": "4f932e944e581ec450226023cb65106e5440e14a6dbdd337fa51a5be971d21d3"
+    }
+  ]
+}

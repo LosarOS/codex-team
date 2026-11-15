@@ -1,0 +1,31 @@
+{
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "application_source_commit": "6e00643676dd9b2e701fdccf50fa8b75ff59fd00",
+  "environment": "Linux Python3.12.14; final canonical GUI publication guard tests included; no live model mission",
+  "tests": 1026,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 4,
+  "duration_seconds": 68.633,
+  "skipped_cases": [
+    {
+      "name": "test_hidden_child_subprocess_wrapper_preserves_flags_and_is_idempotent",
+      "reason": "Windows child process presentation"
+    },
+    {
+      "name": "test_project_summary_link_escape_is_refused[junction]",
+      "reason": "Windows junction test"
+    },
+    {
+      "name": "test_real_docker_stdlib_acceptance",
+      "reason": "Set CODEX_QA_DOCKER_IMAGE to a pre-existing pinned stdlib image"
+    },
+    {
+      "name": "test_boundary_detects_windows_junction",
+      "reason": "NTFS junction test"
+    }
+  ],
+  "passed": 1022,
+  "windows_runtime_verified_by_this_suite": false,
+  "warning": "One Starlette TestClient httpx deprecation warning; no production dependency change made for this warning."
+}

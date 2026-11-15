@@ -1,0 +1,31 @@
+{
+  "source_commit": "03ae2bd37283599f9e9a8b5c2f608114aad1ffcd",
+  "application_source_commit": "68d0ad8d100b2a39053af87b4e120837f7491ef0",
+  "candidate_windows_source": "6807cacc204aca982614ad68fab50db5e0dcef2e",
+  "environment": "Linux/Python3.12.14; startup transport fix and strict native readiness publication tests",
+  "tests": 1042,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 4,
+  "seconds": 73.058,
+  "skipped_cases": [
+    {
+      "name": "test_hidden_child_subprocess_wrapper_preserves_flags_and_is_idempotent",
+      "reason": "Windows child process presentation"
+    },
+    {
+      "name": "test_project_summary_link_escape_is_refused[junction]",
+      "reason": "Windows junction test"
+    },
+    {
+      "name": "test_real_docker_stdlib_acceptance",
+      "reason": "Set CODEX_QA_DOCKER_IMAGE to a pre-existing pinned stdlib image"
+    },
+    {
+      "name": "test_boundary_detects_windows_junction",
+      "reason": "NTFS junction test"
+    }
+  ],
+  "passed": 1038,
+  "windows_runtime_verified_by_this_suite": false
+}

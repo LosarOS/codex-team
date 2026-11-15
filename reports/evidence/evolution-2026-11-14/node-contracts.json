@@ -1,0 +1,65 @@
+{
+  "source_commit": "d71687c81a911f2985923a628c34ed6386f7a49e",
+  "results": [
+    {
+      "script": "ui_smoke",
+      "exit_code": 0
+    },
+    {
+      "script": "mission_control",
+      "exit_code": 0
+    },
+    {
+      "script": "api_client",
+      "exit_code": 0
+    },
+    {
+      "script": "i18n",
+      "exit_code": 0
+    },
+    {
+      "script": "suite_messages",
+      "exit_code": 0
+    },
+    {
+      "script": "pack_localization",
+      "exit_code": 0
+    },
+    {
+      "script": "refresh_loop",
+      "exit_code": 0
+    },
+    {
+      "script": "task_drafts",
+      "exit_code": 0
+    },
+    {
+      "script": "command_palette",
+      "exit_code": 0
+    },
+    {
+      "script": "task_templates",
+      "exit_code": 0
+    },
+    {
+      "script": "run_comparison",
+      "exit_code": 0
+    },
+    {
+      "script": "run_notebook",
+      "exit_code": 0
+    },
+    {
+      "script": "run_replay",
+      "exit_code": 0
+    },
+    {
+      "script": "mission_queue",
+      "exit_code": 0
+    },
+    {
+      "script": "project_doctor",
+      "exit_code": 0
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "passed": 1025,
+  "duration_seconds": 984.022,
+  "tests": 1026,
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "platform": "Windows",
+  "status": "passed",
+  "skipped": 1,
+  "errors": 0,
+  "failures": 0
+}
