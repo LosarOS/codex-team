@@ -2,7 +2,7 @@
 
 Руководство кандидата [PR18](https://github.com/LosarOS/codex-team/pull/18). Опубликованный RC11 остаётся отдельной предыдущей версией.
 
-**Граница проверки:** для бинарного source `6e00643676dd9b2e701fdccf50fa8b75ff59fd00` Windows suite — **985 passed / 1 skipped** (986 total), Linux — **982 passed / 4 skipped**. Это разные среды одной suite, а не суммарное число уникальных тестов. Байты кандидата сверены отдельно. Native budget Save **IMPLEMENTED / NOT RUNTIME VERIFIED**: открытие picker не подтверждает фактическую запись JSON. Публикация требует завершения gates и отдельного подтверждения владельца.
+**Граница проверки:** для бинарного source `6e00643676dd9b2e701fdccf50fa8b75ff59fd00` Windows suite — **985 passed / 1 skipped** (986 total), Linux — **982 passed / 4 skipped**. Это разные среды одной suite, а не суммарное число уникальных тестов. Байты кандидата сверены отдельно. Native budget Save **VERIFIED для ограниченного наблюдённого сценария**: реальный portable WebView2 открыл picker и записал JSON пустой выборки; затем graceful quit завершился exit0, без force cleanup и оставшихся owned процессов. [Proof](../reports/evidence/rc12-native-gui/native-gui-proof.json) · [Сохранённый JSON](../reports/evidence/rc12-native-gui/native-budget-saved.json). Этот отдельный эксперимент не означает полный GUI или финальный canonical release PASS. Публикация требует завершения gates и отдельного подтверждения владельца.
 
 ## От ТЗ к плану
 
@@ -25,6 +25,8 @@
 Выберите проект, UTC-день и страницу. «Предпросмотр экспорта выборки» показывает именно текущую страницу, а не всю историю. Неизвестные токены, стоимость и квота остаются null; текст задач, пути и raw usage не включаются.
 
 В desktop JSON сохраняется через системный диалог; он получает свежий backend-снимок с теми же фильтрами. В браузере скачивается показанный JSON. Отмена/ошибка native-сохранения не вызывает скрытое повторное скачивание. Экспорт не обращается к модели и не знает недельную квоту подписки.
+
+[Настоящий Budget preview и кадры системного Save](screenshots/rc12-native-gui/README.md) получены на disposable Windows Server, source `6e00643…`, probe `8c551c0…`, [run43659404286](https://github.com/LosarOS/codex-team/actions/runs/43659404286). Вход в аккаунт и исполнение модели не запрашивались; количество штатных SDK discovery calls неизвестно (`null`). Физические Windows10/11, DPI, полная GUI-матрица и live SDK development остаются NOT VERIFIED.
 
 ## Перед обновлением
 

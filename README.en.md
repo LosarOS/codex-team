@@ -1,4 +1,4 @@
-> **RC12 candidate:** [New feature guide](docs/RC12-GUIDE-EN.md) · [Review PR](https://github.com/LosarOS/codex-team/pull/18). Publication awaits final checks and owner approval. Native JSON Save completion remains unverified.
+> **RC12 candidate:** [New feature guide](docs/RC12-GUIDE-EN.md) · [Review PR](https://github.com/LosarOS/codex-team/pull/18). Publication awaits final checks and owner approval. [Native JSON Save passed a bounded Windows scenario](reports/evidence/rc12-native-gui/native-gui-proof.json); this is not complete GUI acceptance.
 
 # Codex Team
 
@@ -33,13 +33,21 @@ One developer owns writes; specialists run sequentially. `max_parallel_agents` d
 
 ## Interface
 
-These are **real historical browser/fixture captures** from earlier RCs retained in the repository. They show existing screens, are not RC12 screenshots and do not establish interactive Windows WebView2 acceptance. [Historical UI validation](reports/redesign-rc5/VALIDATION.md).
+The following six images are **real historical browser/fixture captures** from earlier RCs retained in the repository. They show existing screens, are not RC12 screenshots and do not establish interactive Windows WebView2 acceptance. [Historical UI validation](reports/redesign-rc5/VALIDATION.md).
 
 | Overview | Mission queue |
 | --- | --- |
 | ![Overview](reports/redesign-rc5/overview.png) | ![Independent mission queue, RC10](reports/rc10/mission-queue.png) |
 | ![Project knowledge](reports/redesign-rc5/intelligence-en.png) | ![Blocked queue, RC10](reports/rc10/mission-queue-blocked.png) |
 | ![Task templates, RC7](reports/rc7/task-templates.png) | ![Run comparison, RC7](reports/rc7/run-comparison.png) |
+
+### Native RC12: budget export
+
+![Actual RC12 Budget preview in Windows WebView2](docs/screenshots/rc12-native-gui/native-budget-preview.png)
+
+Actual portable EXE source `6e00643…`, disposable Windows Server and a synthetic empty selection. The preview starts above the current scroll; unknown tokens/cost/quota remain null. Native Save, the written JSON and graceful exit0 were observed, with no owned processes left and no forced cleanup. [Proof](reports/evidence/rc12-native-gui/native-gui-proof.json) · [Saved JSON](reports/evidence/rc12-native-gui/native-budget-saved.json) · [Capture provenance](docs/screenshots/rc12-native-gui/README.md).
+
+This is one observed scenario, not a final canonical release PASS. Physical Windows/DPI and live SDK development remain NOT VERIFIED. Startup SDK account-discovery call count in the GUI is unknown, not zero.
 
 ## Install
 

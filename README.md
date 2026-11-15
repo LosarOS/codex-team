@@ -1,4 +1,4 @@
-> **Кандидат RC12:** [новые возможности и инструкции](docs/RC12-GUIDE-RU.md) · [PR18](https://github.com/LosarOS/codex-team/pull/18). Публикация ожидает завершения проверок и подтверждения владельца. Native Save JSON ещё не подтверждён фактической записью.
+> **Кандидат RC12:** [новые возможности и инструкции](docs/RC12-GUIDE-RU.md) · [PR18](https://github.com/LosarOS/codex-team/pull/18). Публикация ожидает завершения проверок и подтверждения владельца. [Native Save JSON подтверждён в ограниченном Windows-сценарии](reports/evidence/rc12-native-gui/native-gui-proof.json); это не полная GUI-приёмка.
 
 # Codex Team
 
@@ -33,13 +33,21 @@
 
 ## Интерфейс
 
-Это **реальные исторические browser/fixture captures** из предыдущих RC, сохранённые в репозитории. Они показывают существующие экраны, не являются снимками нового RC12 и не подтверждают интерактивную Windows WebView2-приёмку. [Историческая проверка интерфейса](reports/redesign-rc5/VALIDATION.md).
+Следующие шесть снимков — **реальные исторические browser/fixture captures** из предыдущих RC, сохранённые в репозитории. Они показывают существующие экраны, не являются снимками нового RC12 и не подтверждают интерактивную Windows WebView2-приёмку. [Историческая проверка интерфейса](reports/redesign-rc5/VALIDATION.md).
 
 | Обзор | Очередь |
 | --- | --- |
 | ![Обзор](reports/redesign-rc5/overview.png) | ![Очередь независимых миссий RC10](reports/rc10/mission-queue.png) |
 | ![Локальные знания проекта](reports/redesign-rc5/intelligence-ru.png) | ![Блокировка очереди RC10](reports/rc10/mission-queue-blocked.png) |
 | ![Шаблоны задач RC7](reports/rc7/task-templates.png) | ![Сравнение запусков RC7](reports/rc7/run-comparison.png) |
+
+### Native RC12: экспорт бюджета
+
+![Настоящий RC12 Budget preview в Windows WebView2](docs/screenshots/rc12-native-gui/native-budget-preview.png)
+
+Реальный portable EXE source `6e00643…`, disposable Windows Server, синтетическая пустая выборка. Верх preview вне scroll; неизвестные токены/стоимость/квота остаются null. Подтверждены native Save, фактически записанный JSON и graceful quit с exit0 без оставшихся owned процессов и принудительной очистки. [Proof](reports/evidence/rc12-native-gui/native-gui-proof.json) · [Сохранённый JSON](reports/evidence/rc12-native-gui/native-budget-saved.json) · [Происхождение снимков](docs/screenshots/rc12-native-gui/README.md).
+
+Это отдельный наблюдённый сценарий, не итоговый canonical release PASS. Физические Windows/DPI и live SDK остаются NOT VERIFIED; число штатных SDK account-discovery calls в GUI неизвестно, а не0.
 
 ## Установить
 
@@ -88,7 +96,7 @@
 
 [RC11 evidence](reports/engineering-session-2026-10-23.md) фиксирует Windows suite **877 passed / 1 skipped** и native portable/installed backend, restart, repair/uninstall/reinstall, Unicode-ярлыки и сохранение профиля. Бинарники повторно скачаны и сверены по SHA256. Это исторический результат **RC11**, не новый прогон текущей рабочей ветки.
 
-Успешная живая разработка SHIFT через SDK не подтверждена: попытки остановились на AUTH_REQUIRED. API inference и платные вызовы не выполнялись. Физическая Windows 10/11, WebView2, DPI, Narrator и полный portable GUI требуют отдельной приёмки. История и тестовые fixtures не подменяют живое выполнение.
+Успешная живая разработка SHIFT через SDK не подтверждена: попытки остановились на AUTH_REQUIRED. API inference и платные вызовы не выполнялись. Физическая Windows 10/11, полная WebView2/DPI/Narrator и portable GUI матрица требуют отдельной приёмки. История и тестовые fixtures не подменяют живое выполнение.
 
 ## Частые вопросы
 
