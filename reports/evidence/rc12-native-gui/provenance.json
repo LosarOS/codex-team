@@ -1,0 +1,47 @@
+{
+  "candidate_source_commit": "6e00643676dd9b2e701fdccf50fa8b75ff59fd00",
+  "probe_commit": "8c551c08fd8369ba47442a2627cbb0bb8b63b3cb",
+  "workflow": "https://github.com/LosarOS/codex-team/actions/runs/43659404286",
+  "artifact_id": 14139312183,
+  "artifact_sha256": "503c225660c04ac65a7beed2f4d89c22dbd012fad7a12676e92952c184ee24b6",
+  "images_and_json_visually_and_semantically_reviewed": true,
+  "personal_data": "None; only disposable synthetic project IDs and temporary runner paths. PNG pixels were not redacted or changed.",
+  "files": [
+    {
+      "file": "reports/evidence/rc12-native-gui/native-gui-proof.json",
+      "original": "native-gui-proof.json",
+      "sha256": "e1c1da18b45cbf2b1ab6d544a7c475786776203e7716d438409ea7802e84ef69",
+      "unaltered": true
+    },
+    {
+      "file": "reports/evidence/rc12-native-gui/native-budget-saved.json",
+      "original": "native-budget-saved.json",
+      "sha256": "dbe750d55d24f122ee2a2592070ffddd9b6439a2c99c3cabb5b5060f0856a405",
+      "unaltered": true
+    },
+    {
+      "file": "docs/screenshots/rc12-native-gui/native-dashboard-task-form.png",
+      "original": "native-dashboard-task-form.png",
+      "sha256": "9099081be36b0acd9e9177fc0bb21eb63db8cbc92c9f0f57c87f045c625af41e",
+      "unaltered": true
+    },
+    {
+      "file": "docs/screenshots/rc12-native-gui/native-budget-preview.png",
+      "original": "native-budget-preview.png",
+      "sha256": "6cfe9d720c567de9bbd982e0c0311d753a253b70c5131bf758f2397780a5d21e",
+      "unaltered": true
+    },
+    {
+      "file": "docs/screenshots/rc12-native-gui/native-budget-save-picker.png",
+      "original": "native-budget-save-picker.png",
+      "sha256": "804934472cec377dd563f6f2d70e9f0e7b54cbe88f016c214f456deed9566e8c",
+      "unaltered": true
+    },
+    {
+      "file": "docs/screenshots/rc12-native-gui/native-budget-selected-path.png",
+      "original": "native-budget-selected-path.png",
+      "sha256": "90b6f101d1a330b618ec11b8982c8e39f7dd0fe9969cfba075886b42c42b643a",
+      "unaltered": true
+    }
+  ]
+}

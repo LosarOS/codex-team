@@ -1,0 +1,80 @@
+Command: python tools/verify_review_candidate.py --portable-review <owner-supplied portable review artifact> --installers-review <owner-supplied installer review artifact> --evidence <retained candidate evidence directory> --source 6e00643676dd9b2e701fdccf50fa8b75ff59fd00 --build-run 43653777510 --version 1.0.0-rc12 --output <new proof path>
+Exit code: 0
+No archives executed or extracted. Temporary files were anonymous owner-controlled files removed on close.
+
+{
+  "status": "ARTIFACT BYTES AND RETAINED NATIVE BACKEND PROOFS VERIFIED",
+  "verified_at_utc": "2026-11-15T00:28:33.181094+00:00",
+  "source_commit": "6e00643676dd9b2e701fdccf50fa8b75ff59fd00",
+  "source_build_run": "43653777510",
+  "version": "1.0.0-rc12",
+  "assets": [
+    {
+      "file": "CodexTeam-Portable-x64.zip",
+      "bytes": 249664641,
+      "sha256": "edcd6aa0bfad62e0eb27dc24b2a587d0fcc176f89d46515c24795d9641f498f1"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.exe",
+      "bytes": 155690448,
+      "sha256": "4167681ec22e02b327947291fe21cf6f7bdc27d5d51dda0de07eee843ad00add"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.zip",
+      "bytes": 155225291,
+      "sha256": "439d403d25401128c218a14c7ff7b696990f8e821bec2084c0e40cb0f61622b3"
+    }
+  ],
+  "package_checks": {
+    "portable_archive": {
+      "entries": 3219,
+      "uncompressed_bytes": 674615359,
+      "crc": "passed",
+      "paths": "passed",
+      "duplicates": "none"
+    },
+    "application_pe": {
+      "machine": "0x8664",
+      "format": "PE32+",
+      "security_directory_offset": 0,
+      "security_directory_bytes": 0,
+      "signature_status": "unsigned (no PE certificate table)"
+    },
+    "portable_marker_present": true,
+    "packaged_user_data": "none found by named path/database guards",
+    "installer_pe": {
+      "machine": "0x14c",
+      "format": "PE32",
+      "security_directory_offset": 0,
+      "security_directory_bytes": 0,
+      "signature_status": "unsigned (no PE certificate table)"
+    },
+    "setup_archive": {
+      "entries": 4,
+      "uncompressed_bytes": 155707689,
+      "crc": "passed",
+      "paths": "passed",
+      "duplicates": "none"
+    },
+    "setup_inner_exe_matches_standalone": true
+  },
+  "source_tests": {
+    "source_commit": "6e00643676dd9b2e701fdccf50fa8b75ff59fd00",
+    "passed": 985,
+    "status": "passed",
+    "platform": "Windows",
+    "errors": 0,
+    "duration_seconds": 800.037,
+    "skipped": 1,
+    "tests": 986,
+    "failures": 0
+  },
+  "skip_scope": "one Docker opt-in skip according to source run; count not a second suite",
+  "model_calls": 0,
+  "sdk_account_calls": 0,
+  "publication_performed": false,
+  "gui_acceptance": "NOT VERIFIED BY THIS TOOL; separate native-gui-proof.json required",
+  "physical_windows_dpi_acceptance": "NOT VERIFIED",
+  "provenance_limits": "Cross-checks supplied retained proofs against expected source; not signed build attestation or an independent runtime rerun.",
+  "signature_limits": "No PE certificate table; this is not a SmartScreen or antivirus check."
+}

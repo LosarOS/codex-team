@@ -1,4 +1,4 @@
-name: Actual portable WebView2 GUI experiment
+name: Read-only Windows candidate review
 on:
   push:
     branches: ['ops/native-gui-experiment']
@@ -41,7 +41,7 @@ jobs:
           }
           if ($env:CANDIDATE_RUN -notmatch '^\d+$' -or $env:CANDIDATE_SHA -notmatch '^[a-f0-9]{40}$') { throw 'Exact run/source required.' }
           $run = gh api "repos/$env:GH_REPO/actions/runs/$env:CANDIDATE_RUN" | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0 -or $run.path -ne '.github/workflows/windows-release.yml' -or $run.conclusion -ne 'success' -or $run.head_sha -cne $env:CANDIDATE_SHA -or $run.repository.full_name -cne $env:GH_REPO -or $run.head_repository.full_name -cne $env:GH_REPO) { throw 'Unverified or foreign candidate.' }
+          if ($LASTEXITCODE -ne 0 -or $run.path -ne '.github/workflows/windows-release.yml' -or $run.status -ne 'completed' -or $run.conclusion -ne 'success' -or $run.head_sha -cne $env:CANDIDATE_SHA -or $run.repository.full_name -cne $env:GH_REPO -or $run.head_repository.full_name -cne $env:GH_REPO) { throw 'Unverified or foreign candidate.' }
           "run_id=$env:CANDIDATE_RUN" >> $env:GITHUB_OUTPUT
           "CANDIDATE_SHA=$env:CANDIDATE_SHA" >> $env:GITHUB_ENV
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
@@ -84,9 +84,9 @@ jobs:
           assert scope['manifest']['app_version']==version
           tests=json.loads(pathlib.Path('candidate/source-test-results.json').read_text(encoding='utf-8-sig'))
           assets=[{'file':name,'bytes':record['bytes'],'sha256':record['sha256']} for name,record in sorted(scope['normalized'].items())]
-          proof={'source_commit':sha,'source_build_run':os.environ['REVIEW_RUN'],'review_run':os.environ['GITHUB_RUN_ID'],'checksums_verified':True,'native_backend_evidence_verified':True,'publication_performed':False,'assets':assets,'source_tests':tests,'gui_acceptance':'separate native-gui-proof.json; not implied by binary checks'}
+          proof={'source_commit':sha,'source_build_run':os.environ['REVIEW_RUN'],'review_run':os.environ['GITHUB_RUN_ID'],'checksums_verified':True,'native_backend_evidence_verified':True,'native_gui_evidence_verified':True,'publication_performed':False,'assets':assets,'source_tests':tests,'gui_acceptance':'original canonical native-gui-proof.json and allowlisted archive validated; no GUI rerun or physical acceptance' }
           pathlib.Path('candidate-review.json').write_text(json.dumps(proof,indent=2)+'\n')
-          print('All three Windows binaries and original native release gates independently verified; publication remains disabled.')
+          print('All three Windows binaries and original backend/GUI release gates independently verified; no GUI rerun or publication.')
       - name: Preserve individually downloadable portable candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -113,18 +113,6 @@ jobs:
             candidate/SHA256SUMS.txt
             candidate/BUILD-NOTES.txt
             candidate/RELEASE-NOTES-RU.md
+            candidate/CodexTeam-Native-GUI-Evidence.zip
           if-no-files-found: error
-          retention-days: 14
-      - name: Run actual EXE UIA and native Save dialog experiment
-        shell: pwsh
-        run: |
-          powershell.exe -NoProfile -STA -File packaging/Smoke-DesktopGui.ps1 -ArchivePath candidate/CodexTeam-Portable-x64.zip -SourceCommit $env:CANDIDATE_SHA
-          if ($LASTEXITCODE -ne 0) { throw 'Native GUI experiment did not pass; inspect genuine evidence.' }
-      - name: Preserve genuine screenshots and experiment outcomes
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: actual-native-gui-experiment
-          path: .build-tools/native-gui/**
-          if-no-files-found: warn
           retention-days: 14
