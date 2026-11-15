@@ -109,8 +109,9 @@ jobs:
           gui = json.loads((root / 'native-gui-proof.json').read_text(encoding='utf-8-sig'))
           assert gui.get('status') == 'OBSERVED_NATIVE_GUI_SCENARIOS_PASSED', 'Native GUI scenarios did not pass'
           assert gui.get('source_commit') == gui.get('probe_commit') == os.environ['SOURCE_COMMIT'], 'Native GUI source mismatch'
-          for gate in ('window_verified', 'task_form_verified', 'portable_marker_profile_verified', 'budget_picker_verified', 'budget_saved_verified', 'graceful_quit_verified'):
+          for gate in ('window_verified', 'task_form_verified', 'backend_connection_verified', 'portable_marker_profile_verified', 'budget_picker_verified', 'budget_saved_verified', 'graceful_quit_verified'):
               assert gui.get(gate) is True, 'Missing native GUI release gate: ' + gate
+          assert gui.get('backend_connection_observed_label') in ('Сервер доступен · проверяем Codex…', 'Сервер доступен · Codex не проверен', 'Нужен вход', 'Codex подключён'), 'Native GUI backend connection observation invalid'
           assert gui.get('owned_process_force_cleanup') is False, 'Native GUI force cleanup was required'
           assert type(gui.get('owned_gui_backend_processes_remaining')) is int and gui['owned_gui_backend_processes_remaining'] == 0, 'Native GUI owned processes remained'
           assert gui.get('login_requested') is False and gui.get('model_execution_requested') is False, 'Native GUI provider execution scope invalid'

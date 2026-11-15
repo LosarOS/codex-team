@@ -2,6 +2,8 @@
 "use strict";
 ((root) => {
   root.CodexI18n?.register({
+  "Проверяем локальный сервер…": "Checking the local server…",
+  "Локальный сервер ещё не готов.": "The local server is not ready yet.",
   "Проект": "Project",
   "Путь": "Path",
   "Задача": "Task",
@@ -164,5 +166,24 @@
       throw error;
     }finally{clearTimeout(timer);options.signal?.removeEventListener("abort",cancel);}
   }
-  root.CodexApi={request,ApiError,formatError};
+  // Latest health probe wins. Provider discovery never decides local transport state.
+  function createReadiness({onChange=()=>{}}={}) {
+    let epoch=0, state={phase:'checking',online:false,result:null,error:null};
+    return {
+      snapshot:()=>({...state}),
+      async probe(read=()=>request('/health')) {
+        const current=++epoch;
+        let next;
+        try {
+          const value=await read();
+          if(!value||!['ok','healthy','ready'].includes(String(value.status).toLowerCase())||value.checks?.backend===false)throw new ApiError(t('Локальный сервер ещё не готов.'),{kind:'protocol'});
+          next={phase:'online',online:true,result:value,error:null};
+        } catch(error) {next={phase:'offline',online:false,result:null,error};}
+        if(current===epoch){state=next;onChange({...state});}
+        return {...next,accepted:current===epoch};
+      }
+    };
+  }
+
+  root.CodexApi={request,ApiError,formatError,createReadiness};
 })(typeof window!=="undefined"?window:globalThis);

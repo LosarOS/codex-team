@@ -76,8 +76,8 @@ def _valid_artifact_fixture(tmp_path, monkeypatch):
     path.write_text(json.dumps(smoke))
     gui = {'status': 'OBSERVED_NATIVE_GUI_SCENARIOS_PASSED', 'source_commit': 'a'*40, 'probe_commit': 'a'*40,
            'owned_process_force_cleanup': False, 'owned_gui_backend_processes_remaining': 0,
-           'login_requested': False, 'model_execution_requested': False, 'sdk_account_calls': None}
-    gui.update({gate: True for gate in ('window_verified','task_form_verified','portable_marker_profile_verified','budget_picker_verified','budget_saved_verified','graceful_quit_verified')})
+           'login_requested': False, 'model_execution_requested': False, 'sdk_account_calls': None, 'backend_connection_observed_label': 'Сервер доступен · Codex не проверен'}
+    gui.update({gate: True for gate in ('window_verified','task_form_verified','backend_connection_verified','portable_marker_profile_verified','budget_picker_verified','budget_saved_verified','graceful_quit_verified')})
     (root / 'native-gui-proof.json').write_text(json.dumps(gui))
     import zipfile
     with zipfile.ZipFile(root / 'CodexTeam-Native-GUI-Evidence.zip', 'w') as archive:

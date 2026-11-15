@@ -103,9 +103,10 @@ jobs:
           $guiProofPath = '.build-tools/native-gui/native-gui-proof.json'
           $gui = Get-Content -LiteralPath $guiProofPath -Raw | ConvertFrom-Json
           if ($gui.status -cne 'OBSERVED_NATIVE_GUI_SCENARIOS_PASSED' -or $gui.source_commit -cne $env:GITHUB_SHA -or $gui.probe_commit -cne $env:GITHUB_SHA) { throw 'Native GUI proof does not match the complete checked-out source.' }
-          foreach ($gate in @('window_verified','task_form_verified','portable_marker_profile_verified','budget_picker_verified','budget_saved_verified','graceful_quit_verified')) {
+          foreach ($gate in @('window_verified','task_form_verified','backend_connection_verified','portable_marker_profile_verified','budget_picker_verified','budget_saved_verified','graceful_quit_verified')) {
             if ($gui.$gate -isnot [bool] -or $gui.$gate -ne $true) { throw "Missing native GUI release gate: $gate" }
           }
+          if ($gui.backend_connection_observed_label -cnotin @('Сервер доступен · проверяем Codex…','Сервер доступен · Codex не проверен','Нужен вход','Codex подключён')) { throw 'Native GUI backend connection observation is invalid.' }
           if ($gui.owned_process_force_cleanup -isnot [bool] -or $gui.owned_process_force_cleanup -ne $false -or $gui.owned_gui_backend_processes_remaining -ne 0) { throw 'Native GUI required force cleanup or left owned processes.' }
           if ($gui.login_requested -ne $false -or $gui.model_execution_requested -ne $false -or ($gui.PSObject.Properties.Name -notcontains 'sdk_account_calls') -or $null -ne $gui.sdk_account_calls) { throw 'Native GUI account/provider observation scope is invalid.' }
           New-Item -ItemType Directory -Force release-assets | Out-Null

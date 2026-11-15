@@ -58,3 +58,13 @@ Build43653777510 **SUCCESS**, publish=false. PyInstaller, настоящий x64
 Причина предыдущего probe-сбоя: WM_SETTEXT/BM_CLICK не доказали ввод/сохранение modern dialog. Успешный probe использует проверенный foreground owned dialog, точный Edit HWND/focus, один keyboard ввод с readback и одно действие Save. Проверки файла/схемы/штатного выхода не убирались.
 
 Это обновляет предыдущий checkpoint **только для этих наблюдаемых сценариев**, а не всего GUI matrix. Настоящие PNG, неизменённые байты/хеши и provenance: `../docs/screenshots/rc12-native-gui/README.md`. Финальная canonical Windows-сборка получает обязательный GUI gate; её результаты будут записаны отдельно.
+
+## C0 checkpoint и финальный startup review
+
+Canonical [43659810614](https://github.com/LosarOS/codex-team/actions/runs/43659810614) **SUCCESS**, sourcec0e6f8f:1025 passed/1 skipped/1026total,984.022s Windows. Final Linux1022/4. [Read-only review43661926960](https://github.com/LosarOS/codex-team/actions/runs/43661926960) такжеSUCCESS: скачанные original binaries/proofs сверены, три split archives повторно скачаны root через GitHub connector и проверены независимо. Все оригинальные evidence сохранены в `evidence/rc12-final-candidate/`; эта папка идентифицирует **C0 checkpoint**, не будущий startup-fix binary.
+
+При реальном просмотре первого Windows PNG обнаружен ранний красный badge «Сервер недоступен». Код подтверждает initial online=false +render до первого запроса; отдельное смешение transport/SDK: /api/status включает медленный account discovery, HTTP timeout12s при SDK bound20s. После этого Budget/native Save/quit работают, поэтому постоянная недоступность не доказана. Важный UX-дефект выбран для исправления перед окончательной публикацией.
+
+Planning agent реализует neutral initial checking, отдельный cheap /health/latest-probe-wins и явные pending/unverified состояния SDK без ложного auth-required; доступы/permissions/start guards сохраняются. Control agent добавил mandatory native UIA backend_connection_verified/observedlabel перед первым screenshot:144a6ae. При этом app-fix ещё проходит targeted/Node review; новые binary/core counts должны быть подтверждены следующей canonical Windows-сборкой. Старые C0 hashes и1025 tests нельзя выдать за доказательство нового app source.
+
+Root готовит повторный real-backend Chromium прогон в новом каталоге, без перезаписи исторических PNG. Оплачиваемые model/API calls не выполняются. SDK discovery calls GUI остаются null. Публикация/merge всё ещё ожидают отдельного подтверждения после конкретного review.
