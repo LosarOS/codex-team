@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-15T00:42:14.607377+00:00",
+  "filters": {
+    "project_id": "project_2738c3f3f13daea0",
+    "date_utc": null
+  },
+  "aggregation_scope": "current_page",
+  "total_matching": 0,
+  "offset": 0,
+  "limit": 50,
+  "exported_runs": 0,
+  "measured_tokens": null,
+  "usage_complete": false,
+  "account_quota": null,
+  "cost": null,
+  "models_called": false,
+  "items": []
+}
