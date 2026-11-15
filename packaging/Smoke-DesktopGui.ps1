@@ -26,9 +26,20 @@ public static class GuiProbeWin32 {
  [DllImport("user32.dll")] public static extern int GetDlgCtrlID(IntPtr h);
  [DllImport("user32.dll")] public static extern bool IsChild(IntPtr parent,IntPtr child);
  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
- [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", CharSet=CharSet.Unicode, SetLastError=true)] public static extern IntPtr SendText(IntPtr h,uint msg,IntPtr w,string text,uint flags,uint timeout,out IntPtr result);
  [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", CharSet=CharSet.Unicode, SetLastError=true)] public static extern IntPtr ReadText(IntPtr h,uint msg,IntPtr w,System.Text.StringBuilder text,uint flags,uint timeout,out IntPtr result);
- [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", SetLastError=true)] public static extern IntPtr SendAction(IntPtr h,uint msg,IntPtr w,IntPtr l,uint flags,uint timeout,out IntPtr result);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+ [StructLayout(LayoutKind.Sequential)] public struct GuiInfo {
+  public uint cbSize, flags;
+  public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret;
+  public int left, top, right, bottom;
+ }
+ [DllImport("user32.dll", SetLastError=true)] public static extern bool GetGUIThreadInfo(uint thread,ref GuiInfo info);
+ public static IntPtr FocusOfWindow(IntPtr h) {
+  uint pid; uint thread=GetWindowThreadProcessId(h,out pid);
+  GuiInfo info=new GuiInfo();info.cbSize=(uint)Marshal.SizeOf(typeof(GuiInfo));
+  if(!GetGUIThreadInfo(thread,ref info))throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+  return info.hwndFocus;
+ }
 }
 '@
 function Capture([string]$name) {
@@ -136,22 +147,35 @@ try {
  $fileHandle=[IntPtr]$file.Current.NativeWindowHandle
  Assert-DialogControl $fileHandle 'Edit' 1001 $dialogHandle $dialogPid
  if (-not [GuiProbeWin32]::IsChild([IntPtr]$fileHost.Current.NativeWindowHandle,$fileHandle)) {throw 'Filename edit is outside the exact filename host.'}
+ # Real common-dialog editing rather than programmatic WM_SETTEXT: native
+ # dialog models may not commit that text until keyboard change notifications.
+ $null=[GuiProbeWin32]::SetForegroundWindow($dialogHandle)
+ if ([GuiProbeWin32]::GetForegroundWindow() -ne $dialogHandle) {throw 'Owned Save dialog is not foreground; refusing keyboard input.'}
+ [Windows.Forms.SendKeys]::SendWait('%n')
+ if ([GuiProbeWin32]::FocusOfWindow($dialogHandle) -ne $fileHandle) {throw 'Alt+N did not focus exact owned filename Edit; refusing text input.'}
+ [Windows.Forms.SendKeys]::SendWait('^a')
+ $escaped=''
+ foreach ($character in $destination.ToCharArray()) {
+   if ('+^%~()[]{}'.Contains([string]$character)) {$escaped+='{'+$character+'}'} else {$escaped+=$character}
+ }
+ [Windows.Forms.SendKeys]::SendWait($escaped)
+ if ([GuiProbeWin32]::GetForegroundWindow() -ne $dialogHandle -or [GuiProbeWin32]::FocusOfWindow($dialogHandle) -ne $fileHandle) {throw 'Owned filename focus changed during input; refusing Save.'}
  $nativeResult=[IntPtr]::Zero
- # One WM_SETTEXT, then read back the same guarded native Edit before any Save action.
- if ([GuiProbeWin32]::SendText($fileHandle,0x000C,[IntPtr]::Zero,$destination,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero -or $nativeResult.ToInt64() -ne 1) {throw 'Native filename WM_SETTEXT failed.'}
  $readBack=[Text.StringBuilder]::new($destination.Length+1)
  if ([GuiProbeWin32]::ReadText($fileHandle,0x000D,[IntPtr]$readBack.Capacity,$readBack,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero -or $readBack.ToString() -cne $destination) {throw 'Native filename readback differs; refusing Save.'}
- $report.filename_pattern='guarded Win32 Edit WM_SETTEXT/WM_GETTEXT'
+ $report.filename_pattern='owned foreground dialog Alt+N / exact Edit focus / keyboard input / WM_GETTEXT'
  Capture 'native-budget-selected-path.png'
  $saveCondition=[Windows.Automation.AndCondition]::new([Windows.Automation.PropertyCondition]::new($idProperty,'1'),[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Save'))
  $save=$dialog.FindFirst([Windows.Automation.TreeScope]::Descendants,$saveCondition)
  if (-not $save) {throw 'Native Save action 1 unavailable.'}
  $saveHandle=[IntPtr]$save.Current.NativeWindowHandle
  Assert-DialogControl $saveHandle 'Button' 1 $dialogHandle $dialogPid
- # BM_CLICK targets only the observed owned Save button. Actual JSON remains the completion gate.
- if ([GuiProbeWin32]::SendAction($saveHandle,0x00F5,[IntPtr]::Zero,[IntPtr]::Zero,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero) {throw 'Native Save button action timed out or failed.'}
+ # One normal Save mnemonic after validating the exact native Save action.
+ if ([GuiProbeWin32]::GetForegroundWindow() -ne $dialogHandle) {throw 'Save dialog lost foreground; refusing Save action.'}
+ [Windows.Forms.SendKeys]::SendWait('%s')
  $until=[DateTime]::UtcNow.AddSeconds(20)
  while (-not (Test-Path -LiteralPath $destination) -and [DateTime]::UtcNow -lt $until) {Start-Sleep -Milliseconds 200}
+ if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) {throw 'Native Save completed without the exact chosen destination file.'}
  $export=Get-Content -LiteralPath $destination -Raw | ConvertFrom-Json
  if ($export.schema_version -ne 1 -or $export.models_called -ne $false -or $export.account_quota -ne $null) {throw 'Native saved budget report is invalid.'}
  Copy-Item -LiteralPath $destination -Destination (Join-Path $out 'native-budget-saved.json')
@@ -175,9 +199,16 @@ try {
  $report.status='OBSERVED_NATIVE_GUI_SCENARIOS_PASSED'
 } catch {
  $report.error=$_.Exception.Message
+ try {
+   $budgetFiles=@(Get-ChildItem -LiteralPath $owned -Recurse -File -Filter '*budget*.json' | Select-Object -First 8 FullName,Length)
+   $budgetFiles | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $out 'owned-budget-files.json') -Encoding utf8
+   $copyIndex=0
+   foreach ($found in $budgetFiles) {if ($found.Length -lt 2000000) {Copy-Item -LiteralPath $found.FullName -Destination (Join-Path $out ('observed-budget-'+$copyIndex+'.json'));$copyIndex++}}
+ } catch {$report.owned_file_diagnostics_error=$_.Exception.Message}
  try {Capture 'native-experiment-failure.png'} catch {}
  if ($window) {try {
-   $dumpRoot=if ($dialog) {$dialog} else {$window}
+   $dumpRoot=$window
+   if ($dialog) {try {$null=$dialog.Current.Name;$dumpRoot=$dialog} catch [Windows.Automation.ElementNotAvailableException] {}}
    $nodes=@();foreach ($node in $dumpRoot.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition)) {
      if ($nodes.Count -ge 500) {break};$nodes+=@{name=$node.Current.Name;type=$node.Current.ControlType.ProgrammaticName;automation_id=$node.Current.AutomationId;native_handle=$node.Current.NativeWindowHandle;class_name=$node.Current.ClassName;patterns=@($node.GetSupportedPatterns() | ForEach-Object {$_.ProgrammaticName})}
    };$nodes | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $out 'uia-controls.json') -Encoding utf8
