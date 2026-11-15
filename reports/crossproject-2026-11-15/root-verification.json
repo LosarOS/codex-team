@@ -24,5 +24,12 @@
     "auto_commit": false
   },
   "successful_model_inference_verified": false,
-  "tokens": null
+  "tokens": null,
+  "persisted_limits_verified": {
+    "max_iterations": 1,
+    "max_agent_calls": 4,
+    "max_total_tokens": 40000,
+    "max_parallel_agents": 1,
+    "max_run_duration": 300
+  }
 }

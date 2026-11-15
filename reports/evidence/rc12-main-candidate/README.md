@@ -43,3 +43,5 @@ Metadata, release notes, GUI archive и candidate-review скопированы 
 - [Proof/evidence14142457332](https://github.com/LosarOS/codex-team/actions/runs/43667875815/artifacts/14142457332).
 
 Это пригодный для решения владельца кандидат, **не опубликованный GitHub Release**. Старые релизы и tags не изменялись.
+
+Raw `RELEASE-NOTES-RU.md` сохраняет относительные ссылки исходного расположения `docs/releases/`. Для чтения со ссылками используйте [исходный документ exact T](https://github.com/LosarOS/codex-team/blob/ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6/docs/releases/v1.0.0-rc12.md). Нынешние пользовательские notes подготовлены отдельно; original artifact не редактируется.
