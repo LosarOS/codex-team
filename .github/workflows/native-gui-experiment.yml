@@ -71,12 +71,12 @@ jobs:
         run: |
           import base64,json,os,pathlib,re,subprocess,textwrap,tomllib
           repo=os.environ['GH_REPO'];sha=os.environ['CANDIDATE_SHA']
-          source=json.loads(subprocess.run(['gh','api','repos/'+repo+'/contents/pyproject.toml?ref='+sha],capture_output=True,text=True,check=True).stdout)
+          source=json.loads(subprocess.run(['gh','api','repos/'+repo+'/contents/pyproject.toml?ref='+sha],capture_output=True,text=True,encoding='utf-8',check=True).stdout)
           version=tomllib.loads(base64.b64decode(source['content']).decode('utf-8'))['project']['version']
           match=re.fullmatch(r'(\d+\.\d+\.\d+)(?:rc(\d+))?',version);assert match
           os.environ['RELEASE_TAG']='v'+match[1]+('-rc'+match[2] if match[2] else '')
           os.environ['SOURCE_COMMIT']=sha
-          workflow=pathlib.Path('.github/workflows/publish-windows-artifact.yml').read_text()
+          workflow=pathlib.Path('.github/workflows/publish-windows-artifact.yml').read_text(encoding='utf-8-sig')
           code=textwrap.dedent(workflow.split("python3 - <<'PY'\n")[2].split('\n          PY',1)[0])
           assert code.count("pathlib.Path('release-assets')")==1
           code=code.replace("pathlib.Path('release-assets')","pathlib.Path('candidate')",1)
