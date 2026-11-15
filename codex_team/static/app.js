@@ -41,11 +41,28 @@
     lastEventsFetch: 0, eventsHasMore: false, eventsLoaded: false, eventsState: null, lastRunList: 0, lastRunDetail: 0, availableModels: [], diffError: null,
     controlPending: false, creatingRun: false, runRevision: 0, pendingActions: new Set(),
     stageEvents: [], selectedAttempt: null, eventFilter: "all", eventsRequest: null,
-    desktopReady: false, health: null, healthError: null, healthCheckedAt: null,
+    desktopReady: false, health: null, healthError: null, healthCheckedAt: null, healthPhase:"checking", lastHealthProbe:0, statusError:null, statusPending:true,
   };
   let taskDraft = null, refreshLoop = null, taskTemplates = null, runComparison = null, runNotebook = null;
   state.initialRefreshDone = false;
   state.refreshQueued = false;
+  I.register?.({
+    "Проверяем локальный сервер…":"Checking the local server…",
+    "Сервер доступен · проверяем Codex…":"Server available · checking Codex…",
+    "Сервер доступен · Codex не проверен":"Server available · Codex not verified",
+    "Проверяем подключение…":"Checking connection…",
+    "Подключение не проверено":"Connection not verified",
+    "Проверка подключения Codex недоступна. Локальные функции работают.":"Codex connection check is unavailable. Local features remain available.",
+    "Локальный сервер ещё не готов.":"The local server is not ready yet."
+  });
+  const localReadiness=window.CodexApi.createReadiness({onChange:result=>{
+    if(!result.online||state.healthPhase==="offline")state.statusPending=true;
+    state.healthPhase=result.phase;state.lastHealthProbe=Date.now();
+    updateHealth(result.online?{status:"fulfilled",value:result.result}:{status:"rejected",reason:result.error});
+    setOnline(result.online,result.error?.message);
+  }});
+  const probeLocalHealth=()=>localReadiness.probe(()=>api("/health","GET",undefined,{timeoutMs:5000}));
+
   const roles = {
     coordinator: [I.t("Координатор"), I.t("План и организация работы")],
     analyst: [I.t("Аналитик"), I.t("Архитектура и критерии приёмки")],
@@ -291,6 +308,7 @@
     renderDesktopIntegration();
   }
   function authConnected() {
+    if(state.statusError||state.statusPending)return false;
     const auth = state.status?.auth;
     return ["CONNECTED", "AUTHENTICATED", "LOGGED_IN"].includes(normalizedState(auth?.status)) || auth?.authenticated === true;
   }
@@ -324,14 +342,22 @@
   function renderConnection() {
     const connected = runReady();
     const apiActive=(state.providers?.active||state.status?.settings?.execution_backend)==="openai_api";
-    const dotClass=!state.online?"red":connected?apiActive&&state.providers?.openai_api?.status!=="CONNECTED"?"yellow":"green":"yellow";
-    $("connection-status").replaceChildren(node("span", `status-dot ${dotClass}`), document.createTextNode(!state.online ? I.t("Сервер недоступен") : connected ? apiActive ? I.t("OpenAI API настроен") : I.t("Codex подключён") : apiActive ? I.t("Нужен ключ API") : I.t("Нужен вход")));
+    const checking=state.healthPhase==="checking";
+    const dotClass=checking?"yellow":!state.online?"red":connected?apiActive&&state.providers?.openai_api?.status!=="CONNECTED"?"yellow":"green":"yellow";
+    const connectionLabel=checking ? I.t("Проверяем локальный сервер…") : !state.online ? I.t("Сервер недоступен") : state.statusPending ? I.t("Сервер доступен · проверяем Codex…") : state.statusError ? I.t("Сервер доступен · Codex не проверен") : connected ? apiActive ? I.t("OpenAI API настроен") : I.t("Codex подключён") : apiActive ? I.t("Нужен ключ API") : I.t("Нужен вход");
+    const connection=$("connection-status"), connectionKey=dotClass+":"+connectionLabel;
+    if(connection.dataset.connectionState!==state.healthPhase)connection.dataset.connectionState=state.healthPhase;
+    if(connection.dataset.renderedConnection!==connectionKey){
+      connection.dataset.renderedConnection=connectionKey;
+      connection.setAttribute("aria-label",connectionLabel);
+      connection.replaceChildren(node("span", `status-dot ${dotClass}`), document.createTextNode(connectionLabel));
+    }
     $("sidebar-auth-dot").className = `status-dot ${dotClass}`;
-    $("sidebar-auth-label").textContent=!state.online?I.t("Нет связи с сервером"):apiActive?connected?I.t("Ключ API настроен"):I.t("Требуется ключ API"):connected?I.t("Аккаунт подключён"):I.t("Авторизация требуется"); $("sidebar-provider-label").textContent=apiActive?"OpenAI API":"ChatGPT / Codex"; $("compose-provider-label").replaceChildren(node("span",`status-dot ${apiActive?"yellow":"green"}`),document.createTextNode(apiActive?I.t("Отдельная оплата OpenAI API"):I.t("Через ваш аккаунт Codex"))); $("api-required-banner").hidden=!state.online||!apiActive||connected;
-    $("auth-banner").hidden = !state.online || connected || apiActive;
+    $("sidebar-auth-label").textContent=checking?I.t("Проверяем локальный сервер…"):!state.online?I.t("Нет связи с сервером"):state.statusPending?I.t("Проверяем подключение…"):state.statusError?I.t("Подключение не проверено"):apiActive?connected?I.t("Ключ API настроен"):I.t("Требуется ключ API"):connected?I.t("Аккаунт подключён"):I.t("Авторизация требуется"); $("sidebar-provider-label").textContent=apiActive?"OpenAI API":"ChatGPT / Codex"; $("compose-provider-label").replaceChildren(node("span",`status-dot ${apiActive?"yellow":"green"}`),document.createTextNode(apiActive?I.t("Отдельная оплата OpenAI API"):I.t("Через ваш аккаунт Codex"))); $("api-required-banner").hidden=!state.online||state.statusPending||Boolean(state.statusError)||!apiActive||connected;
+    $("auth-banner").hidden = !state.online || state.statusPending || Boolean(state.statusError) || connected || apiActive;
     $("start-button").disabled = state.creatingRun || !state.online || !connected || state.runs.some((run) => activeStates.has(normalizedState(run.state)));
     $("start-button").title=state.runs.some(run=>activeStates.has(normalizedState(run.state)))?I.t("Сначала завершите, остановите или приостановите текущий запуск."):!connected?apiActive?I.t("Сохраните ключ API или выберите Codex в настройках."):I.t("Войдите через официальный Codex."):"";
-    qa(".login-button").forEach((button) => { button.disabled = !state.online || state.loginPending; }); renderProviderChoice();
+    qa(".login-button").forEach((button) => { button.disabled = !state.online || state.statusPending || Boolean(state.statusError) || state.loginPending; }); renderProviderChoice();
   }
   function renderStatus() {
     renderConnection();
@@ -339,7 +365,8 @@
     const account = auth.account || {};
     const details = $("settings-auth-details");
     details.replaceChildren();
-    details.append(node("p", "", I.tr`Состояние: ${authConnected() ? I.t("аккаунт подключён") : ({AUTH_REQUIRED:I.t("нужен вход"),UNAVAILABLE:I.t("подключение недоступно"),ERROR:I.t("ошибка подключения"),NOT_LOGGED_IN:I.t("нужен вход")}[auth.status] || I.t("нет подключения"))}`));
+    if(state.statusError)details.append(node("p","field-note",I.t("Проверка подключения Codex недоступна. Локальные функции работают.")),node("p","field-note",state.statusError));
+    details.append(node("p", "", I.tr`Состояние: ${state.statusPending ? I.t("Проверяем подключение…") : state.statusError ? I.t("Подключение не проверено") : authConnected() ? I.t("аккаунт подключён") : ({AUTH_REQUIRED:I.t("нужен вход"),UNAVAILABLE:I.t("подключение недоступно"),ERROR:I.t("ошибка подключения"),NOT_LOGGED_IN:I.t("нужен вход")}[auth.status] || I.t("нет подключения"))}`));
     if (typeof account === "string") details.append(node("p", "", account));
     else for (const [key, label] of [["email", I.t("Аккаунт")], ["planType", I.t("План")], ["plan_type", I.t("План")], ["type", I.t("Тип")]]) {
       if (account[key]) details.append(node("p", "", `${label}: ${account[key]}`));
@@ -883,8 +910,8 @@
   }
   async function refresh() {
     if(state.refreshing)return;if(state.polling){state.refreshQueued=true;return;}state.refreshing=true;$("refresh-button").disabled=true;
-    try{const responses=await Promise.allSettled([api("/api/status"),api("/api/runs?summary=true&limit=20&offset=0"),api("/api/agents"),api("/api/packs"),api("/health"),api("/api/providers")]);updateHealth(responses[4]);
-      if(responses[0].status==="fulfilled"){const first=!state.status;state.status=responses[0].value;state.lastStatus=Date.now();setOnline(true);renderStatus();if(first)applyDefaults(state.status.settings);}else setOnline(false,responses[0].reason.message);
+    try{const responses=await Promise.allSettled([api("/api/status"),api("/api/runs?summary=true&limit=20&offset=0"),api("/api/agents"),api("/api/packs"),probeLocalHealth(),api("/api/providers")]);
+      if(responses[0].status==="fulfilled"){const first=!state.status;state.status=responses[0].value;state.lastStatus=Date.now();state.statusError=null;state.statusPending=false;renderStatus();if(first)applyDefaults(state.status.settings);}else {state.statusError=responses[0].reason.message;state.statusPending=false;renderStatus();}
       if(responses[1].status==="fulfilled"){acceptRuns(responses[1].value);state.lastRunList=Date.now();}
       if(responses[2].status==="fulfilled")state.agents=Array.isArray(responses[2].value)?responses[2].value:responses[2].value.agents||[];
       if(responses[3].status==="fulfilled")state.packs=Array.isArray(responses[3].value)?responses[3].value:responses[3].value.packs||[];
@@ -894,11 +921,16 @@
       if(state.selectedRun&&!state.controlPending&&!state.pendingActions.size){const id=state.selectedRun.id,version=state.selectionVersion,revision=state.runRevision,run=await api(`/api/runs/${encodeURIComponent(id)}`);if(version===state.selectionVersion&&revision===state.runRevision&&state.selectedRun?.id===id){state.selectedRun=run;renderRun();if(["overview","activity"].includes(state.detailTab))await fetchEvents(id,version);if(state.detailTab==="diff"){state.diffRun=null;await loadDiff();}}}
       const partial = [1,2,3,5].map(index=>responses[index]).find(response=>response.status==="rejected");
       if (state.online && partial) showServiceIssue(partial.reason.message, true);
-    }catch(error){if(error.kind==="offline"||error.kind==="timeout")setOnline(false,error.message);else showServiceIssue(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
+    }catch(error){if(error.kind==="offline"||error.kind==="timeout")await probeLocalHealth();showServiceIssue(error.message,true);}finally{state.refreshing=false;$("refresh-button").disabled=false;}
   }
   async function poll() {
     if(state.polling||state.refreshing||state.selecting||state.controlPending||state.pendingActions.size||document.hidden)return;state.polling=true;let checkingStatus=false;
-    try{if(Date.now()-state.lastStatus>15000||!state.online){checkingStatus=true;state.status=await api("/api/status");checkingStatus=false;state.lastStatus=Date.now();setOnline(true);renderStatus();}
+    try{if(Date.now()-state.lastHealthProbe>15000||!state.online)await probeLocalHealth();
+      if(Date.now()-state.lastStatus>15000||state.statusError||state.statusPending){checkingStatus=true;
+        try {state.status=await api("/api/status");state.lastStatus=Date.now();state.statusError=null;}
+        catch(error){state.statusError=error.message;}
+        finally {checkingStatus=false;state.statusPending=false;renderStatus();}
+      }
       const active=state.runs.some(r=>activeStates.has(normalizedState(r.state)));
       if(Date.now()-state.lastRunList>(active?1800:10000)){acceptRuns(await api("/api/runs?summary=true&limit=20&offset=0"));state.lastRunList=Date.now();}
       await loadActions();
@@ -909,7 +941,7 @@
       if(state.actionsError){showServiceIssue(state.actionsError,true);return false;}
       if(state.online)$("service-banner").hidden=true;
       return true;
-    }catch(error){if(checkingStatus||error.kind==="offline"||error.kind==="timeout")setOnline(false,error.message);else showServiceIssue(error.message,true);return false;}
+    }catch(error){if(error.kind==="offline"||error.kind==="timeout")await probeLocalHealth();showServiceIssue(error.message,true);return false;}
     finally{state.polling=false;if(state.refreshQueued){state.refreshQueued=false;Promise.resolve().then(refresh);}}
   }
   const accessLabels={"read-only":I.t("Только чтение"),standard:I.t("Рабочая папка"),"full-access":I.t("Полный доступ")};
@@ -1004,7 +1036,7 @@
     $("onboarding").hidden=storageGet("codex-team-onboarding")==="dismissed";
   }
   function renderModeChecks(container,selected,showAll=false) { container.replaceChildren(...Object.entries(modes).map(([id,mode])=>{const l=node("label","specialist-option"),i=node("input");i.type="checkbox";i.value=id;i.checked=showAll||selected.includes(id);l.append(i,document.createTextNode(mode.title));return l;})); }
-  function runReady() { return (state.providers?.active||state.status?.settings?.execution_backend)==="openai_api"?state.providers?.openai_api?.configured===true:authConnected(); }
+  function runReady() { if(state.statusError||state.statusPending)return false;return (state.providers?.active||state.status?.settings?.execution_backend)==="openai_api"?state.providers?.openai_api?.configured===true:authConnected(); }
   function modelEffortOptions(modelId) {const model=state.availableModels?.find(m=>(m.model||m.id)===modelId)||(!modelId?state.availableModels?.find(m=>m.isDefault||m.is_default):null);return list(model?.supportedReasoningEfforts||model?.supported_reasoning_efforts).map(e=>typeof e==="string"?e:e.reasoningEffort||e.reasoning_effort||e.effort).filter(Boolean);}
   function effortLabelText(value) {return {none:I.t("Без дополнительного анализа"),minimal:I.t("Минимальная"),low:I.t("Низкая"),medium:I.t("Средняя"),high:I.t("Высокая"),xhigh:I.t("Очень высокая"),max:I.t("Максимальная"),ultra:I.t("Предельная")}[value]||value;}
   function scopeLabel(value) {return {turn:I.t("Текущий шаг агента"),session:I.t("Текущая сессия"),run:I.t("Этот запуск"),project:I.t("Этот проект"),once:I.t("Однократно"),command:I.t("Эта команда"),workspace:I.t("Рабочая папка"),network:I.t("Доступ к сети")}[value]||value;}

@@ -1,5 +1,6 @@
 /* Authored UI text only. Keys remain stable Russian source identifiers. */
 window.CodexI18nCatalog = {
+  "Проверяем локальный сервер…": "Checking the local server…",
   "Очередь миссий": "Mission queue",
   "Только избранные": "Favorites only",
   "Координатор": "Coordinator",
