@@ -17,3 +17,7 @@
 26 relevant Python/UI contract cases passed in1.78s, including8 new readiness regressions: real app.js DOM initial checking, SDK HTTP failure with healthy backend, failed backend despite successful auth, deferred SDK response, known authentication required, identical aria-live subtree retention, conservative auth gating after transport recovery, and deferred overlapping health responses in both orders. No POST or model/provider call was introduced in these scenarios. Existing 15 Node scripts and the new backend_readiness script all passed (16scripts). Source parse and diff checks passed.
 
 The previous canonical native screenshot/report is preserved as historical evidence. The fixed frontend still requires fresh full regression and actual Windows GUI acceptance for its exact source commit; no prior GUI proof is relabelled as testing this change. Physical Windows10/11, Narrator/DPI and live SDK development remain separate gates.
+
+## Actual Windows acceptance
+
+The source6807 native pipeline and independent read-only review passed. UI Automation waited for an actual visible healthy backend label before capture; the unchanged screenshot shows «Сервер доступен · проверяем Codex…». Native Save wrote the JSON and Quit returned0 without force cleanup. [Original before/after and exact evidence](evidence/rc12-startup-fixed-checkpoint/README.md).1041passed/1skipped source cases on Windows; SDK account calls remainunknown, physical/DPI/live model mission are separate. Subsequent merge-source packaging is validated independently before publication.

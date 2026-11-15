@@ -1,0 +1,38 @@
+{
+  "source_commit": "6807cacc204aca982614ad68fab50db5e0dcef2e",
+  "source_build_run": "43663714379",
+  "review_run": "43665666851",
+  "checksums_verified": true,
+  "native_backend_evidence_verified": true,
+  "native_gui_evidence_verified": true,
+  "publication_performed": false,
+  "assets": [
+    {
+      "file": "CodexTeam-Portable-x64.zip",
+      "bytes": 249665824,
+      "sha256": "1032568622f5986c33d6a2605d7aa424389f5ecf89f272791e5667706c64bde8"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.exe",
+      "bytes": 155672088,
+      "sha256": "40f163ab18a1e8a2171d544ab12651f8ca385e6cd86b8ed6367b73d80f4d545b"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.zip",
+      "bytes": 155206372,
+      "sha256": "2cff30128663014a3004b8d033b250a7859fbb7151026754cc1ead1cf480d3fa"
+    }
+  ],
+  "source_tests": {
+    "failures": 0,
+    "tests": 1042,
+    "source_commit": "6807cacc204aca982614ad68fab50db5e0dcef2e",
+    "passed": 1041,
+    "skipped": 1,
+    "duration_seconds": 847.906,
+    "platform": "Windows",
+    "status": "passed",
+    "errors": 0
+  },
+  "gui_acceptance": "original canonical native-gui-proof.json and allowlisted archive validated; no GUI rerun or physical acceptance"
+}

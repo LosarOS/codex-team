@@ -1,0 +1,31 @@
+{
+  "source_commit": "6807cacc204aca982614ad68fab50db5e0dcef2e",
+  "canonical_run": 43663714379,
+  "review_run": 43665666851,
+  "artifact_id": 14141878506,
+  "files": [
+    {
+      "name": "candidate-review.json",
+      "sha256": "268469b5bd5b2e4b700084267814ad5a2edf3cddd668f8b59e69c882b258e21a",
+      "bytes": 1231
+    },
+    {
+      "name": "source-test-results.json",
+      "sha256": "aaed06df1421c2522ea6787931ed864b4c0bb693aeff0905a6b93b0e89c29419",
+      "bytes": 238
+    },
+    {
+      "name": "native-gui-proof.json",
+      "sha256": "ab5123cea2b82b14c521cb9fc52336e227a8c362a395e6d61229c425b3bb83dc",
+      "bytes": 1393
+    },
+    {
+      "name": "native-dashboard-task-form.png",
+      "sha256": "497676650ef26b3e01e4f8bfb8e0aed042b649c6fadd4a5aa46e2c92f8ee0ece",
+      "bytes": 225786
+    }
+  ],
+  "local_binary_payload_verification": "not performed for this intermediate checkpoint; remote strict publisher validator passed, final main binaries are verified separately",
+  "model_execution_requested": false,
+  "sdk_account_calls": null
+}

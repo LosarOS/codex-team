@@ -1,0 +1,35 @@
+{
+  "persisted_run_verified_read_only": true,
+  "driver_create_app_uses_default_provider": true,
+  "driver_fake_provider_references": 0,
+  "owned_clone_and_worktree_head": "a5effcdcc4861ff099636be7782dd5155a029671",
+  "owned_git_trees_clean": true,
+  "run": {
+    "id": "run_e61a05cb3b9e",
+    "state": "AUTH_REQUIRED",
+    "calls": 1,
+    "stage": 0,
+    "current_role": "coordinator",
+    "pipeline": [
+      "coordinator",
+      "developer",
+      "qa",
+      "reviewer"
+    ],
+    "result_history": [],
+    "usage": [],
+    "usage_complete": null,
+    "isolated": true,
+    "access_level": "standard",
+    "auto_commit": false
+  },
+  "successful_model_inference_verified": false,
+  "tokens": null,
+  "persisted_limits_verified": {
+    "max_iterations": 1,
+    "max_agent_calls": 4,
+    "max_total_tokens": 40000,
+    "max_parallel_agents": 1,
+    "max_run_duration": 300
+  }
+}

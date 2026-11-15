@@ -1,0 +1,25 @@
+{
+  "bundle": "D:\\a\\codex-team\\codex-team\\dist\\CodexTeam",
+  "app_version": "1.0.0rc12",
+  "sdk_cli_version": "codex-cli 0.162.1",
+  "git_version": "git version 2.56.0.windows.2",
+  "sdk": "0.162.1",
+  "pywebview": "6.2.1",
+  "pyinstaller": "6.22.3",
+  "bundled_python": {
+    "version": "3.12.10",
+    "prefix": "D:\\a\\codex-team\\codex-team\\dist\\CodexTeam\\_internal\\runtime\\python"
+  },
+  "permission_profiles_verified": [
+    "standard",
+    "read-only",
+    "full-access"
+  ],
+  "permission_profile_cleanup_warnings": [],
+  "permission_profile_inference_calls": 0,
+  "permission_profile_sdk": "source SDK adapter with actual bundled CLI",
+  "required_files_checked": 49,
+  "sensitive_paths_found": 0,
+  "files": 3218,
+  "bytes": 674620027
+}

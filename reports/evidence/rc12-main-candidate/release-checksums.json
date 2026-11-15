@@ -1,0 +1,14 @@
+{
+  "installer\\CodexTeam-Setup-x64.exe": {
+    "sha256": "7d1f9a3d66212037447e2cbf85b0df89deeafc566defac431ab62fb7726e2003",
+    "bytes": 155694288
+  },
+  "dist\\CodexTeam-Setup-x64.zip": {
+    "sha256": "5968713c05b6458f24b88ea8ccd5206bd6480bc2b049a3b407785d9e2be983bd",
+    "bytes": 155228614
+  },
+  "dist\\CodexTeam-Portable-x64.zip": {
+    "sha256": "ad05e0966417e3173f5dda3847c0d6ddf98b10474459e063d833e3531eb9be65",
+    "bytes": 249666849
+  }
+}
