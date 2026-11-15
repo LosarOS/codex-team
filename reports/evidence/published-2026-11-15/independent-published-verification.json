@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "status": "VERIFIED PRERELEASE WITH DISCLOSED LIMITATIONS",
+  "verified_at_utc": "2026-11-15T09:01:23.202280+00:00",
+  "repository": "LosarOS/codex-team",
+  "release_url": "https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc12",
+  "release_tag": "v1.0.0-rc12",
+  "published_at": "2026-11-15T09:00:23Z",
+  "source_commit": "2611575e3b814f0ebcf4289f547fe2f196ee8411",
+  "tag_source_verified": true,
+  "draft": false,
+  "prerelease": true,
+  "signature": "unsigned",
+  "checksum_manifest_verified": true,
+  "artifacts": [
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 276,
+      "sha256": "3ea27f72d928cbbaae48c26ee4b008fed00646c37a417558da3fbafa1affb17b",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/SHA256SUMS.txt",
+      "download_method": "public"
+    },
+    {
+      "name": "CodexTeam-Setup-x64.exe",
+      "bytes": 155706244,
+      "sha256": "7253c9b58d63005249c80a56e27d8629b99af89a1c24f6b5207145e0e60c4eef",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Setup-x64.exe",
+      "download_method": "public",
+      "pe_mz_verified": true
+    },
+    {
+      "name": "CodexTeam-Setup-x64.zip",
+      "bytes": 155241132,
+      "sha256": "af258ff6d1374fc6d779a5178b90f1626faf34f28f499f0d24d3698c9b053716",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Setup-x64.zip",
+      "download_method": "public",
+      "zip_crc_verified": true,
+      "entries": 4,
+      "embedded_installer_matches_exe": true
+    },
+    {
+      "name": "CodexTeam-Portable-x64.zip",
+      "bytes": 249663686,
+      "sha256": "0bd2bd81814aaba88a3f1c7b75bca6af83d8c4c7159372acff272788d53a980c",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Portable-x64.zip",
+      "download_method": "public",
+      "zip_crc_verified": true,
+      "entries": 3219
+    },
+    {
+      "name": "source-test-results.json",
+      "bytes": 238,
+      "sha256": "50fd1943a237f31c3dd8430c37a5b0cf6e689c8f5b615603a238ca61c0770e4f",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/source-test-results.json",
+      "download_method": "public"
+    },
+    {
+      "name": "build-verification.json",
+      "bytes": 779,
+      "sha256": "df506a7c03ca21593ddb4ec1cbbd7d223f2f05dab2a8bf49063c988e06be393a",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/build-verification.json",
+      "download_method": "public"
+    },
+    {
+      "name": "native-gui-proof.json",
+      "bytes": 1393,
+      "sha256": "cef59c10e5a7e79817be5501e1047dca1040449c827ce19c5e9f086c35ddd64e",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/native-gui-proof.json",
+      "download_method": "public"
+    },
+    {
+      "name": "portable-smoke.json",
+      "bytes": 859,
+      "sha256": "83bafecf72a84bc93bc7b682bdd524a52c1255e8f8d6cf79bb868184251a905e",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/portable-smoke.json",
+      "download_method": "public"
+    },
+    {
+      "name": "installed-smoke.json",
+      "bytes": 3006,
+      "sha256": "a7aaf8514258de73ff61ab49a78fd888da6873ab76da008306e90b8d6d1f75ed",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/installed-smoke.json",
+      "download_method": "public"
+    },
+    {
+      "name": "release-checksums.json",
+      "bytes": 464,
+      "sha256": "8623087c73b37f423e749e34e8375a75aa8f15a254ad0ff0f6196cbf970dc9d1",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/release-checksums.json",
+      "download_method": "public"
+    },
+    {
+      "name": "BUILD-NOTES.txt",
+      "bytes": 778,
+      "sha256": "337820facafd43329eaa24cfee53c76cc3418035d3f816cc2a7992469a78b60a",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/BUILD-NOTES.txt",
+      "download_method": "public"
+    },
+    {
+      "name": "CodexTeam-Native-GUI-Evidence.zip",
+      "bytes": 405795,
+      "sha256": "73f39f6e36585db0ea240a50266fc86be87479549514455db5da124d7ac4c731",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Native-GUI-Evidence.zip",
+      "download_method": "public",
+      "zip_crc_verified": true,
+      "entries": 4
+    },
+    {
+      "name": "RELEASE-NOTES-RU.md",
+      "bytes": 4616,
+      "sha256": "e900ec83d4931adfc8455b4b4529c950b1eaca2c5ae61add02ee891a3457a563",
+      "github_digest_verified": true,
+      "url": "https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/RELEASE-NOTES-RU.md",
+      "download_method": "public"
+    }
+  ],
+  "physical_windows_acceptance": "NOT VERIFIED",
+  "successful_live_sdk_development": "NOT VERIFIED"
+}
