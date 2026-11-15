@@ -50,3 +50,11 @@ Build43653777510 **SUCCESS**, publish=false. PyInstaller, настоящий x64
 Закончить реальный native Save+штатный Quit, затем включить обязательный gate для финальной Windows-кандидатной сборки, сохранить screenshot/proof и запросить публикацию. Физическая Windows10/11, DPI, Narrator, RDP, длительный soak и успешная live Codex mission **NOT VERIFIED**. Бинарники unsigned; SmartScreen/антивирусная приёмка не заявляются.
 
 Публичный RC11 остаётся download в README до выпуска RC12. Main/tags/releases продуктов не изменены. Метаданные description/topics/homepage/social preview не применены: GitHub integration вернула403. Профильный README LosarOS опубликован отдельно через согласованный scope без смены позиционирования/личных контактов.
+
+## Native GUI checkpoint — 15 ноября, 00:42UTC
+
+[Эксперимент43659404286](https://github.com/LosarOS/codex-team/actions/runs/43659404286) **SUCCESS**. Исходный frozen кандидат6e00643, probe8c551c0. Root независимо прочитал `evidence/rc12-native-gui/native-gui-proof.json`, сохранённый JSON и просмотрел PNG с фактическим системным Save/предпросмотром. Шесть наблюдаемых gates true, native exit0, оставшихся процессов0, force cleanupfalse. SDK account callsnull; physicalWindows/DPI false.
+
+Причина предыдущего probe-сбоя: WM_SETTEXT/BM_CLICK не доказали ввод/сохранение modern dialog. Успешный probe использует проверенный foreground owned dialog, точный Edit HWND/focus, один keyboard ввод с readback и одно действие Save. Проверки файла/схемы/штатного выхода не убирались.
+
+Это обновляет предыдущий checkpoint **только для этих наблюдаемых сценариев**, а не всего GUI matrix. Настоящие PNG, неизменённые байты/хеши и provenance: `../docs/screenshots/rc12-native-gui/README.md`. Финальная canonical Windows-сборка получает обязательный GUI gate; её результаты будут записаны отдельно.
