@@ -11,7 +11,7 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $owned=Join-Path $env:RUNNER_TEMP ('CodexGui-'+[guid]::NewGuid().ToString('N'))
 if (Test-Path -LiteralPath $owned) { throw 'Owned folder unexpectedly exists.' }
 New-Item -ItemType Directory -Path $owned | Out-Null
-$report=[ordered]@{source_commit=$SourceCommit;probe_commit=$env:GITHUB_SHA;environment='disposable Windows runner / actual portable EXE / WebView2 / UI Automation';status='NOT VERIFIED';window_verified=$false;task_form_verified=$false;budget_picker_verified=$false;budget_saved_verified=$false;portable_marker_profile_verified=$false;login_requested=$false;model_execution_requested=$false;sdk_account_calls=$null;physical_windows11_verified=$false;dpi_matrix_verified=$false;graceful_quit_verified=$false;owned_process_force_cleanup=$false}
+$report=[ordered]@{source_commit=$SourceCommit;probe_commit=$env:GITHUB_SHA;environment='disposable Windows runner / actual portable EXE / WebView2 / UI Automation';status='NOT VERIFIED';window_verified=$false;task_form_verified=$false;backend_connection_verified=$false;backend_connection_observed_label=$null;budget_picker_verified=$false;budget_saved_verified=$false;portable_marker_profile_verified=$false;login_requested=$false;model_execution_requested=$false;sdk_account_calls=$null;physical_windows11_verified=$false;dpi_matrix_verified=$false;graceful_quit_verified=$false;owned_process_force_cleanup=$false}
 $previousData=$env:CODEX_TEAM_DATA_ROOT;$previousCodex=$env:CODEX_HOME;$previousArgs=$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
 $backend=$null;$appExe=$null;$window=$null;$dialog=$null
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,System.Drawing,System.Windows.Forms
@@ -56,6 +56,26 @@ function Wait-Control($root,[string]$name,$type,[int]$seconds=30) {
  do {try {$node=Find-Control $root $name $type;if ($node) {return $node}} catch [Windows.Automation.ElementNotAvailableException] {}
  Start-Sleep -Milliseconds 300 } while ([DateTime]::UtcNow -lt $until)
  throw "Actual UIA control unavailable: $name"
+}
+function Wait-BackendConnectionIndicator($root,[int]$seconds=60) {
+ # Observe the actual accessible header label, never infer UI readiness from /health.
+ # Codex account checks may still be pending; local backend availability is separate.
+ $healthy=@('Сервер доступен · проверяем Codex…','Сервер доступен · Codex не проверен','Нужен вход','Codex подключён')
+ $until=[DateTime]::UtcNow.AddSeconds($seconds);$previous=$null;$stable=0
+ do {
+   $observed=$null
+   foreach ($label in $healthy) {
+     try {
+       $condition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,$label)
+       $node=$root.FindFirst([Windows.Automation.TreeScope]::Descendants,$condition)
+       if ($node -and -not $node.Current.IsOffscreen -and $node.Current.Name -ceq $label) {$observed=$node.Current.Name;break}
+     } catch [Windows.Automation.ElementNotAvailableException] {}
+   }
+   if ($observed -and $observed -ceq $previous) {$stable++} else {$previous=$observed;$stable=1}
+   if ($observed -and $stable -ge 3) {return $observed}
+   Start-Sleep -Milliseconds 300
+ } while ([DateTime]::UtcNow -lt $until)
+ throw 'Actual UI backend connection indicator never settled to an available state.'
 }
 function Invoke-Control($node) { $node.SetFocus();$node.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke() }
 function Assert-DialogControl([IntPtr]$handle,[string]$class,[int]$id,[IntPtr]$dialogHandle,[uint32]$ownerPid) {
@@ -118,7 +138,10 @@ try {
  $report.window_verified=$true
  $null=[GuiProbeWin32]::ShowWindow([IntPtr]$window.Current.NativeWindowHandle,3);$null=[GuiProbeWin32]::SetForegroundWindow([IntPtr]$window.Current.NativeWindowHandle)
  $null=Wait-Control $window 'Что нужно сделать?' ([Windows.Automation.ControlType]::Edit) 60
- $report.task_form_verified=$true;Capture 'native-dashboard-task-form.png'
+ $report.task_form_verified=$true
+ $report.backend_connection_observed_label=Wait-BackendConnectionIndicator $window 60
+ $report.backend_connection_verified=$true
+ Capture 'native-dashboard-task-form.png'
  if (-not (Test-Path (Join-Path $profile 'cache/webview'))) {throw 'Portable marker-owned WebView2 profile absent.'}
  $report.portable_marker_profile_verified=$true
  Invoke-Control (Wait-Control $window 'Бюджет запусков' ([Windows.Automation.ControlType]::Button))
