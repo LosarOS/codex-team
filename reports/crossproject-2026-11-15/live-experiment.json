@@ -1,0 +1,153 @@
+{
+  "date_utc": "2026-11-15",
+  "status": "LIVE_MISSION_BLOCKED_OR_PARTIAL",
+  "product_head": "33a1e5194d1bb59374cf06af5150984e76333365",
+  "shift_source": "a5effcdcc4861ff099636be7782dd5155a029671",
+  "auth_kind": "chatgpt",
+  "api_fallback": false,
+  "mode": "implement",
+  "access_level": "standard",
+  "isolated": true,
+  "auto_commit": false,
+  "max_agent_calls": 4,
+  "max_run_duration": 300,
+  "max_total_tokens": 40000,
+  "token_limit_semantics": "Measured inter-stage guard; not a hard provider token cap. Unknown usage stays null.",
+  "tokens": null,
+  "auth_status": "CONNECTED",
+  "project_id": "project_7c1c4b75c98a8436",
+  "run_id": "run_e61a05cb3b9e",
+  "pipeline": [
+    "coordinator",
+    "developer",
+    "qa",
+    "reviewer"
+  ],
+  "state": "AUTH_REQUIRED",
+  "calls": 1,
+  "stage": 0,
+  "current_role": "coordinator",
+  "error": "Your access token could not be refreshed because you have since logged out or signed in to another account. Please sign in again.",
+  "error_info": null,
+  "result_history": [],
+  "threads_count": 1,
+  "usage_complete": false,
+  "usage": [],
+  "events": [
+    {
+      "id": 1,
+      "type": "created",
+      "role": null,
+      "created_at": "2026-11-15T02:14:26.512935+00:00"
+    },
+    {
+      "id": 2,
+      "type": "agent_started",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:27.095879+00:00"
+    },
+    {
+      "id": 3,
+      "type": "thread_ready",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:27.966289+00:00"
+    },
+    {
+      "id": 4,
+      "type": "turn/started",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.002913+00:00"
+    },
+    {
+      "id": 5,
+      "type": "item/started",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.485590+00:00"
+    },
+    {
+      "id": 6,
+      "type": "item/completed",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.490080+00:00"
+    },
+    {
+      "id": 7,
+      "type": "error",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.749526+00:00"
+    },
+    {
+      "id": 8,
+      "type": "turn/completed",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.752961+00:00"
+    },
+    {
+      "id": 9,
+      "type": "run_state",
+      "role": null,
+      "created_at": "2026-11-15T02:14:28.777297+00:00"
+    },
+    {
+      "id": 10,
+      "type": "action_required",
+      "role": "coordinator",
+      "created_at": "2026-11-15T02:14:28.778242+00:00"
+    }
+  ],
+  "isolated_worktree_created": true,
+  "project_source_unchanged": true,
+  "changed_files": [],
+  "observed_elapsed_seconds": 4.71,
+  "sdk_agent_execution_attempted": true,
+  "inference_completed_verified": false,
+  "product_code_source": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+  "product_code_identical_to_head": true,
+  "worktree_branch": "codex/run_e61a05cb3b9e",
+  "worktree_head": "a5effcdcc4861ff099636be7782dd5155a029671",
+  "worktree_status": "",
+  "pipeline_observed": {
+    "coordinator": "SDK thread/turn started; authentication failure; no accepted result",
+    "developer": "NOT STARTED",
+    "qa": "NOT STARTED",
+    "reviewer": "NOT STARTED"
+  },
+  "task_scope": {
+    "file": "tests/Shift.Tests/UnicodeBackupCatalogTests.cs",
+    "gap": "Existing tests contain Unicode workspace names and backup directories, but no Cyrillic/emoji/spaces .db filename with combined inventory/inspection/source-byte preservation assertions.",
+    "filename": "Учёба 🧪 2026.db",
+    "acceptance": [
+      "new regression file only, preferably under50lines",
+      "inventory preserves exact full filename/path",
+      "inspection preserves expected workspace/history/profile/widget counts",
+      "backup bytes and live workspace unchanged",
+      "focused dotnet test passes"
+    ],
+    "generated_test_added": false,
+    "agent_test_runs": null,
+    "agent_diff_review": "NOT VERIFIED: no developer changes produced"
+  },
+  "baseline": {
+    "head": "a5effcdcc4861ff099636be7782dd5155a029671",
+    "dirty": false,
+    "status": ""
+  },
+  "models_observed": null,
+  "execution_backend": "codex_chatgpt",
+  "reasoning_effort": "medium",
+  "provider_factory_override": false,
+  "transport": "Actual FastAPI/uvicorn loopback HTTP, existing /api/projects and /api/runs, actual Engine and official CodexProvider; no fake provider and no direct Codex exec",
+  "post_shutdown_owned_process_check": {
+    "method": "psutil cwd limited to owned application roots and isolated clone worktree",
+    "remaining": [],
+    "scope": "No process command lines or owner account data published; process check is limited to these owned roots."
+  },
+  "max_iterations": 1,
+  "max_parallel_agents": 1,
+  "owned_runtime_shutdown": {
+    "engine_close_called": true,
+    "uvicorn_shutdown_requested": true,
+    "driver_process_exit_code": 0,
+    "owned_worktree_retained_for_review": true
+  }
+}
