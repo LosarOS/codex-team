@@ -1,8 +1,10 @@
 # Codex Team RC12 — итог кандидата, 15 ноября 2026
 
+> Обновление публикации: владелец подтвердил выпуск; [публичные файлы, итоговый source commit, свежие Windows gates и повторная сверка SHA256](RELEASE-PUBLICATION-2026-11-15.md). Доказательства кандидата ниже сохраняют исходные SHA/хеши и не подменяют результаты опубликованной пересборки.
+
 ## Результат и источники
 
-Кандидат **1.0.0-rc12** реализован и собран от объединённого master. Автоматические release gates: **PASS**. Публичный release status: **BLOCKED — ожидается отдельное подтверждение владельца на публикацию**. Live SDK development: **PARTIAL / AUTH_REQUIRED**, успешная end-to-end миссия не подтверждена. Stable1.0 не назначена.
+Кандидат **1.0.0-rc12** реализован и собран от объединённого master. Автоматические release gates: **PASS**. Публичный release status: **VERIFIED PRERELEASE WITH DISCLOSED LIMITATIONS**. Live SDK development: **PARTIAL / AUTH_REQUIRED**, успешная end-to-end миссия не подтверждена. Stable1.0 не назначена.
 
 База: master `0269b3db6b8d485b6880784f827c9719984aaabb`, публичный RC11. Проверенный binary source: **`ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6`**. [PR18 merged](https://github.com/LosarOS/codex-team/pull/18) · [Windows43665690346](https://github.com/LosarOS/codex-team/actions/runs/43665690346) · [read-only byte/proof review43667875815](https://github.com/LosarOS/codex-team/actions/runs/43667875815). Оба runs SUCCESS; публикационные jobs не выполнялись. Master фактически protected=false; обычное слияние входило в согласованный scope, настройки защиты не менялись. Последующие docs-only commits не меняют приложение.
 

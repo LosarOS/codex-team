@@ -1,0 +1,3 @@
+# Preserve downloaded proof bytes, including original CRLF.
+*.json -text
+SHA256SUMS.txt -text

@@ -1,8 +1,8 @@
-> **Final RC12 candidate:** [Feature guide](docs/RC12-GUIDE-EN.md) · [Verified files and SHA256](reports/evidence/rc12-main-candidate/README.md). [PR18](https://github.com/LosarOS/codex-team/pull/18) is merged; canonical Windows source `ccd0500…` passed **1041 tests / 1 skip**, native GUI/Save and independent byte verification. Release publication awaits owner approval; full physical GUI acceptance remains separate.
+> **Codex Team 1.0.0-rc12 is published:** [Feature guide](docs/RC12-GUIDE-EN.md) · [Windows checks and published SHA256](reports/RELEASE-PUBLICATION-2026-11-15.md). Editable plans, source-aware context, real mission events and native budget export. Unsigned prerelease; full physical GUI and successful live SDK development remain unverified.
 
 # Codex Team
 
-[Русский](README.md) · [Download for Windows](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11) · [User guide, Russian](docs/USER_GUIDE.md)
+[Русский](README.md) · [Download for Windows](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc12) · [User guide, Russian](docs/USER_GUIDE.md)
 
 ![Codex Team](docs/assets/product-banner.svg)
 
@@ -12,7 +12,7 @@ Describe a task, choose the team and permissions, follow execution, then inspect
 
 This is an independent LosarOS product, **not an official OpenAI application**. It uses the official Codex SDK. ChatGPT/Codex sign-in is the primary connection method; an API key is optional.
 
-> The current published version is **1.0.0-rc11**, an unsigned prerelease. [Installer EXE](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/CodexTeam-Setup-x64.exe) · [Portable ZIP](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/CodexTeam-Portable-x64.zip) · [SHA256](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc11/SHA256SUMS.txt). [Evidence and exact limits](reports/engineering-session-2026-10-23.md). Interactive WebView2/DPI acceptance and successful development through a live SDK account still need confirmation.
+> The current release is **1.0.0-rc12**, an unsigned prerelease. [Installer EXE](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Setup-x64.exe) · [Installer ZIP](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Setup-x64.zip) · [Portable ZIP](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/CodexTeam-Portable-x64.zip) · [SHA256](https://github.com/LosarOS/codex-team/releases/download/v1.0.0-rc12/SHA256SUMS.txt). [Public-file verification and exact limits](reports/RELEASE-PUBLICATION-2026-11-15.md). Actual WebView2 window, backend indicator, native Save and graceful exit passed bounded automation; physical DPI/accessibility and successful live SDK development remain separate.
 
 ## From an idea to a reviewable result
 
@@ -30,6 +30,15 @@ This is an independent LosarOS product, **not an official OpenAI application**. 
 | **History** | Search, favorites, personal notes, reports, run comparison and safe preparation of a new task from a saved run. |
 
 One developer owns writes; specialists run sequentially. `max_parallel_agents` does not promise parallel coding. There is no automatic merge, push or silent queue restart.
+
+## New in RC12
+
+- **From a specification to a reviewable plan.** Up to 20 editable steps with acceptance criteria, files and dependencies. Cycles and stale edits are rejected. Explicitly hand a saved root step to the task composer; execution still requires a separate Start.
+- **Context with sources.** Project Knowledge shows whether linked source files changed. Stale and unreviewed entries stay available for review but are excluded from context. A bounded preview makes no model call.
+- **Mission timeline.** Actual events, blocker reasons and available next actions, without invented progress or hidden retries.
+- **Budget export.** Export the selected page with project and UTC-day filters; unknown tokens and cost remain unknown. Desktop uses a real Save dialog, with no hidden download after cancellation.
+
+[RC12 walkthrough](docs/RC12-GUIDE-EN.md) · [Windows evidence and acceptance boundaries](reports/RELEASE-PUBLICATION-2026-11-15.md).
 
 ## RC12 interface
 
@@ -60,7 +69,7 @@ The following six images are **real historical browser/fixture captures** from e
 
 ## Install
 
-1. Download **CodexTeam-Setup-x64.exe** from [RC11 Releases](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11). `CodexTeam-Setup-x64.zip` contains the installer. “Code → Download ZIP” downloads source code.
+1. Download **CodexTeam-Setup-x64.exe** from [RC12 Releases](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc12). `CodexTeam-Setup-x64.zip` contains the installer. “Code → Download ZIP” downloads source code.
 2. Verify it against `SHA256SUMS.txt`, for example `Get-FileHash .\CodexTeam-Setup-x64.exe -Algorithm SHA256`.
 3. Install for the current user and open the shortcut. **Microsoft Edge WebView2 Runtime** is required; the installer offers Microsoft's official bootstrapper if absent.
 4. For portable use, extract **all** of `CodexTeam-Portable-x64.zip` to a writable folder and open `CodexTeam.exe`.
