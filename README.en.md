@@ -1,3 +1,5 @@
+> **RC12 candidate:** [New feature guide](docs/RC12-GUIDE-EN.md) · [Review PR](https://github.com/LosarOS/codex-team/pull/18). Publication awaits final checks and owner approval. Native JSON Save completion remains unverified.
+
 # Codex Team
 
 [Русский](README.md) · [Download for Windows](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11) · [User guide, Russian](docs/USER_GUIDE.md)

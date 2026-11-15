@@ -1,3 +1,5 @@
+> **Кандидат RC12:** [новые возможности и инструкции](docs/RC12-GUIDE-RU.md) · [PR18](https://github.com/LosarOS/codex-team/pull/18). Публикация ожидает завершения проверок и подтверждения владельца. Native Save JSON ещё не подтверждён фактической записью.
+
 # Codex Team
 
 [English](README.en.md) · [Скачать Windows-версию](https://github.com/LosarOS/codex-team/releases/tag/v1.0.0-rc11) · [Руководство](docs/USER_GUIDE.md)
