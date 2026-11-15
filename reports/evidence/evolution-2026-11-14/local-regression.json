@@ -1,12 +1,12 @@
 {
-  "source_commit": "57a9f90d4a8d95befca7896f9d4012d9dbc7975c",
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
   "application_source_commit": "6e00643676dd9b2e701fdccf50fa8b75ff59fd00",
-  "environment": "Linux Python3.12.14; disposable fixtures; no live model mission",
-  "tests": 986,
+  "environment": "Linux Python3.12.14; final canonical GUI publication guard tests included; no live model mission",
+  "tests": 1026,
   "failed": 0,
   "errors": 0,
   "skipped": 4,
-  "duration_seconds": 68.839,
+  "duration_seconds": 68.633,
   "skipped_cases": [
     {
       "name": "test_hidden_child_subprocess_wrapper_preserves_flags_and_is_idempotent",
@@ -25,6 +25,7 @@
       "reason": "NTFS junction test"
     }
   ],
-  "passed": 982,
-  "windows_runtime_verified_by_this_suite": false
+  "passed": 1022,
+  "windows_runtime_verified_by_this_suite": false,
+  "warning": "One Starlette TestClient httpx deprecation warning; no production dependency change made for this warning."
 }
