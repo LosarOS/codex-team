@@ -1,0 +1,32 @@
+# Codex Team 1.0.0-rc12 — план, контекст и контроль
+
+Release candidate; публикация ожидает проверок и отдельного подтверждения владельца. [Full English notes](v1.0.0-rc12.en.md).
+
+## Что нового
+
+- Редактируемый план Task Architect с критериями, файлами, зависимостями и проверкой циклов; без скрытого исполнения.
+- Источники и актуальность локальной памяти, исключение устаревшего контекста и ограниченный предпросмотр.
+- Хронология реальных событий Mission Control и понятные следующие действия при блокировке.
+- Экспорт текущей страницы фактического использования с фильтрами; неизвестные значения не подменяются нулями. Desktop открывает системный диалог Save и сохраняет заново запрошенный snapshot тех же фильтров; отмена не вызывает скрытый browser fallback.
+- Исправлен ложный «Сервер недоступен» при запуске: доступность локального backend проверяется отдельно от медленного SDK; неизвестное состояние не превращается в требование входа.
+- Русский основной README, полноценный English и оформление GitHub.
+
+## Интерфейс
+
+Русский / English; сохранены темы Obsidian Violet, Neon Blue, Emerald Tech, Crimson Night и существующие варианты. Новые сценарии используют текущие компоненты, keyboard focus и явные состояния. WebView2 остаётся desktop host.
+
+## Безопасность и совместимость
+
+Существующие permissions, frozen budgets, explicit start, Git isolation и запрет автоматического merge сохранены. Нет скрытых модельных вызовов и платного API fallback. Данные остаются локальными.
+
+## Установка
+
+После публикации: CodexTeam-Setup-x64.exe или полная распаковка CodexTeam-Portable-x64.zip. Нужен WebView2. Перед обновлением завершите задачи, выйдите и сделайте копию каталога данных.
+
+## Проверки и ограничения
+
+Проверенный исходный кандидат `6e00643`: Windows985 passed/1 skipped, Linux982 passed/4 skipped. 15 Node suites, реальный backend/browser и18 сочетаний RU/EN×тем проверены отдельно. Настоящий portable EXE/WebView2 открыл форму и системный Save, записал JSON и завершился с кодом0 без принудительного cleanup ([native evidence](../../reports/evidence/rc12-native-gui/README.md)). Полная финальная Windows-сборка с обязательным новым GUI gate ожидается отдельно; исходные бинарники и хеши сохранены в [отчёте](../../reports/PRODUCT-EVOLUTION-2026-11-14.md). Неподписанные binaries; возможен SmartScreen. Windows Server CI не заменяет физическую Windows10/11, DPI/Narrator, полный GUI matrix и успешный live SDK account-run. Новые планы не являются исполнительным графом зависимых миссий. Экспорт бюджета относится к выбранной странице, не квоте аккаунта.
+
+## English
+
+RC12 adds editable non-executing work plans, source-bound knowledge freshness and bounded context preview, an actual-event mission timeline, and explicit filtered-page usage export. Permissions, isolated worktrees and explicit starts remain unchanged. Unsigned candidate; physical Windows/WebView2/live account acceptance remains separate.

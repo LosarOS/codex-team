@@ -1,4 +1,4 @@
-> **Кандидат RC12:** [новые возможности и инструкции](docs/RC12-GUIDE-RU.md) · [PR18](https://github.com/LosarOS/codex-team/pull/18). Публикация ожидает завершения проверок и подтверждения владельца. [Native Save JSON подтверждён в ограниченном Windows-сценарии](reports/evidence/rc12-native-gui/native-gui-proof.json); это не полная GUI-приёмка.
+> **Финальный кандидат RC12:** [возможности и инструкции](docs/RC12-GUIDE-RU.md) · [проверенные файлы и SHA256](reports/evidence/rc12-main-candidate/README.md). Реализация [PR18](https://github.com/LosarOS/codex-team/pull/18) объединена; canonical Windows source `ccd0500…` прошёл **1041 тест / 1 skip**, native GUI/Save и независимую сверку байтов. Публикация Releases ожидает подтверждения владельца; полная физическая GUI-приёмка остаётся отдельной.
 
 # Codex Team
 
@@ -31,7 +31,22 @@
 
 Один разработчик владеет записью; специалисты выполняются последовательно. `max_parallel_agents` не обещает параллельное внесение изменений. Нет автоматического merge результатов, push или скрытого запуска очереди после restart.
 
-## Интерфейс
+## Интерфейс RC12
+
+![Настоящее окно RC12 на Windows: backend доступен, нужен вход Codex](docs/screenshots/rc12-main-candidate/native-dashboard-task-form.png)
+
+| Предпросмотр бюджета | Системное сохранение JSON |
+| --- | --- |
+| ![Budget preview](docs/screenshots/rc12-main-candidate/native-budget-preview.png) | ![Настоящий Save dialog](docs/screenshots/rc12-main-candidate/native-budget-save-picker.png) |
+
+Реальный portable EXE source `ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6`, disposable Windows Server, синтетический профиль. Подтверждены окно/форма, **доступность backend по реальному индикатору UI**, portable marker, native Save, сохранение JSON и graceful exit0 без force cleanup/оставшихся owned процессов. [Исходный proof](reports/evidence/rc12-main-candidate/native-gui-proof.json) · [Независимая проверка GUI evidence](reports/evidence/rc12-main-candidate/independent-gui-evidence-verification.json) · [Происхождение PNG](docs/screenshots/rc12-main-candidate/README.md).
+
+Тело сохранённого JSON не включено в этот canonical archive: его не подменяем телом старого эксперимента. Физические Windows/DPI/Narrator и живое выполнение SDK остаются NOT VERIFIED; число SDK account-discovery calls в GUI — `null`, не0. Windows suite **1041 passed / 1 skipped**; Linux на итоговом коде **1038 passed / 4 skipped** — [отдельные среды, не сумма тестов](reports/evidence/rc12-startup-regression/README.md).
+
+**Исправлен ложный offline при запуске.** Начальная проверка backend нейтральна; задержка/сбой проверки Codex больше не означает недоступность локального сервера. Неизвестная авторизация не становится готовностью к запуску: команды агентов остаются заблокированными до подтверждённого подключения.
+
+<details>
+<summary>Исторические экраны предыдущих RC</summary>
 
 Следующие шесть снимков — **реальные исторические browser/fixture captures** из предыдущих RC, сохранённые в репозитории. Они показывают существующие экраны, не являются снимками нового RC12 и не подтверждают интерактивную Windows WebView2-приёмку. [Историческая проверка интерфейса](reports/redesign-rc5/VALIDATION.md).
 
@@ -41,13 +56,7 @@
 | ![Локальные знания проекта](reports/redesign-rc5/intelligence-ru.png) | ![Блокировка очереди RC10](reports/rc10/mission-queue-blocked.png) |
 | ![Шаблоны задач RC7](reports/rc7/task-templates.png) | ![Сравнение запусков RC7](reports/rc7/run-comparison.png) |
 
-### Native RC12: экспорт бюджета
-
-![Настоящий RC12 Budget preview в Windows WebView2](docs/screenshots/rc12-native-gui/native-budget-preview.png)
-
-Реальный portable EXE source `6e00643…`, disposable Windows Server, синтетическая пустая выборка. Верх preview вне scroll; неизвестные токены/стоимость/квота остаются null. Подтверждены native Save, фактически записанный JSON и graceful quit с exit0 без оставшихся owned процессов и принудительной очистки. [Proof](reports/evidence/rc12-native-gui/native-gui-proof.json) · [Сохранённый JSON](reports/evidence/rc12-native-gui/native-budget-saved.json) · [Происхождение снимков](docs/screenshots/rc12-native-gui/README.md).
-
-Это отдельный наблюдённый сценарий, не итоговый canonical release PASS. Физические Windows/DPI и live SDK остаются NOT VERIFIED; число штатных SDK account-discovery calls в GUI неизвестно, а не0.
+</details>
 
 ## Установить
 

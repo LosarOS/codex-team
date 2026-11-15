@@ -1,0 +1,82 @@
+{
+  "source_commit": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+  "original_files": [
+    {
+      "file": "BUILD-NOTES.txt",
+      "original_path": "candidate/BUILD-NOTES.txt",
+      "bytes": 779,
+      "sha256": "c8ae2d7225ceee9f9839160d4fdb8eb1fdbaa4364f20a430d2aa3d13e00d7c81",
+      "unaltered": true
+    },
+    {
+      "file": "CodexTeam-Native-GUI-Evidence.zip",
+      "original_path": "candidate/CodexTeam-Native-GUI-Evidence.zip",
+      "bytes": 412896,
+      "sha256": "d1b05cbd79b2d5e3113f77037fb4190a87c22015ed3214ad5136e5abae928b1c",
+      "unaltered": true
+    },
+    {
+      "file": "RELEASE-NOTES-RU.md",
+      "original_path": "candidate/RELEASE-NOTES-RU.md",
+      "bytes": 4423,
+      "sha256": "2d63f85b90f004625007a0a6ab5c68898c1b2af500a826a76d0886a90a5b7c88",
+      "unaltered": true
+    },
+    {
+      "file": "SHA256SUMS.txt",
+      "original_path": "candidate/SHA256SUMS.txt",
+      "bytes": 276,
+      "sha256": "16f163411ed975f1b31e80adeb33e815da2ec4be2215897bf8c37cb19a634097",
+      "unaltered": true
+    },
+    {
+      "file": "build-verification.json",
+      "original_path": "candidate/build-verification.json",
+      "bytes": 779,
+      "sha256": "df506a7c03ca21593ddb4ec1cbbd7d223f2f05dab2a8bf49063c988e06be393a",
+      "unaltered": true
+    },
+    {
+      "file": "installed-smoke.json",
+      "original_path": "candidate/installed-smoke.json",
+      "bytes": 3006,
+      "sha256": "3b55a2fb9569fb13f02ca5d7483b1e3c8b02689401717aee25604f92843d17be",
+      "unaltered": true
+    },
+    {
+      "file": "native-gui-proof.json",
+      "original_path": "candidate/native-gui-proof.json",
+      "bytes": 1352,
+      "sha256": "13deb841cfb8253a5ebc3822099017a80af31fb95551ee47d962e64e3c58d2f3",
+      "unaltered": true
+    },
+    {
+      "file": "portable-smoke.json",
+      "original_path": "candidate/portable-smoke.json",
+      "bytes": 859,
+      "sha256": "676fc4bcdacea9bd9fe18fcec5c3c3dba01cac9f64c9790d18a3015d7354b37f",
+      "unaltered": true
+    },
+    {
+      "file": "release-checksums.json",
+      "original_path": "candidate/release-checksums.json",
+      "bytes": 464,
+      "sha256": "1907b4b6936423a4eedc64e73f28fc34c11bd4fee1795647ada81a1734284fd8",
+      "unaltered": true
+    },
+    {
+      "file": "source-test-results.json",
+      "original_path": "candidate/source-test-results.json",
+      "bytes": 239,
+      "sha256": "2f0dbe70c73f602923fe02ce86bf86e20238cd953affbad43bcc889c3c5da55f",
+      "unaltered": true
+    },
+    {
+      "file": "candidate-review.json",
+      "original_path": "candidate-review.json",
+      "bytes": 1232,
+      "sha256": "143d16dfbc148000d4376c27b7916104712ff754b0869a16caa7de54fa24e8c9",
+      "unaltered": true
+    }
+  ]
+}

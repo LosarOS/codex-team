@@ -1,0 +1,55 @@
+{
+  "status": "RETAINED CANONICAL NATIVE GUI PROOFS AND ORIGINAL PNGS VERIFIED",
+  "verified_at_utc": "2026-11-15T02:32:45.797556+00:00",
+  "source_commit": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+  "probe_commit": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+  "canonical_run": "43665690346",
+  "independent_review_run": "43667875815",
+  "proof_source_matches": true,
+  "original_gui_archive_crc": "passed",
+  "archived_proof_byte_identical": true,
+  "backend_connection_verified": true,
+  "backend_connection_observed_label": "\u041d\u0443\u0436\u0435\u043d \u0432\u0445\u043e\u0434",
+  "native_gui_exit_code": 0,
+  "owned_process_force_cleanup": false,
+  "owned_gui_backend_processes_remaining": 0,
+  "sdk_account_calls": null,
+  "login_requested": false,
+  "model_execution_requested": false,
+  "physical_windows11_verified": false,
+  "dpi_matrix_verified": false,
+  "local_runtime_rerun": false,
+  "pngs": [
+    {
+      "file": "native-budget-preview.png",
+      "original_entry": "native-budget-preview.png",
+      "bytes": 116773,
+      "sha256": "f40becfb4a2bab4262e74922096a3d916f9e5dcb81e27a33b812cf7895605a62",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true
+    },
+    {
+      "file": "native-budget-save-picker.png",
+      "original_entry": "native-budget-save-picker.png",
+      "bytes": 112571,
+      "sha256": "d5814b154245fc8ff4113f00a99f5b6ef198ba25584ca4931a07c7733114242a",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true
+    },
+    {
+      "file": "native-dashboard-task-form.png",
+      "original_entry": "native-dashboard-task-form.png",
+      "bytes": 234678,
+      "sha256": "aacd4413db04f09048a1c9f9568e3e20f0a1f9aebfae232e1b247a6a133bb160",
+      "width": 1024,
+      "height": 768,
+      "png_decode": "passed",
+      "unaltered": true
+    }
+  ],
+  "limits": "Verification of retained disposable Windows native evidence; not physical Windows/DPI/SmartScreen/AV or live SDK acceptance."
+}

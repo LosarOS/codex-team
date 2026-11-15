@@ -1,0 +1,76 @@
+{
+  "status": "ARTIFACT BYTES AND RETAINED NATIVE BACKEND PROOFS VERIFIED",
+  "verified_at_utc": "2026-11-15T02:32:01.000630+00:00",
+  "source_commit": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+  "source_build_run": "43665690346",
+  "version": "1.0.0-rc12",
+  "assets": [
+    {
+      "file": "CodexTeam-Portable-x64.zip",
+      "bytes": 249666849,
+      "sha256": "ad05e0966417e3173f5dda3847c0d6ddf98b10474459e063d833e3531eb9be65"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.exe",
+      "bytes": 155694288,
+      "sha256": "7d1f9a3d66212037447e2cbf85b0df89deeafc566defac431ab62fb7726e2003"
+    },
+    {
+      "file": "CodexTeam-Setup-x64.zip",
+      "bytes": 155228614,
+      "sha256": "5968713c05b6458f24b88ea8ccd5206bd6480bc2b049a3b407785d9e2be983bd"
+    }
+  ],
+  "package_checks": {
+    "portable_archive": {
+      "entries": 3219,
+      "uncompressed_bytes": 674620064,
+      "crc": "passed",
+      "paths": "passed",
+      "duplicates": "none"
+    },
+    "application_pe": {
+      "machine": "0x8664",
+      "format": "PE32+",
+      "security_directory_offset": 0,
+      "security_directory_bytes": 0,
+      "signature_status": "unsigned (no PE certificate table)"
+    },
+    "portable_marker_present": true,
+    "packaged_user_data": "none found by named path/database guards",
+    "installer_pe": {
+      "machine": "0x14c",
+      "format": "PE32",
+      "security_directory_offset": 0,
+      "security_directory_bytes": 0,
+      "signature_status": "unsigned (no PE certificate table)"
+    },
+    "setup_archive": {
+      "entries": 4,
+      "uncompressed_bytes": 155711529,
+      "crc": "passed",
+      "paths": "passed",
+      "duplicates": "none"
+    },
+    "setup_inner_exe_matches_standalone": true
+  },
+  "source_tests": {
+    "status": "passed",
+    "failures": 0,
+    "source_commit": "ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6",
+    "errors": 0,
+    "platform": "Windows",
+    "skipped": 1,
+    "passed": 1041,
+    "duration_seconds": 1043.844,
+    "tests": 1042
+  },
+  "skip_scope": "one Docker opt-in skip according to source run; count not a second suite",
+  "model_calls": 0,
+  "sdk_account_calls": 0,
+  "publication_performed": false,
+  "gui_acceptance": "NOT VERIFIED BY THIS TOOL; separate native-gui-proof.json required",
+  "physical_windows_dpi_acceptance": "NOT VERIFIED",
+  "provenance_limits": "Cross-checks supplied retained proofs against expected source; not signed build attestation or an independent runtime rerun.",
+  "signature_limits": "No PE certificate table; this is not a SmartScreen or antivirus check."
+}

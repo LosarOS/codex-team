@@ -1,4 +1,4 @@
-> **RC12 candidate:** [New feature guide](docs/RC12-GUIDE-EN.md) · [Review PR](https://github.com/LosarOS/codex-team/pull/18). Publication awaits final checks and owner approval. [Native JSON Save passed a bounded Windows scenario](reports/evidence/rc12-native-gui/native-gui-proof.json); this is not complete GUI acceptance.
+> **Final RC12 candidate:** [Feature guide](docs/RC12-GUIDE-EN.md) · [Verified files and SHA256](reports/evidence/rc12-main-candidate/README.md). [PR18](https://github.com/LosarOS/codex-team/pull/18) is merged; canonical Windows source `ccd0500…` passed **1041 tests / 1 skip**, native GUI/Save and independent byte verification. Release publication awaits owner approval; full physical GUI acceptance remains separate.
 
 # Codex Team
 
@@ -31,7 +31,22 @@ This is an independent LosarOS product, **not an official OpenAI application**. 
 
 One developer owns writes; specialists run sequentially. `max_parallel_agents` does not promise parallel coding. There is no automatic merge, push or silent queue restart.
 
-## Interface
+## RC12 interface
+
+![Actual RC12 Windows window: local backend available, Codex sign-in required](docs/screenshots/rc12-main-candidate/native-dashboard-task-form.png)
+
+| Budget preview | Native JSON Save |
+| --- | --- |
+| ![Budget preview](docs/screenshots/rc12-main-candidate/native-budget-preview.png) | ![Actual system Save dialog](docs/screenshots/rc12-main-candidate/native-budget-save-picker.png) |
+
+Actual portable EXE source `ccd0500e07c79eca7cbbea1e098f8c05d8e6a0f6`, disposable Windows Server and a synthetic profile. Window/form, **backend availability observed in the real UI indicator**, portable marker, native Save, JSON writing and graceful exit0 passed without forced cleanup or remaining owned processes. [Original proof](reports/evidence/rc12-main-candidate/native-gui-proof.json) · [Independent GUI evidence verification](reports/evidence/rc12-main-candidate/independent-gui-evidence-verification.json) · [PNG provenance](docs/screenshots/rc12-main-candidate/README.md).
+
+The saved JSON body is not retained in this canonical archive; an older experiment's payload is not presented as this build's output. Physical Windows/DPI/Narrator and live SDK execution remain NOT VERIFIED; GUI SDK account-discovery count is `null`, not zero. Windows: **1041 passed / 1 skipped**; Linux on the final code: **1038 passed / 4 skipped** — [separate environments, not added test totals](reports/evidence/rc12-startup-regression/README.md).
+
+**Fixed false offline during startup.** Initial backend checking is neutral; slow or failed Codex status checks no longer mean the local server is unavailable. Unknown authorization never becomes execution readiness: agent execution stays disabled until connection status is confirmed.
+
+<details>
+<summary>Historical screens from earlier release candidates</summary>
 
 The following six images are **real historical browser/fixture captures** from earlier RCs retained in the repository. They show existing screens, are not RC12 screenshots and do not establish interactive Windows WebView2 acceptance. [Historical UI validation](reports/redesign-rc5/VALIDATION.md).
 
@@ -41,13 +56,7 @@ The following six images are **real historical browser/fixture captures** from e
 | ![Project knowledge](reports/redesign-rc5/intelligence-en.png) | ![Blocked queue, RC10](reports/rc10/mission-queue-blocked.png) |
 | ![Task templates, RC7](reports/rc7/task-templates.png) | ![Run comparison, RC7](reports/rc7/run-comparison.png) |
 
-### Native RC12: budget export
-
-![Actual RC12 Budget preview in Windows WebView2](docs/screenshots/rc12-native-gui/native-budget-preview.png)
-
-Actual portable EXE source `6e00643…`, disposable Windows Server and a synthetic empty selection. The preview starts above the current scroll; unknown tokens/cost/quota remain null. Native Save, the written JSON and graceful exit0 were observed, with no owned processes left and no forced cleanup. [Proof](reports/evidence/rc12-native-gui/native-gui-proof.json) · [Saved JSON](reports/evidence/rc12-native-gui/native-budget-saved.json) · [Capture provenance](docs/screenshots/rc12-native-gui/README.md).
-
-This is one observed scenario, not a final canonical release PASS. Physical Windows/DPI and live SDK development remain NOT VERIFIED. Startup SDK account-discovery call count in the GUI is unknown, not zero.
+</details>
 
 ## Install
 
