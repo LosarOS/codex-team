@@ -7,6 +7,7 @@
 - Added actual-event mission timelines, actionable blockers and filtered-page factual budget export with guarded native Save.
 - Preserved queue explicit start, isolated worktrees, permission profiles and unknown usage values.
 - Fixed malformed usage projections; updated vulnerable desktop pins and added RU/EN product guides, real browser/native evidence and independently verified Windows candidate bytes.
+- Fixed premature offline presentation: local backend health, SDK checking/unverified and actual authentication requirements now remain separate; stale health responses cannot override newer readiness.
 - Native and physical Windows acceptance have separate reports. [Release notes](docs/releases/v1.0.0-rc12.md); earlier public releases remain in [GitHub Releases](https://github.com/LosarOS/codex-team/releases).
 
 ## 1.0.0-rc1
