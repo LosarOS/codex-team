@@ -22,6 +22,13 @@ public static class GuiProbeWin32 {
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int n);
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("kernel32.dll", SetLastError=true)] public static extern bool GetExitCodeProcess(IntPtr h,out uint code);
+ [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h,System.Text.StringBuilder name,int count);
+ [DllImport("user32.dll")] public static extern int GetDlgCtrlID(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool IsChild(IntPtr parent,IntPtr child);
+ [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
+ [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", CharSet=CharSet.Unicode, SetLastError=true)] public static extern IntPtr SendText(IntPtr h,uint msg,IntPtr w,string text,uint flags,uint timeout,out IntPtr result);
+ [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", CharSet=CharSet.Unicode, SetLastError=true)] public static extern IntPtr ReadText(IntPtr h,uint msg,IntPtr w,System.Text.StringBuilder text,uint flags,uint timeout,out IntPtr result);
+ [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", SetLastError=true)] public static extern IntPtr SendAction(IntPtr h,uint msg,IntPtr w,IntPtr l,uint flags,uint timeout,out IntPtr result);
 }
 '@
 function Capture([string]$name) {
@@ -40,6 +47,13 @@ function Wait-Control($root,[string]$name,$type,[int]$seconds=30) {
  throw "Actual UIA control unavailable: $name"
 }
 function Invoke-Control($node) { $node.SetFocus();$node.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke() }
+function Assert-DialogControl([IntPtr]$handle,[string]$class,[int]$id,[IntPtr]$dialogHandle,[uint32]$ownerPid) {
+ if ($handle -eq [IntPtr]::Zero -or -not [GuiProbeWin32]::IsChild($dialogHandle,$handle)) {throw 'Native control is outside the owned Save dialog.'}
+ $actualClass=[Text.StringBuilder]::new(256)
+ $null=[GuiProbeWin32]::GetClassName($handle,$actualClass,$actualClass.Capacity)
+ $actualPid=[uint32]0;$null=[GuiProbeWin32]::GetWindowThreadProcessId($handle,[ref]$actualPid)
+ if ($actualClass.ToString() -cne $class -or [GuiProbeWin32]::GetDlgCtrlID($handle) -ne $id -or $actualPid -ne $ownerPid) {throw 'Native control class/ID/process ownership mismatch.'}
+}
 try {
  $app = (& python -c "import sys;sys.path.insert(0,'packaging');from pathlib import Path;from smoke_portable import extract_portable;print(extract_portable(Path(sys.argv[1]),Path(sys.argv[2])))" $ArchivePath $owned).Trim()
  if ($LASTEXITCODE -ne 0) {throw 'Candidate extraction failed.'}
@@ -115,20 +129,27 @@ try {
  $file=$fileHost.FindFirst([Windows.Automation.TreeScope]::Descendants,$fileCondition)
  if (-not $file) {throw 'Native filename field 1001 unavailable inside filename host.'}
  $destination=Join-Path $owned 'native-budget.json'
- $pattern=$null
- if ($file.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern,[ref]$pattern)) {
-   $pattern.SetValue($destination);$report.filename_pattern='ValuePattern'
- } elseif ($file.TryGetCurrentPattern([Windows.Automation.LegacyIAccessiblePattern]::Pattern,[ref]$pattern)) {
-   $pattern.SetValue($destination);$report.filename_pattern='LegacyIAccessiblePattern'
- } else {throw 'Native filename field has no supported writable accessibility pattern.'}
+ $dialogHandle=[IntPtr]$dialog.Current.NativeWindowHandle
+ $dialogPid=[uint32]0;$null=[GuiProbeWin32]::GetWindowThreadProcessId($dialogHandle,[ref]$dialogPid)
+ $mainPid=[uint32]0;$null=[GuiProbeWin32]::GetWindowThreadProcessId([IntPtr]$window.Current.NativeWindowHandle,[ref]$mainPid)
+ if ($dialogPid -eq 0 -or $dialogPid -ne $mainPid) {throw 'Save dialog does not belong to owned GUI process.'}
+ $fileHandle=[IntPtr]$file.Current.NativeWindowHandle
+ Assert-DialogControl $fileHandle 'Edit' 1001 $dialogHandle $dialogPid
+ if (-not [GuiProbeWin32]::IsChild([IntPtr]$fileHost.Current.NativeWindowHandle,$fileHandle)) {throw 'Filename edit is outside the exact filename host.'}
+ $nativeResult=[IntPtr]::Zero
+ # One WM_SETTEXT, then read back the same guarded native Edit before any Save action.
+ if ([GuiProbeWin32]::SendText($fileHandle,0x000C,[IntPtr]::Zero,$destination,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero -or $nativeResult.ToInt64() -ne 1) {throw 'Native filename WM_SETTEXT failed.'}
+ $readBack=[Text.StringBuilder]::new($destination.Length+1)
+ if ([GuiProbeWin32]::ReadText($fileHandle,0x000D,[IntPtr]$readBack.Capacity,$readBack,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero -or $readBack.ToString() -cne $destination) {throw 'Native filename readback differs; refusing Save.'}
+ $report.filename_pattern='guarded Win32 Edit WM_SETTEXT/WM_GETTEXT'
  Capture 'native-budget-selected-path.png'
  $saveCondition=[Windows.Automation.AndCondition]::new([Windows.Automation.PropertyCondition]::new($idProperty,'1'),[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Save'))
  $save=$dialog.FindFirst([Windows.Automation.TreeScope]::Descendants,$saveCondition)
  if (-not $save) {throw 'Native Save action 1 unavailable.'}
- $pattern=$null
- if ($save.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) {$pattern.Invoke()}
- elseif ($save.TryGetCurrentPattern([Windows.Automation.LegacyIAccessiblePattern]::Pattern,[ref]$pattern)) {$pattern.DoDefaultAction()}
- else {throw 'Native Save action has no supported accessibility action.'}
+ $saveHandle=[IntPtr]$save.Current.NativeWindowHandle
+ Assert-DialogControl $saveHandle 'Button' 1 $dialogHandle $dialogPid
+ # BM_CLICK targets only the observed owned Save button. Actual JSON remains the completion gate.
+ if ([GuiProbeWin32]::SendAction($saveHandle,0x00F5,[IntPtr]::Zero,[IntPtr]::Zero,2,3000,[ref]$nativeResult) -eq [IntPtr]::Zero) {throw 'Native Save button action timed out or failed.'}
  $until=[DateTime]::UtcNow.AddSeconds(20)
  while (-not (Test-Path -LiteralPath $destination) -and [DateTime]::UtcNow -lt $until) {Start-Sleep -Milliseconds 200}
  $export=Get-Content -LiteralPath $destination -Raw | ConvertFrom-Json
