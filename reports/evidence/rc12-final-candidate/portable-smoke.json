@@ -1,0 +1,23 @@
+{
+  "platform": "Windows",
+  "portable_backend_verified": true,
+  "native_gui_verified": false,
+  "gui_portable_marker_selection_verified": false,
+  "model_calls": 0,
+  "sdk_account_calls": 0,
+  "source_commit": "c0e6f8f6c7ffd87d2981b5033e6fd2afa9f80333",
+  "started_at_utc": "2026-11-15T01:08:42Z",
+  "archive_crc_verified": true,
+  "synthetic_run_fixture": true,
+  "runtime_version": "1.0.0-rc12",
+  "evolution_budget_export_verified": true,
+  "evolution_plan_verified": true,
+  "evolution_context_preview_verified": true,
+  "evolution_no_dispatch_verified": true,
+  "evolution_specification_id": "specification_9393865983a04ccb97daecdb7ce27b3b",
+  "startup_verified": true,
+  "settings_history_queue_preserved": true,
+  "evolution_plan_restart_verified": true,
+  "restart_verified": true,
+  "finished_at_utc": "2026-11-15T01:09:03Z"
+}

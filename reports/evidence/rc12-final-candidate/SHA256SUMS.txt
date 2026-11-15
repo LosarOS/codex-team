@@ -1,0 +1,3 @@
+5e378cd9a21582a5d349d2f3590fb21ec6d30230a91f7b6fc807dd6742deb7dc  CodexTeam-Setup-x64.exe
+5177746bb2fa542c42ed84ed93ec217e7a3ff6c34ddf0b3fa065843ff707bea8  CodexTeam-Setup-x64.zip
+e0d0d351d3131fa6d37f14f2e245d3b944b9df0a3dc6914fcf62fdfda6a3af40  CodexTeam-Portable-x64.zip
