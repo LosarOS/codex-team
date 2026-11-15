@@ -11,9 +11,9 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $owned=Join-Path $env:RUNNER_TEMP ('CodexGui-'+[guid]::NewGuid().ToString('N'))
 if (Test-Path -LiteralPath $owned) { throw 'Owned folder unexpectedly exists.' }
 New-Item -ItemType Directory -Path $owned | Out-Null
-$report=[ordered]@{source_commit=$SourceCommit;probe_commit=$env:GITHUB_SHA;environment='disposable Windows runner / actual portable EXE / WebView2 / UI Automation';status='NOT VERIFIED';window_verified=$false;task_form_verified=$false;budget_picker_verified=$false;budget_saved_verified=$false;portable_marker_profile_verified=$false;login_requested=$false;model_execution_requested=$false;sdk_account_calls=$null;physical_windows11_verified=$false;dpi_matrix_verified=$false}
+$report=[ordered]@{source_commit=$SourceCommit;probe_commit=$env:GITHUB_SHA;environment='disposable Windows runner / actual portable EXE / WebView2 / UI Automation';status='NOT VERIFIED';window_verified=$false;task_form_verified=$false;budget_picker_verified=$false;budget_saved_verified=$false;portable_marker_profile_verified=$false;login_requested=$false;model_execution_requested=$false;sdk_account_calls=$null;physical_windows11_verified=$false;dpi_matrix_verified=$false;graceful_quit_verified=$false;owned_process_force_cleanup=$false}
 $previousData=$env:CODEX_TEAM_DATA_ROOT;$previousCodex=$env:CODEX_HOME;$previousArgs=$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-$backend=$null;$appExe=$null;$window=$null
+$backend=$null;$appExe=$null;$window=$null;$dialog=$null
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,System.Drawing,System.Windows.Forms
 Add-Type @'
 using System;
@@ -60,6 +60,11 @@ try {
  $body=@{name='Native GUI CI';path=(Join-Path $owned 'project')} | ConvertTo-Json
  $project=Invoke-RestMethod ($base+'/api/projects/create') -Method Post -ContentType 'application/json' -Body $body -TimeoutSec 30
  if (-not $project.ready) {throw 'Owned Git project fixture not ready.'}
+ # Existing supported setting, only in this newly created disposable profile.
+ $null=Invoke-RestMethod ($base+'/api/settings') -Method Post -ContentType 'application/json' -Body '{"minimize_to_tray":false}'
+ $fixtureSettings=Invoke-RestMethod ($base+'/api/settings')
+ if ($fixtureSettings.minimize_to_tray -ne $false) {throw 'Owned fixture could not disable minimize_to_tray.'}
+ $report.fixture_minimize_to_tray_disabled=$true
  $null=Invoke-RestMethod ($base+'/desktop/shutdown') -Method Post -ContentType 'application/json' -Headers @{'X-Codex-Team-Desktop'=$token} -Body '{}'
  $fixtureExited=$backend.WaitForExit(30000)
  $report.fixture_wait_completed=$fixtureExited
@@ -74,6 +79,7 @@ try {
  $env:CODEX_TEAM_DATA_ROOT=$null
  $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--force-renderer-accessibility'
  $gui=Start-Process -FilePath $appExe -WorkingDirectory $app -PassThru -RedirectStandardOutput (Join-Path $out 'gui.stdout.log') -RedirectStandardError (Join-Path $out 'gui.stderr.log')
+ $guiHandle=$gui.Handle
  $desktop=[Windows.Automation.AutomationElement]::RootElement;$window=$null;$until=[DateTime]::UtcNow.AddSeconds(90)
  do {
    $condition=[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Codex Team')
@@ -92,34 +98,74 @@ try {
  $report.portable_marker_profile_verified=$true
  Invoke-Control (Wait-Control $window 'Бюджет запусков' ([Windows.Automation.ControlType]::Button))
  Invoke-Control (Wait-Control $window 'Предпросмотр экспорта выборки' ([Windows.Automation.ControlType]::Button))
+ $download=Wait-Control $window 'Скачать JSON' ([Windows.Automation.ControlType]::Button)
+ $scroll=$null
+ if ($download.TryGetCurrentPattern([Windows.Automation.ScrollItemPattern]::Pattern,[ref]$scroll)) {$scroll.ScrollIntoView()}
  Capture 'native-budget-preview.png'
- Invoke-Control (Wait-Control $window 'Скачать JSON' ([Windows.Automation.ControlType]::Button))
+ Invoke-Control $download
  $dialog=Wait-Control $desktop 'Save As' ([Windows.Automation.ControlType]::Window) 20
  $report.budget_picker_verified=$true;Capture 'native-budget-save-picker.png'
- $file=Find-Control $dialog 'File name:' ([Windows.Automation.ControlType]::Edit)
- if (-not $file) {throw 'Native filename control unavailable.'}
+ # The actual modern Windows picker exposes filename and Save as Pane peers,
+ # not Edit/Button. Scope IDs to the filename host, never the Search Box or list cells.
+ $idProperty=[Windows.Automation.AutomationElement]::AutomationIdProperty
+ $hostCondition=[Windows.Automation.PropertyCondition]::new($idProperty,'FileNameControlHost')
+ $fileHost=$dialog.FindFirst([Windows.Automation.TreeScope]::Descendants,$hostCondition)
+ if (-not $fileHost) {throw 'Native filename host unavailable.'}
+ $fileCondition=[Windows.Automation.PropertyCondition]::new($idProperty,'1001')
+ $file=$fileHost.FindFirst([Windows.Automation.TreeScope]::Descendants,$fileCondition)
+ if (-not $file) {throw 'Native filename field 1001 unavailable inside filename host.'}
  $destination=Join-Path $owned 'native-budget.json'
- $file.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).SetValue($destination)
- Invoke-Control (Wait-Control $dialog 'Save' ([Windows.Automation.ControlType]::Button))
+ $pattern=$null
+ if ($file.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern,[ref]$pattern)) {
+   $pattern.SetValue($destination);$report.filename_pattern='ValuePattern'
+ } elseif ($file.TryGetCurrentPattern([Windows.Automation.LegacyIAccessiblePattern]::Pattern,[ref]$pattern)) {
+   $pattern.SetValue($destination);$report.filename_pattern='LegacyIAccessiblePattern'
+ } else {throw 'Native filename field has no supported writable accessibility pattern.'}
+ Capture 'native-budget-selected-path.png'
+ $saveCondition=[Windows.Automation.AndCondition]::new([Windows.Automation.PropertyCondition]::new($idProperty,'1'),[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Save'))
+ $save=$dialog.FindFirst([Windows.Automation.TreeScope]::Descendants,$saveCondition)
+ if (-not $save) {throw 'Native Save action 1 unavailable.'}
+ $pattern=$null
+ if ($save.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern,[ref]$pattern)) {$pattern.Invoke()}
+ elseif ($save.TryGetCurrentPattern([Windows.Automation.LegacyIAccessiblePattern]::Pattern,[ref]$pattern)) {$pattern.DoDefaultAction()}
+ else {throw 'Native Save action has no supported accessibility action.'}
  $until=[DateTime]::UtcNow.AddSeconds(20)
  while (-not (Test-Path -LiteralPath $destination) -and [DateTime]::UtcNow -lt $until) {Start-Sleep -Milliseconds 200}
  $export=Get-Content -LiteralPath $destination -Raw | ConvertFrom-Json
  if ($export.schema_version -ne 1 -or $export.models_called -ne $false -or $export.account_quota -ne $null) {throw 'Native saved budget report is invalid.'}
- $report.budget_saved_verified=$true;$report.status='OBSERVED_NATIVE_GUI_SCENARIOS_PASSED'
+ Copy-Item -LiteralPath $destination -Destination (Join-Path $out 'native-budget-saved.json')
+ $report.budget_saved_verified=$true
+ # Real supported window-close request. No active mission was created; tray is disabled.
+ $window.GetCurrentPattern([Windows.Automation.WindowPattern]::Pattern).Close()
+ $guiExited=$gui.WaitForExit(45000)
+ $report.gui_wait_completed=$guiExited
+ $guiCode=[uint32]259
+ if (-not [GuiProbeWin32]::GetExitCodeProcess($guiHandle,[ref]$guiCode)) {throw ('Could not read owned GUI exit code: '+[Runtime.InteropServices.Marshal]::GetLastWin32Error())}
+ $report.gui_native_exit_code=$guiCode
+ if (-not $guiExited -or $guiCode -ne 0) {throw ('Owned GUI failed graceful close; native exit code='+$guiCode)}
+ $until=[DateTime]::UtcNow.AddSeconds(10)
+ do {
+   $remaining=@(Get-Process -Name CodexTeam -ErrorAction SilentlyContinue | Where-Object {$_.Path -eq $appExe})
+   if ($remaining.Count) {Start-Sleep -Milliseconds 200}
+ } while ($remaining.Count -and [DateTime]::UtcNow -lt $until)
+ if ($remaining.Count) {throw 'Owned GUI/backend process remained after native close.'}
+ $report.owned_gui_backend_processes_remaining=0
+ $report.graceful_quit_verified=$true
+ $report.status='OBSERVED_NATIVE_GUI_SCENARIOS_PASSED'
 } catch {
  $report.error=$_.Exception.Message
  try {Capture 'native-experiment-failure.png'} catch {}
  if ($window) {try {
-   $nodes=@();foreach ($node in $window.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition)) {
-     if ($nodes.Count -ge 500) {break};$nodes+=@{name=$node.Current.Name;type=$node.Current.ControlType.ProgrammaticName;automation_id=$node.Current.AutomationId}
+   $dumpRoot=if ($dialog) {$dialog} else {$window}
+   $nodes=@();foreach ($node in $dumpRoot.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition)) {
+     if ($nodes.Count -ge 500) {break};$nodes+=@{name=$node.Current.Name;type=$node.Current.ControlType.ProgrammaticName;automation_id=$node.Current.AutomationId;native_handle=$node.Current.NativeWindowHandle;class_name=$node.Current.ClassName;patterns=@($node.GetSupportedPatterns() | ForEach-Object {$_.ProgrammaticName})}
    };$nodes | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $out 'uia-controls.json') -Encoding utf8
  } catch {}}
  throw
 } finally {
  # Only the unique extracted EXE process tree is owned. No global process name kill or owner data deletion.
- if ($appExe) {foreach ($process in Get-Process -Name CodexTeam -ErrorAction SilentlyContinue) {if ($process.Path -eq $appExe) {Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue}}}
+ if ($appExe) {foreach ($process in Get-Process -Name CodexTeam -ErrorAction SilentlyContinue) {if ($process.Path -eq $appExe) {try {Stop-Process -Id $process.Id -Force -ErrorAction Stop;$report.owned_process_force_cleanup=$true} catch {$report.cleanup_error=$_.Exception.Message}}}}
  try {if (Test-Path (Join-Path $owned 'CodexTeam/data/logs')) {Copy-Item (Join-Path $owned 'CodexTeam/data/logs') -Destination (Join-Path $out 'profile-logs') -Recurse -Force}} catch {$report.log_copy_error=$_.Exception.Message}
  $env:CODEX_TEAM_DATA_ROOT=$previousData;$env:CODEX_HOME=$previousCodex;$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=$previousArgs
- $report.graceful_quit_verified=$false;$report.owned_process_force_cleanup=$true
  $report.finished_at_utc=[DateTime]::UtcNow.ToString('o');$report | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $out 'native-gui-proof.json') -Encoding utf8
 }
