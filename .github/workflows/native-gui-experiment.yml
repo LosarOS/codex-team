@@ -2,7 +2,7 @@ name: Actual portable WebView2 GUI experiment
 on:
   push:
     branches: ['ops/native-gui-experiment']
-    paths: ['.github/gui-experiment-request.json', '.github/workflows/native-gui-experiment.yml']
+    paths: ['.github/gui-experiment-request.json', '.github/workflows/native-gui-experiment.yml', 'packaging/Smoke-DesktopGui.ps1']
   workflow_dispatch:
     inputs:
       run_id:
