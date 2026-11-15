@@ -1,0 +1,1092 @@
+{
+  "status": "passed",
+  "source_commit": "6807cacc204aca982614ad68fab50db5e0dcef2e",
+  "environment": "Linux Chromium / real FastAPI SQLite / synthetic project",
+  "windows_dpi_verified": false,
+  "sdk_live_verified": false,
+  "combinations": 18,
+  "layout_checks": 108,
+  "checks": [
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "ru",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "obsidian-violet",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "neon-blue",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "emerald-tech",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "crimson-night",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "system",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "light",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "purple-neon",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "plan",
+      "width": 1440,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 712,
+      "client": 712,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "plan",
+      "width": 900,
+      "keyboard": true,
+      "dependent_disabled": true,
+      "raw_ids_collapsed": true,
+      "scroll": 728,
+      "client": 728,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "intelligence",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "intelligence",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "budget",
+      "width": 1440,
+      "scroll": 1160,
+      "client": 1160,
+      "document": 1440
+    },
+    {
+      "theme": "dark-fantasy",
+      "language": "en",
+      "state": "budget",
+      "width": 900,
+      "scroll": 776,
+      "client": 776,
+      "document": 900
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-15T01:33:02.627983+00:00",
+  "filters": {
+    "project_id": "rc12_fixture",
+    "date_utc": null
+  },
+  "aggregation_scope": "current_page",
+  "total_matching": 0,
+  "offset": 0,
+  "limit": 50,
+  "exported_runs": 0,
+  "measured_tokens": null,
+  "usage_complete": false,
+  "account_quota": null,
+  "cost": null,
+  "models_called": false,
+  "items": []
+}
